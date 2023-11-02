@@ -1,0 +1,31 @@
+name: Serverless Package 📦
+on: push
+
+jobs:
+  build:
+    name: Package Zip 📦
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install pip requirements
+      run: |
+        mkdir package
+        pip install -r requirements.txt --target ./package
+        cd package
+        zip -r ../my_deployment_package.zip .
+        cd ..
+
+    - name: Add project code
+      run: zip ./my_deployment_package.zip ./main.py
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: package
+        path: ./my_deployment_package.zip
