@@ -3,7 +3,7 @@ from dislord import interaction, server, serverless
 
 @interaction.command(name="hello")
 def hello():
-    return "hello world"
+    return "hello world!"
 
 
 def serverless_handler(*args, **kwargs):
