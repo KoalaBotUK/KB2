@@ -7,7 +7,7 @@ def hello():
 
 
 def serverless_handler(*args, **kwargs):
-    serverless.serverless_handler(*args, **kwargs)
+    return serverless.serverless_handler(*args, **kwargs)
 
 
 if __name__ == '__main__':
