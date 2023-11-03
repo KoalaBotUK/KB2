@@ -14,21 +14,22 @@ jobs:
       with:
         python-version: "3.11"
 
+
     - name: Install pip requirements
       run: |
         mkdir package
-        pip install -r requirements.txt --target ./package/
+        pip install -r requirements.txt --target ./package
+        cd package
+        zip -r ../package.zip .
+        cd ..
 
     - name: Add project code
-      run: cp ./main.py package/
-
-    - name: Compress package
-      run: zip -r package.zip package/*
+      run: zip ./package.zip ./main.py
 
     - uses: actions/upload-artifact@v3
       with:
-        name: package
-        path: package.zip
+        name: sl-package
+        path: ./package.zip
 
   upload-s3:
     name: Upload to S3 🪣
@@ -38,7 +39,7 @@ jobs:
     - name: Download artifact
       uses: actions/download-artifact@v3
       with:
-        name: package
+        name: sl-package
 
     - name: Setup AWS CLI
       uses: aws-actions/configure-aws-credentials@v1
@@ -49,6 +50,7 @@ jobs:
 
     - name: Deploy Modified Files
       run: |
+        ls
         # Constants
         S3_BUCKET=kb2
         S3_KEY=package.zip
