@@ -45,9 +45,10 @@ def serverless_handler(event, context):  # Not needed if using server
     return client.serverless_handler(event, context)
 
 
-def sync_serverless_handler(**kwargs):
+def sync_serverless_handler(event, context):
     client.sync_commands()
     client.sync_commands(guild_ids=client.guilds)
+    return {"statusCode": 200}
 
 
 if __name__ == '__main__':  # Not needed if using serverless
