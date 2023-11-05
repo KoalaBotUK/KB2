@@ -1,4 +1,4 @@
-name: Serverless Package 📦
+name: Serverless Package & Upload 📦🪣
 on: push
 
 jobs:
