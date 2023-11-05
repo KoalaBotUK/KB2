@@ -45,6 +45,11 @@ def serverless_handler(event, context):  # Not needed if using server
     return client.serverless_handler(event, context)
 
 
+def sync_serverless_handler(**kwargs):
+    client.sync_commands()
+    client.sync_commands(guild_ids=client.guilds)
+
+
 if __name__ == '__main__':  # Not needed if using serverless
     client.sync_commands()
     dislord.server.start_server(client, host='0.0.0.0', debug=True, port=8123)
