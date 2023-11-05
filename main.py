@@ -47,7 +47,7 @@ def serverless_handler(event, context):  # Not needed if using server
 
 def sync_serverless_handler(event, context):
     client.sync_commands()
-    client.sync_commands(guild_ids=client.guilds)
+    client.sync_commands(guild_ids=[g.id for g in client.guilds])
     return {"statusCode": 200}
 
 
