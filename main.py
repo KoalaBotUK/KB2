@@ -3,6 +3,7 @@ import random
 import string
 
 import dislord
+from dislord.models.channel import MessageFlags
 from dislord.models.command import ApplicationCommandOption, ApplicationCommandOptionType
 from dislord.models.interaction import Interaction, InteractionResponse
 
@@ -11,6 +12,7 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
 client = dislord.ApplicationClient(PUBLIC_KEY, BOT_TOKEN)
 
+tmp_token_store = {}
 
 @client.command(name="verify", description="Verify your email with Koala",
                 options=[
@@ -20,8 +22,10 @@ client = dislord.ApplicationClient(PUBLIC_KEY, BOT_TOKEN)
 def verify(interaction: Interaction, email: str):
     token = ''.join(random.choice(string.ascii_letters) for _ in range(8))
     print(token)
-    # db.save(email, token)
-    return InteractionResponse.message(content="Please verify yourself using the command you have been emailed")
+    # db.save(user, email, token)
+    tmp_token_store[interaction.user.id] = token
+    return InteractionResponse.message(content="Please verify yourself using the command you have been emailed",
+                                       flags=[MessageFlags.EPHEMERAL])
 
 
 @client.command(name="confirm", description="Send token to complete email verification",
@@ -30,15 +34,14 @@ def verify(interaction: Interaction, email: str):
                                                          type=ApplicationCommandOptionType.STRING, required=True,
                                                          client=client)])
 def confirm(interaction: Interaction, token: str):
-    token = ''.join(random.choice(string.ascii_letters) for _ in range(8))
     print(token)
-    success = True
     # success = db.check(email, token)
+    success = tmp_token_store.get(interaction.user.id) == token
     if success:
-        content = "Verification Successful"
+        content = "Verification Successful "+token
     else:
         content = "Could not verify with token provided"
-    return InteractionResponse.message(content=content)
+    return InteractionResponse.message(content=content, flags=[MessageFlags.EPHEMERAL])
 
 
 def serverless_handler(event, context):  # Not needed if using server
@@ -53,4 +56,5 @@ def sync_serverless_handler(event, context):
 
 if __name__ == '__main__':  # Not needed if using serverless
     client.sync_commands()
+    client.sync_commands(guild_ids=[g.id for g in client.guilds])
     dislord.server.start_server(client, host='0.0.0.0', debug=True, port=8123)
