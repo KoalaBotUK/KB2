@@ -50,7 +50,7 @@ You can use the [Infrastructure as Code](#Infrastructure-as-Code) to spin up you
 
 If you are using a server the following can be used:
 ```bash
-$ python3 main.py
+$ python3 ./kb2/main.py
 ```
 
 ## License

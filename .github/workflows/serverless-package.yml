@@ -24,7 +24,9 @@ jobs:
         cd ..
 
     - name: Add project code
-      run: zip ./package.zip ./main.py
+      run: |
+        zip ./package.zip ./dislord/
+        zip ./package.zip ./kb2/
 
     - uses: actions/upload-artifact@v3
       with:
