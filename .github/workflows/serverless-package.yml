@@ -25,8 +25,8 @@ jobs:
 
     - name: Add project code
       run: |
-        zip ./package.zip ./dislord/
-        zip ./package.zip ./kb2/
+        zip ./package.zip ./dislord/*
+        zip ./package.zip ./kb2/*
 
     - uses: actions/upload-artifact@v3
       with:
