@@ -1,4 +1,3 @@
-from enum import IntFlag
 from types import NoneType
 from typing import Optional
 
