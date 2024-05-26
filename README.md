@@ -8,6 +8,18 @@ This is an all-in-one bot with multiple functions custom-built for university cl
 This bot is the new generation of the original [KoalaBot](https://koalabot.uk) project. This project is an open source discord bot with a development 
 team of students and alumni from around UK and Europe.
 
+## Features
+- Verify
+- ColourRole
+- TwitchAlert
+
+### Possible Removal
+- Announce - Too intensive on Rate Limit
+- Vote - Maybe replaced by Polls
+
+### Removed since Legacy KoalaBot
+- ReactForRole - Replaced by Discord Onboarding 
+- TextFilter - Replaced by Discord AutoMod
 
 ## Cloud Architecture
 ![Cloud Architecture](docs/cloud_architecture.png)

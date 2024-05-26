@@ -3,17 +3,20 @@ from typing import Callable
 
 from discord_interactions import verify_key
 
+from .discord.base import cast
+from .discord.interactions.application_commands.enums import ApplicationCommandType
+from .discord.interactions.application_commands.models import ApplicationCommand, ApplicationCommandOption
+from .discord.interactions.receiving_and_responding.interaction import Interaction, InteractionType
+from .discord.interactions.receiving_and_responding.interaction_response import InteractionResponse
+from .discord.resources.application.models import Application
+from .discord.resources.channel.channel import Channel
+from .discord.resources.guild.guild import Guild, PartialGuild
+from .discord.resources.user.user import User
 from .group import CommandGroup
 from .api import DiscordApi
-from .models.application import Application
-from .models.channel import Channel
-from .models.command import ApplicationCommand, ApplicationCommandType, ApplicationCommandOption
-from .models.guild import Guild, PartialGuild
-from .models.type import Snowflake, Missing
-from .models.user import User
+from .discord.type import Snowflake, Missing
 from .error import DiscordApiException
-from .models.api import HttpResponse, HttpUnauthorized, HttpOk
-from .models.interaction import Interaction, InteractionResponse, InteractionType
+from .discord.api import HttpResponse, HttpUnauthorized, HttpOk
 
 
 class ApplicationClient:
@@ -21,8 +24,8 @@ class ApplicationClient:
     _api: DiscordApi
     _commands: dict[Snowflake, dict[str, ApplicationCommand]] = {}
     _command_callbacks: dict[str, Callable] = {}
-    _application: Application = Missing
-    _guilds: list[Guild] = Missing
+    _application: Application = Missing()
+    _guilds: list[Guild] = Missing()
 
     def __init__(self, public_key, bot_token):
         self._public_key = public_key
@@ -30,10 +33,11 @@ class ApplicationClient:
 
     def interact(self, raw_request, signature, timestamp) -> HttpResponse:
         if signature is None or timestamp is None or not verify_key(json.dumps(raw_request, separators=(',', ':'))
-                                                                        .encode('utf-8'), signature, timestamp,
+                                                                            .encode('utf-8'), signature, timestamp,
                                                                     self._public_key):
             return HttpUnauthorized('Bad request signature')
-        interaction = Interaction.from_dict(raw_request, self)
+        interaction = cast(raw_request, Interaction, self)
+
         if interaction.type == InteractionType.PING:  # PING
             response_data = InteractionResponse.pong()  # PONG
         elif interaction.type == InteractionType.APPLICATION_COMMAND:
@@ -64,10 +68,10 @@ class ApplicationClient:
             for guild_id in guild_ids:
                 if guild_id == "ALL":
                     guild_id = None
-                self.add_command(ApplicationCommand.from_kwargs(name=name, description=description,
-                                                                type=ApplicationCommandType.CHAT_INPUT,
-                                                                dm_permission=dm_permission, nsfw=nsfw,
-                                                                guild_id=guild_id, options=options, client=self), func)
+                self.add_command(ApplicationCommand(name=name, description=description,
+                                                    type=ApplicationCommandType.CHAT_INPUT,
+                                                    dm_permission=dm_permission, nsfw=nsfw,
+                                                    guild_id=guild_id, options=options, client=self), func)
             return func
 
         return decorator
@@ -76,7 +80,7 @@ class ApplicationClient:
         if self._commands.get(command_group.guild_id) is None:
             self._commands[command_group.guild_id] = {}
 
-        self._commands[command_group.guild_id][command_group.name] = ApplicationCommand.from_kwargs(
+        self._commands[command_group.guild_id][command_group.name] = ApplicationCommand(
             name=command_group.name, description=command_group.description, type=ApplicationCommandType.CHAT_INPUT,
             dm_permission=command_group.dm_permission, nsfw=command_group.nsfw, guild_id=command_group.guild_id,
             options=list(command_group.commands.values()), client=self)
@@ -97,13 +101,13 @@ class ApplicationClient:
 
     @property
     def application(self):
-        if self._application is Missing:
+        if self._application is Missing():
             self._application = self.get_application()
         return self._application
 
     @property
     def guilds(self):
-        if self._guilds is Missing:
+        if self._guilds is Missing():
             self._guilds = self._get_guilds()
         return self._guilds
 
@@ -149,10 +153,8 @@ class ApplicationClient:
 
         self._api.delete(f"{endpoint}/commands/{command_id}")
 
-
-
     def _register_command(self, application_command: ApplicationCommand,
-                         guild_id: Snowflake = None, application_id: Snowflake = None) -> ApplicationCommand:
+                          guild_id: Snowflake = None, application_id: Snowflake = None) -> ApplicationCommand:
         endpoint = f"/applications/{application_id if application_id else self.application.id}"
         if guild_id:
             endpoint += f"/guilds/{guild_id}"
@@ -164,7 +166,7 @@ class ApplicationClient:
     def get_guild(self, guild_id) -> Guild:
         return self._api.get(f"/guilds/{guild_id}", type_hint=Guild)
 
-    def _get_guilds(self) -> list[PartialGuild]:
+    def _get_guilds(self) -> list[Guild]:
         return self._api.get("/users/@me/guilds", type_hint=list[PartialGuild])
 
     def get_channel(self, channel_id) -> list[Channel]:

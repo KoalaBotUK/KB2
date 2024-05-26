@@ -1,8 +1,9 @@
 from typing import Callable
 
-from .models.command import ApplicationCommandOption, ApplicationCommandOptionType
-from .models.interaction import Interaction
-from .models.type import Snowflake
+from .discord.interactions.application_commands.enums import ApplicationCommandOptionType
+from .discord.interactions.application_commands.models import ApplicationCommandOption
+from .discord.interactions.receiving_and_responding.interaction import Interaction
+from .discord.type import Snowflake
 
 
 class CommandGroup:

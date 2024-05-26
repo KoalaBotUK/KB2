@@ -3,14 +3,19 @@ import random
 import string
 
 import dislord
-from dislord.models.channel import MessageFlags
-from dislord.models.command import ApplicationCommandOption, ApplicationCommandOptionType
-from dislord.models.interaction import Interaction, InteractionResponse
+from dislord.discord.interactions.application_commands.enums import ApplicationCommandOptionType
+from dislord.discord.interactions.application_commands.models import ApplicationCommandOption
+from dislord.discord.interactions.receiving_and_responding.interaction import Interaction
+from dislord.discord.interactions.receiving_and_responding.interaction_response import InteractionResponse
+from dislord.discord.resources.channel.message import MessageFlags
+from kb2.commands import extension_group
 
 PUBLIC_KEY = os.environ.get("PUBLIC_KEY")
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
 client = dislord.ApplicationClient(PUBLIC_KEY, BOT_TOKEN)
+client.register_group(extension_group)
+
 
 tmp_token_store = {}
 
@@ -25,7 +30,7 @@ def verify(interaction: Interaction, email: str):
     # db.save(user, email, token)
     tmp_token_store[interaction.user.id] = token
     return InteractionResponse.message(content="Please verify yourself using the command you have been emailed",
-                                       flags=[MessageFlags.EPHEMERAL])
+                                       flags=MessageFlags.EPHEMERAL)
 
 
 @client.command(name="confirm", description="Send token to complete email verification",
@@ -41,7 +46,7 @@ def confirm(interaction: Interaction, token: str):
         content = "Verification Successful "+token
     else:
         content = "Could not verify with token provided"
-    return InteractionResponse.message(content=content, flags=[MessageFlags.EPHEMERAL])
+    return InteractionResponse.message(content=content, flags=MessageFlags.EPHEMERAL)
 
 
 def serverless_handler(event, context):  # Not needed if using server
