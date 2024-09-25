@@ -3,13 +3,14 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from kb2.env import CONFIG_PATH, LOGGING_FILE
+from kb2.env import LOG_PATH, LOGGING_FILE
 
 _LOG_LEVEL = logging.DEBUG
 _FORMATTER = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
-_LOG_DIR = Path(CONFIG_PATH, "logs", str(date.today()))
 
-Path(_LOG_DIR).mkdir(exist_ok=True, parents=True)
+if LOGGING_FILE:
+    _LOG_DIR = Path(LOG_PATH, str(date.today()))
+    Path(_LOG_DIR).mkdir(exist_ok=True, parents=True)
 
 
 logging.basicConfig(filename=Path(_LOG_DIR, 'kb.log'),
