@@ -107,7 +107,8 @@ DEFAULT_LEGACY_EXTENSIONS = [
     LegacyExtension(id="rfr", name="React for Role", emoji="👍", version=1, enabled=False, hidden=False, data={}),
     LegacyExtension(id="filter", name="Text Filter", emoji="🔎", version=1, enabled=False, hidden=False, data={}),
     LegacyExtension(id="twitch_alerts", name="Twitch Alert", emoji="🔔", version=1, enabled=False, hidden=False, data={}),
-    LegacyExtension(id="verify", name="Verify", emoji="✅", version=1, enabled=False, hidden=False, data={})
+    LegacyExtension(id="verify", name="Verify", emoji="✅", version=1, enabled=False, hidden=False, data={}),
+    LegacyExtension(id="vote", name="Vote", emoji="🗳", version=1, enabled=False, hidden=False, data={})
 ]
 
 if __name__ == '__main__':

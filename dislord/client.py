@@ -12,10 +12,10 @@ from .discord.interactions.receiving_and_responding.interaction_response import 
 from .discord.reference import Snowflake, Missing
 from .discord.resources.application.models import Application
 from .api import DiscordApi
+from .discord.resources.channel.message import Message
 from .discord.resources.guild.guild import PartialGuild
 from .error import DiscordApiException
 from .model.api import HttpResponse, HttpUnauthorized, HttpOk
-from .model.base import cast, EnhancedJSONEncoder
 from .model.channel import Channel
 from .model.commands import ApplicationCommand
 from .model.guild import Guild
@@ -60,10 +60,11 @@ class ApplicationClient:
             case _:
                 raise DiscordApiException(DiscordApiException.UNKNOWN_INTERACTION_TYPE.format(interaction.type))
 
-        return HttpOk(json.loads(response_data.json()), headers={"Content-Type": "application/json"})
+        return HttpOk(json.loads(response_data.model_dump_json()), headers={"Content-Type": "application/json"})
 
     def edit_original_response(self, interaction_token: Snowflake, response: MessagesInteractionCallbackData):
-        self._api.patch(f"/webhooks/{self.application.id}/{interaction_token}/messages/@original", response)
+        self._api.patch(f"/webhooks/{self.application.id}/{interaction_token}/messages/@original", response,
+                        type_hint=Message)
 
     def add_command(self, command: ApplicationCommand, callback: Callable):
         if self._commands.get(command.guild_id) is None:

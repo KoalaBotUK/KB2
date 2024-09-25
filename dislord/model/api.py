@@ -2,8 +2,6 @@ import json
 from http.client import OK, UNAUTHORIZED
 from fastapi import Response
 
-from dislord.model.base import EnhancedJSONEncoder
-
 
 class HttpResponse:
     status_code: int
@@ -16,7 +14,7 @@ class HttpResponse:
 
     def as_serverless_response(self):
         return {"statusCode": int(self.status_code),
-                "body": json.dumps(self.body, cls=EnhancedJSONEncoder),
+                "body": json.dumps(self.body),
                 "headers": self.headers}
 
     def as_server_response(self, response: Response):
