@@ -35,10 +35,10 @@ def start_server(application_client, **kwargs):
     uvicorn.run(app, host="0.0.0.0", port=8123)
 
 
-handler = Mangum(app)
+handler = Mangum(app, api_gateway_base_path="/interactions")
 
 
-def serverless_handler(application_client, event, context, **kwargs):
+def serverless_handler(application_client, event, context):
     global __application_client
     __application_client = application_client
-    return handler(event, context, **kwargs)
+    return handler(event, context)
