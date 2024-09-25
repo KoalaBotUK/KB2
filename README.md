@@ -43,9 +43,9 @@ Before running the bot you must install these as so:
 $ pip3 install -r requirements.txt
 ``` 
 
-If you would like to run a server version locally, you will also need to install Flask
+If you would like to run a server version locally, you will also need to install FastAPI with standard libraries
 ```bash
-$ pip3 install flask
+$ pip3 install fastapi[standard]
 ```
 
 ### Environment Variables
@@ -55,7 +55,7 @@ You will instead have to provide the environment variables either as part of ser
 The environment variables required are listed below:
 
 `PUBLIC_KEY` : The public key from the application in the Discord developers portal<br>
-`BOT_TOKEN` : The secret token from the bot in the Discord developers portal
+`DISCORD_TOKEN` : The secret token from the bot in the Discord developers portal
 
 ### Running KB2
 You can use the [Infrastructure as Code](#Infrastructure-as-Code) to spin up your serverless environment.

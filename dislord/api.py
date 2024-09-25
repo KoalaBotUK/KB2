@@ -1,14 +1,12 @@
 import json
-from datetime import time
 from time import sleep
 
+from pydantic import BaseModel, TypeAdapter
 import requests
 
+from .discord.reference import DISCORD_URL
 from .error import DiscordApiException
-from .discord.base import cast, EnhancedJSONEncoder
-
-DISCORD_API_VERSION = 10
-DISCORD_URL = f"https://discord.com/api/v{DISCORD_API_VERSION}"
+from .model.base import cast, EnhancedJSONEncoder
 
 
 # WARNING: Average time to call and get response from API is 25ms, not great to call lots if you want quick processing
@@ -25,7 +23,12 @@ class DiscordApi:
         response = requests.get(DISCORD_URL + endpoint, params, **kwargs, headers=self.auth_header)
         if response.ok:
             print(f"📬 Response from Discord API: {response.content}")
-            return cast(json.loads(response.content), type_hint, client=self.client)
+            response_payload = json.loads(response.content)
+            if type_hint:
+                return TypeAdapter(type_hint).validate_json(response.content)
+                # return cast(response_payload, type_hint, client=self.client)
+            else:
+                return response_payload
         elif response.status_code == 429:
             retry_after = response.json()["retry_after"]
             print(f"⚠️ Rate Limited, waiting {retry_after}s")
@@ -68,3 +71,23 @@ class DiscordApi:
         else:
             raise DiscordApiException(f"{response.status_code} {response.text} error when calling discord API "
                                       f"URL: POST {endpoint} Body: {body_json}")
+
+
+    def patch(self, endpoint: str, body: object = None, type_hint: type = None, **kwargs):
+        body_json = json.dumps(body, cls=EnhancedJSONEncoder)
+        print(f"📨 Sending to Discord API PATCH: {endpoint}, {body_json}")
+        headers = self.auth_header
+        headers["Content-Type"] = "application/json"
+        response = requests.patch(DISCORD_URL + endpoint, data=body_json,
+                                 **kwargs, headers=headers)
+        if response.ok:
+            print(f"📬 Response from Discord API: {response.content}")
+            return cast(json.loads(response.content), type_hint, client=self.client)
+        elif response.status_code == 429:
+            retry_after = response.json()["retry_after"]
+            print(f"⚠️ Rate Limited, waiting {retry_after}s")
+            sleep(retry_after)
+            return self.post(endpoint, body, type_hint, **kwargs)
+        else:
+            raise DiscordApiException(f"{response.status_code} {response.text} error when calling discord API "
+                                      f"URL: PATCH {endpoint} Body: {body_json}")

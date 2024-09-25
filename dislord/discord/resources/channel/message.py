@@ -1,7 +1,7 @@
 from enum import IntFlag, IntEnum
 from typing import Self
 
-from dislord.discord.base import BaseModel
+from dislord.types import ObjDict
 from dislord.discord.interactions.components.models import Component
 from dislord.discord.interactions.receiving_and_responding.interaction_data import ResolvedData
 from dislord.discord.interactions.receiving_and_responding.message_interaction import MessageInteraction
@@ -15,7 +15,7 @@ from dislord.discord.resources.channel.role_subscription_data import RoleSubscri
 from dislord.discord.resources.poll.poll import Poll
 from dislord.discord.resources.sticker.sticker import Sticker
 from dislord.discord.resources.sticker.sticker_item import StickerItem
-from dislord.discord.type import Missing, Snowflake
+from dislord.discord.reference import Missing, Snowflake
 
 
 class MessageFlags(IntFlag):
@@ -39,28 +39,28 @@ class MessageActivityType(IntEnum):
     JOIN_REQUEST = 5
 
 
-class MessageActivity(BaseModel):
+class MessageActivity(ObjDict):
     type: MessageActivityType
-    party_id: str | Missing
+    party_id: str | Missing = None
 
 
 class Message(PartialMessage):
-    mention_channels: list[ChannelMention] | Missing
-    nonce: int | str | Missing
-    webhook_id: Snowflake | Missing
-    activity: MessageActivity | Missing
-    application: PartialApplication | Missing
-    application_id: Snowflake | Missing
-    message_reference: MessageReference | Missing
-    flags: MessageFlags | Missing
-    referenced_message: Self | Missing | None
-    interaction_metadata: MessageInteractionMetadata | Missing
-    interaction: MessageInteraction | Missing
-    thread: Channel | Missing
-    components: list[Component] | Missing
-    sticker_items: list[StickerItem] | Missing
-    stickers: list[Sticker] | Missing
-    position: int | Missing
-    role_subscription_data = RoleSubscriptionData | Missing
-    resolved: ResolvedData | Missing
-    poll: Poll | Missing
+    mention_channels: list[ChannelMention] | Missing = None
+    nonce: int | str | Missing = None
+    webhook_id: Snowflake | Missing = None
+    activity: MessageActivity | Missing = None
+    application: PartialApplication | Missing = None
+    application_id: Snowflake | Missing = None
+    message_reference: MessageReference | Missing = None
+    flags: MessageFlags | Missing = None
+    referenced_message: Self | Missing | None = None
+    interaction_metadata: MessageInteractionMetadata | Missing = None
+    interaction: MessageInteraction | Missing = None
+    thread: Channel | Missing = None
+    components: list[Component] | Missing = None
+    sticker_items: list[StickerItem] | Missing = None
+    stickers: list[Sticker] | Missing = None
+    position: int | Missing = None
+    role_subscription_data: RoleSubscriptionData | Missing = None
+    resolved: ResolvedData | Missing = None
+    poll: Poll | Missing = None

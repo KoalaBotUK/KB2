@@ -1,63 +1,63 @@
-from dislord.discord.base import BaseModel
-from dislord.discord.type import Missing, ISOTimestamp
+from dislord.types import ObjDict
+from dislord.discord.reference import Missing, ISOTimestamp
 
 
-class EmbedField(BaseModel):
+class EmbedField(ObjDict):
     name: str
     value: str
-    inline: bool | Missing
+    inline: bool | Missing = None
 
 
-class EmbedFooter(BaseModel):
+class EmbedFooter(ObjDict):
     text: str
-    icon_url: str | Missing
-    proxy_icon_url: str | Missing
+    icon_url: str | Missing = None
+    proxy_icon_url: str | Missing = None
 
 
-class EmbedAuthor(BaseModel):
+class EmbedAuthor(ObjDict):
     name: str
-    url: str | Missing
-    icon_url: str | Missing
-    proxy_icon_url: str | Missing
+    url: str | Missing = None
+    icon_url: str | Missing = None
+    proxy_icon_url: str | Missing = None
 
 
-class EmbedProvider(BaseModel):
-    name: str | Missing
-    url: str | Missing
+class EmbedProvider(ObjDict):
+    name: str | Missing = None
+    url: str | Missing = None
 
 
-class EmbedImage(BaseModel):
+class EmbedImage(ObjDict):
     url: str
-    proxy_url: str | Missing
-    height: int | Missing
-    width: int | Missing
+    proxy_url: str | Missing = None
+    height: int | Missing = None
+    width: int | Missing = None
 
 
-class EmbedVideo(BaseModel):
-    url: str | Missing
-    proxy_url: str | Missing
-    height: int | Missing
-    width: int | Missing
+class EmbedVideo(ObjDict):
+    url: str | Missing = None
+    proxy_url: str | Missing = None
+    height: int | Missing = None
+    width: int | Missing = None
 
 
-class EmbedThumbnail(BaseModel):
+class EmbedThumbnail(ObjDict):
     url: str
-    proxy_url: str | Missing
-    height: int | Missing
-    width: int | Missing
+    proxy_url: str | Missing = None
+    height: int | Missing = None
+    width: int | Missing = None
 
 
-class Embed(BaseModel):
-    title: str | Missing
-    type: str | Missing
-    description: str | Missing
-    url: str | Missing
-    timestamp: ISOTimestamp | Missing
-    color: int | Missing
-    footer: EmbedFooter | Missing
-    image: EmbedImage | Missing
-    thumbnail: EmbedThumbnail | Missing
-    video: EmbedVideo | Missing
-    provider: EmbedProvider | Missing
-    author: EmbedAuthor | Missing
-    fields: list[EmbedField] | Missing
+class Embed(ObjDict):
+    title: str | Missing = None
+    type: str | Missing = None
+    description: str | Missing = None
+    url: str | Missing = None
+    timestamp: ISOTimestamp | Missing = None
+    color: int | Missing = None
+    footer: EmbedFooter | Missing = None
+    image: EmbedImage | Missing = None
+    thumbnail: EmbedThumbnail | Missing = None
+    video: EmbedVideo | Missing = None
+    provider: EmbedProvider | Missing = None
+    author: EmbedAuthor | Missing = None
+    fields: list[EmbedField] | Missing = None

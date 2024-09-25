@@ -1,8 +1,8 @@
 from enum import IntFlag
 
-from dislord.discord.base import BaseModel
+from dislord.types import ObjDict
 from dislord.discord.resources.emoji.emoji import Emoji
-from dislord.discord.type import Snowflake, Missing
+from dislord.discord.reference import Snowflake, Missing
 
 
 class PromptType(IntFlag):
@@ -15,14 +15,14 @@ class OnboardingMode(IntFlag):
     ONBOARDING_ADVANCED = 1
 
 
-class PromptOption(BaseModel):
+class PromptOption(ObjDict):
     id: Snowflake
     channel_ids: list[Snowflake]
     role_ids: list[Snowflake]
-    emoji: Emoji | Missing
-    emoji_id: Snowflake | Missing
-    emoji_name: str | Missing
-    emoji_animated: bool | Missing
+    emoji: Emoji | Missing = None
+    emoji_id: Snowflake | Missing = None
+    emoji_name: str | Missing = None
+    emoji_animated: bool | Missing = None
     title: str
     description: str
 
@@ -37,7 +37,7 @@ class OnboardingPrompt(Snowflake):
     in_onboarding: bool
 
 
-class GuildOnboarding(BaseModel):
+class GuildOnboarding(ObjDict):
     guild_id: Snowflake
     prompts: list[OnboardingPrompt]
     default_channel_ids: list[Snowflake]

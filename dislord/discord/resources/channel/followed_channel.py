@@ -1,7 +1,7 @@
-from dislord.discord.base import BaseModel
-from dislord.discord.type import Snowflake
+from dislord.types import ObjDict
+from dislord.discord.reference import Snowflake
 
 
-class FollowedChannel(BaseModel):
+class FollowedChannel(ObjDict):
     channel_id: Snowflake
     webhook_id: Snowflake

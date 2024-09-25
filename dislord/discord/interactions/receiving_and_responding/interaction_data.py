@@ -1,54 +1,55 @@
 from typing import Self
 
-from dislord.discord.base import BaseModel
+from dislord.discord.interactions.components.enums import ComponentType
+from dislord.types import ObjDict
 from dislord.discord.interactions.application_commands.enums import ApplicationCommandOptionType
-from dislord.discord.interactions.components.models import SelectOption, Component
-from dislord.discord.permissions import Role
+from dislord.discord.interactions.components.models import  Component
+from dislord.discord.topics.permissions.role import Role
 from dislord.discord.resources.channel.attachment import Attachment
 from dislord.discord.resources.channel.channel import PartialChannel
 from dislord.discord.resources.channel.partial_message import PartialMessage
 from dislord.discord.resources.guild.guild_member import PartialGuildMember
 from dislord.discord.resources.user.user import User
-from dislord.discord.type import Snowflake, Missing
+from dislord.discord.reference import Snowflake, Missing
 
 
-class ApplicationCommandInteractionDataOption(BaseModel):
+class ApplicationCommandInteractionDataOption(ObjDict):
     name: str
     type: ApplicationCommandOptionType
-    value: str | int | float | bool | Missing
-    options: list[Self] | Missing
-    focused: bool | Missing
+    value: str | int | float | bool | Missing = None
+    options: list['ApplicationCommandInteractionDataOption'] | Missing = None
+    focused: bool | Missing = None
 
 
-class ModalSubmitData(BaseModel):
+class ModalSubmitData(ObjDict):
     custom_id: str
     components: list[Component]
 
 
-class ResolvedData(BaseModel):
-    users: dict[Snowflake, User] | Missing
-    members: dict[Snowflake, PartialGuildMember] | Missing
-    roles: dict[Snowflake, Role] | Missing
-    channels: dict[Snowflake, PartialChannel] | Missing
-    messages: dict[Snowflake, PartialMessage] | Missing
-    attachments: dict[Snowflake, Attachment] | Missing
+class ResolvedData(ObjDict):
+    users: dict[Snowflake, User] | Missing = None
+    members: dict[Snowflake, PartialGuildMember] | Missing = None
+    roles: dict[Snowflake, Role] | Missing = None
+    channels: dict[Snowflake, PartialChannel] | Missing = None
+    messages: dict[Snowflake, PartialMessage] | Missing = None
+    attachments: dict[Snowflake, Attachment] | Missing = None
 
 
-class MessageComponentData(BaseModel):
+class MessageComponentData(ObjDict):
     custom_id: str
-    component_type: int
-    values: list[SelectOption] | Missing
-    resolved: ResolvedData | Missing
+    component_type: ComponentType
+    values: list[str] | Missing = None
+    resolved: ResolvedData | Missing = None
 
 
-class ApplicationCommandData(BaseModel):
+class ApplicationCommandData(ObjDict):
     id: Snowflake
     name: str
     type: int
-    resolved: ResolvedData | Missing
-    options: list[ApplicationCommandInteractionDataOption] | Missing
-    guild_id: Snowflake | Missing
-    target: Snowflake | Missing
+    resolved: ResolvedData | Missing = None
+    options: list[ApplicationCommandInteractionDataOption] | Missing = None
+    guild_id: Snowflake | Missing = None
+    target: Snowflake | Missing = None
 
 
 InteractionData = ApplicationCommandData | MessageComponentData | ModalSubmitData

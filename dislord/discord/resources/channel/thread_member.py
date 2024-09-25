@@ -1,13 +1,13 @@
 from enum import IntFlag
 
-from dislord.discord.base import BaseModel
+from dislord.types import ObjDict
 from dislord.discord.resources.guild.guild_member import GuildMember
-from dislord.discord.type import Snowflake, Missing, ISOTimestamp
+from dislord.discord.reference import Snowflake, Missing, ISOTimestamp
 
 
-class ThreadMember(BaseModel):
-    id: Snowflake | Missing
-    user_id: Snowflake | Missing
+class ThreadMember(ObjDict):
+    id: Snowflake | Missing = None
+    user_id: Snowflake | Missing = None
     join_timestamp: ISOTimestamp
     flags: IntFlag  # Any user-thread settings, currently only used for notifications
-    member: GuildMember | Missing
+    member: GuildMember | Missing = None

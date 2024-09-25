@@ -1,9 +1,9 @@
-from dislord.discord.base import BaseModel
+from dislord.types import ObjDict
 from dislord.discord.resources.sticker.sticker import StickerFormatType
-from dislord.discord.type import Snowflake
+from dislord.discord.reference import Snowflake
 
 
-class StickerItem(BaseModel):
+class StickerItem(ObjDict):
     id: Snowflake
     name: str
     format_type: StickerFormatType

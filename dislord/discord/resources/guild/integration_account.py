@@ -1,6 +1,6 @@
-from dislord.discord.base import BaseModel
+from dislord.types import ObjDict
 
 
-class IntegrationAccount(BaseModel):
+class IntegrationAccount(ObjDict):
     id: str
     name: str

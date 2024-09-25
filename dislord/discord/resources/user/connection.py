@@ -1,8 +1,8 @@
 from enum import IntEnum
 
-from dislord.discord.base import BaseModel
+from dislord.types import ObjDict
 from dislord.discord.resources.guild.integration import Integration
-from dislord.discord.type import Missing
+from dislord.discord.reference import Missing
 
 
 class VisibilityType(IntEnum):
@@ -10,12 +10,12 @@ class VisibilityType(IntEnum):
     EVERYONE = 1
 
 
-class Connection(BaseModel):
+class Connection(ObjDict):
     id: str
     name: str
     type: str
-    revoked: bool | Missing
-    integrations: list[Integration] | Missing
+    revoked: bool | Missing = None
+    integrations: list[Integration] | Missing = None
     verified: bool
     friend_sync: bool
     show_activity: bool

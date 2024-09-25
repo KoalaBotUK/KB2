@@ -1,9 +1,9 @@
-from dislord.discord.base import BaseModel
+from dislord.types import ObjDict
 from dislord.discord.resources.channel.channel import ChannelType
-from dislord.discord.type import Snowflake
+from dislord.discord.reference import Snowflake
 
 
-class ChannelMention(BaseModel):
+class ChannelMention(ObjDict):
     id: Snowflake
     guild_id: Snowflake
     type: ChannelType

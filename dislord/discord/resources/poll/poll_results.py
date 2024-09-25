@@ -1,12 +1,12 @@
-from dislord.discord.base import BaseModel
+from dislord.types import ObjDict
 
 
-class PollAnswerCount(BaseModel):
+class PollAnswerCount(ObjDict):
     id: int
     count: int
     me_voted: bool
 
 
-class PollResults(BaseModel):
+class PollResults(ObjDict):
     is_finalized: bool
     answer_counts: list[PollAnswerCount]

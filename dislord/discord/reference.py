@@ -1,5 +1,30 @@
 from enum import Enum
 
+from dislord.types import ObjDict
+
+DISCORD_API_VERSION = 10
+DISCORD_URL = f"https://discord.com/api/v{DISCORD_API_VERSION}"
+
+
+class TokenType(Enum):
+    BOT = "Bot"
+    OAUTH2 = "Bearer"
+
+
+class Authorization(ObjDict):
+    token_type: TokenType
+    token: str
+
+    def to_authorization_header(self):
+        return {"Authorization": f"{self.token_type.value} {self.token}"}
+
+
+Snowflake = str
+
+ISOTimestamp = str  # ISO8601 Timestamp
+
+Missing = type(None)
+
 
 class Locale(Enum):
     INDONESIAN = 'id'

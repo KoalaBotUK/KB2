@@ -1,12 +1,12 @@
 from enum import IntEnum
 
-from dislord.discord.base import BaseModel
-from dislord.discord.permissions import Role
+from dislord.types import ObjDict
+from dislord.discord.topics.permissions.role import Role
 from dislord.discord.resources.channel.attachment import Attachment
 from dislord.discord.resources.channel.embed import Embed
 from dislord.discord.resources.channel.reaction import Reaction
 from dislord.discord.resources.user.user import User
-from dislord.discord.type import Snowflake, ISOTimestamp
+from dislord.discord.reference import Snowflake, ISOTimestamp, Missing
 
 
 class MessageType(IntEnum):
@@ -43,19 +43,19 @@ class MessageType(IntEnum):
     GUILD_APPLICATION_PREMIUM_SUBSCRIPTION = 32
 
 
-class PartialMessage(BaseModel):
+class PartialMessage(ObjDict):
     id: Snowflake
     channel_id: Snowflake
     author: User
     content: str
     timestamp: ISOTimestamp
-    edited_timestamp: ISOTimestamp | None
+    edited_timestamp: ISOTimestamp | None = None
     tts: bool
     mention_everyone: bool
     mentions: list[User]
     mention_roles: list[Role]
     attachments: list[Attachment]
     embeds: list[Embed]
-    reactions: list[Reaction]
+    reactions: list[Reaction] | Missing = None
     pinned: bool
     type: MessageType

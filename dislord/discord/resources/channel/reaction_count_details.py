@@ -1,6 +1,6 @@
-from dislord.discord.base import BaseModel
+from dislord.types import ObjDict
 
 
-class ReactionCountDetails(BaseModel):
+class ReactionCountDetails(ObjDict):
     burst: int
     normal: int

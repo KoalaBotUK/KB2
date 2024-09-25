@@ -1,7 +1,8 @@
 import json
 from http.client import OK, UNAUTHORIZED
+from fastapi import Response
 
-from .base import EnhancedJSONEncoder
+from dislord.model.base import EnhancedJSONEncoder
 
 
 class HttpResponse:
@@ -18,8 +19,9 @@ class HttpResponse:
                 "body": json.dumps(self.body, cls=EnhancedJSONEncoder),
                 "headers": self.headers}
 
-    def as_server_response(self):
-        return json.loads(json.dumps(self.body, cls=EnhancedJSONEncoder)), int(self.status_code)
+    def as_server_response(self, response: Response):
+        response.status_code = int(self.status_code)
+        return self.body
 
 
 class HttpOk(HttpResponse):

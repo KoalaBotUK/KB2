@@ -1,12 +1,11 @@
 from enum import IntEnum, IntFlag, Flag
 
-from dislord.discord.base import BaseModel
-from dislord.discord.locale import Locale
-from dislord.discord.permissions import Role
+from dislord.types import ObjDict
+from dislord.discord.topics.permissions.role import Role
 from dislord.discord.resources.emoji.emoji import Emoji
 from dislord.discord.resources.guild.welcome_screen import WelcomeScreen
 from dislord.discord.resources.sticker.sticker import Sticker
-from dislord.discord.type import Missing, Snowflake
+from dislord.discord.reference import Missing, Snowflake, Locale
 
 
 class MutableGuildFeatures(Flag):
@@ -44,6 +43,11 @@ class GuildFeatures(Flag):
     VERIFIED = "VERIFIED"
     VIP_REGIONS = "VIP_REGIONS"
     WELCOME_SCREEN_ENABLED = "WELCOME_SCREEN_ENABLED"
+    # Not on documentation
+    GUILD_ONBOARDING = "GUILD_ONBOARDING"
+    GUILD_ONBOARDING_EVER_ENABLED = "GUILD_ONBOARDING_EVER_ENABLED"
+    GUILD_ONBOARDING_HAS_PROMPTS = "GUILD_ONBOARDING_HAS_PROMPTS"
+    GUILD_SERVER_GUIDE = "GUILD_SERVER_GUIDE"
 
 
 class SystemChannelFlags(IntFlag):
@@ -93,26 +97,26 @@ class DefaultMessageNotificationLevel(IntEnum):
     ONLY_MENTIONS = 1
 
 
-class PartialGuild(BaseModel):
+class PartialGuild(ObjDict):
     id: Snowflake
-    name: str
-    description: str | None
-    region: str | Missing
-    afk_channel_id: Snowflake | None
-    system_channel_id: Snowflake | None
-    icon_hash: str | Missing | None
+    description: str | None = None
+    region: str | Missing = None
+    afk_channel_id: Snowflake | None = None
+    system_channel_id: Snowflake | None = None
+    icon_hash: str | Missing | None = None
 
 
 class Guild(PartialGuild):
-    icon: str | None
-    splash: str | None
-    discovery_splash: str | None
-    owner: bool | Missing
-    owner_id: Snowflake
-    permissions: str | Missing
+    name: str
+    icon: str | None = None
+    splash: str | None = None
+    discovery_splash: str | None = None
+    owner: bool | Missing = None
+    owner_id: Snowflake = None
+    permissions: str | Missing = None
     afk_timeout: int
-    widget_enabled: bool | Missing
-    widget_channel_id: Snowflake | Missing | None
+    widget_enabled: bool | Missing = None
+    widget_channel_id: Snowflake | Missing | None = None
     verification_level: VerificationLevel
     default_message_notifications: DefaultMessageNotificationLevel
     explicit_content_filter: ExplicitContentFilterLevel
@@ -120,23 +124,23 @@ class Guild(PartialGuild):
     emojis: list[Emoji]
     features: list[GuildFeatures]
     mfa_level: MfaLevel
-    application_id: Snowflake | None
+    application_id: Snowflake | None = None
     system_channel_flags: SystemChannelFlags
-    rules_channel_id: Snowflake | None
-    max_presences: int | Missing | None
-    max_members: int | Missing
-    vanity_url_code: str | None
-    banner: str | None
+    rules_channel_id: Snowflake | None = None
+    max_presences: int | Missing | None = None
+    max_members: int | Missing = None
+    vanity_url_code: str | None = None
+    banner: str | None = None
     premium_tier: PremiumTier
-    premium_subscription_count: int | Missing
+    premium_subscription_count: int | Missing = None
     preferred_locale: Locale
-    public_updates_channel_id: Snowflake | None
-    max_video_channel_users: int | Missing
-    max_stage_video_channel_users: int | Missing
-    approximate_member_count: int | Missing
-    approximate_presence_count: int | Missing
-    welcome_screen: WelcomeScreen | Missing
+    public_updates_channel_id: Snowflake | None = None
+    max_video_channel_users: int | Missing = None
+    max_stage_video_channel_users: int | Missing = None
+    approximate_member_count: int | Missing = None
+    approximate_presence_count: int | Missing = None
+    welcome_screen: WelcomeScreen | Missing = None
     nsfw_level: GuildNsfwLevel
-    stickers: list[Sticker] | Missing
+    stickers: list[Sticker] | Missing = None
     premium_progress_bar_enabled: bool
-    safety_alerts_channel_id: Snowflake | None
+    safety_alerts_channel_id: Snowflake | None = None

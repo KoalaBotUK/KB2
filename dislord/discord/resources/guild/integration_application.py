@@ -1,11 +1,11 @@
-from dislord.discord.base import BaseModel
+from dislord.types import ObjDict
 from dislord.discord.resources.user.user import User
-from dislord.discord.type import Snowflake, Missing
+from dislord.discord.reference import Snowflake, Missing
 
 
-class IntegrationApplication(BaseModel):
+class IntegrationApplication(ObjDict):
     id: Snowflake
     name: str
-    icon: str | None
+    icon: str | None = None
     description: str
-    bot: User | Missing
+    bot: User | Missing = None

@@ -1,8 +1,8 @@
-from dislord.discord.base import BaseModel
+from dislord.types import ObjDict
 from dislord.discord.resources.emoji.emoji import PartialEmoji
-from dislord.discord.type import Missing
+from dislord.discord.reference import Missing
 
 
-class PollMedia(BaseModel):
-    text: str | Missing
-    emoji: PartialEmoji | Missing
+class PollMedia(ObjDict):
+    text: str | Missing = None
+    emoji: PartialEmoji | Missing = None

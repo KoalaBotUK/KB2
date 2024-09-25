@@ -1,19 +1,18 @@
 from enum import Enum
 from typing import Literal
 
-from dislord.discord.base import BaseModel
+from dislord.types import ObjDict
 from dislord.discord.interactions.receiving_and_responding.interaction_data import InteractionData, \
     ApplicationCommandData, MessageComponentData, ModalSubmitData
 from dislord.discord.interactions.receiving_and_responding.message_interaction import InteractionType
-from dislord.discord.locale import Locale
 from dislord.discord.resources.application.enums import ApplicationIntegrationType
 from dislord.discord.resources.application.models import ApplicationIntegrationTypeConfiguration
 from dislord.discord.resources.channel.channel import PartialChannel
 from dislord.discord.resources.channel.message import Message
-from dislord.discord.resources.guild.guild import Guild
+from dislord.discord.resources.guild.guild import Guild, PartialGuild
 from dislord.discord.resources.guild.guild_member import GuildMember
 from dislord.discord.resources.user.user import User
-from dislord.discord.type import Snowflake, Missing
+from dislord.discord.reference import Snowflake, Missing, Locale
 
 
 class InteractionContextType(Enum):
@@ -22,46 +21,46 @@ class InteractionContextType(Enum):
     PRIVATE_CHANNEL = 2
 
 
-class __Interaction(BaseModel):
+class __Interaction(ObjDict):
     id: Snowflake
     application_id: Snowflake
     type: InteractionType
-    data: InteractionData | Missing
-    guild: Guild | Missing
-    guild_id: Snowflake | Missing
-    channel: PartialChannel | Missing
-    channel_id: Snowflake | Missing
-    member: GuildMember | Missing
-    user: User | Missing
+    data: InteractionData | Missing = None
+    guild: PartialGuild | Missing = None
+    guild_id: Snowflake | Missing = None
+    channel: PartialChannel | Missing = None
+    channel_id: Snowflake | Missing = None
+    member: GuildMember | Missing = None
+    user: User | Missing = None
     token: str
     version: int
-    message: Message | Missing
+    message: Message | Missing = None
     app_permissions: str
-    locale: Locale | Missing
-    guild_locale: Locale | Missing
+    locale: Locale | Missing = None
+    guild_locale: Locale | Missing = None
     # entitlements: list[Entitlement] FIXME
-    authorizing_integration_owners: dict[ApplicationIntegrationType, ApplicationIntegrationTypeConfiguration]
-    context: InteractionContextType | Missing
+    authorizing_integration_owners: dict[ApplicationIntegrationType, Snowflake]
+    context: InteractionContextType | Missing = None
 
 
 class PingInteraction(__Interaction):
-    type: 1
-    data: Missing
+    type: Literal[1]
+    data: Missing = None
 
 
 class ApplicationCommandInteraction(__Interaction):
-    type: (2, 4)
-    type2: [2, 4]
+    type: Literal[2, 4]
     data: ApplicationCommandData
 
 
 class MessageInteraction(__Interaction):
-    type: 3
+    type: Literal[3]
     data: MessageComponentData
 
 
 class ModalSubmitInteraction(__Interaction):
-    type: 5
+    type: Literal[5]
     data: ModalSubmitData
 
-Interaction = ApplicationCommandInteraction | MessageInteraction | ModalSubmitInteraction
+
+Interaction = PingInteraction | ApplicationCommandInteraction | MessageInteraction | ModalSubmitInteraction

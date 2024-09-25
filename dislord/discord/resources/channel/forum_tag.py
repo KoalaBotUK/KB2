@@ -1,10 +1,10 @@
-from dislord.discord.base import BaseModel
-from dislord.discord.type import Snowflake
+from dislord.types import ObjDict
+from dislord.discord.reference import Snowflake
 
 
-class ForumTag(BaseModel):
+class ForumTag(ObjDict):
     id: Snowflake
     name: str
     moderated: bool
-    emoji_id: Snowflake | None
-    emoji_name: str | None
+    emoji_id: Snowflake | None = None
+    emoji_name: str | None = None

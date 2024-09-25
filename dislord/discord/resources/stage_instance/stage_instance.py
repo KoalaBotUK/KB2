@@ -1,7 +1,7 @@
 from enum import IntEnum
 
-from dislord.discord.base import BaseModel
-from dislord.discord.type import Snowflake
+from dislord.types import ObjDict
+from dislord.discord.reference import Snowflake
 
 
 class PrivacyLevel(IntEnum):
@@ -9,7 +9,7 @@ class PrivacyLevel(IntEnum):
     GUILD_ONLY = 2
 
 
-class StageInstance(BaseModel):
+class StageInstance(ObjDict):
     id: Snowflake
     guild_id: Snowflake
     channel_id: Snowflake

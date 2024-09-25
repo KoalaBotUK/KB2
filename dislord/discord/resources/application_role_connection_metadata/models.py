@@ -1,13 +1,12 @@
-from dislord.discord.base import BaseModel
-from dislord.discord.locale import Locale
+from dislord.types import ObjDict
 from dislord.discord.resources.application_role_connection_metadata.enums import ApplicationRoleConnectionMetadataType
-from dislord.discord.type import Missing
+from dislord.discord.reference import Missing, Locale
 
 
-class ApplicationRoleConnectionMetadata(BaseModel):
+class ApplicationRoleConnectionMetadata(ObjDict):
     type: ApplicationRoleConnectionMetadataType
     key: str
     name: str
-    name_localizations: dict[Locale, str] | Missing | None
+    name_localizations: dict[Locale, str] | Missing | None = None
     description: str
     description_localizations: dict[Locale, str] | Missing | None

@@ -1,7 +1,8 @@
-from dislord.discord.base import BaseModel
-from dislord.discord.type import Snowflake
+
+from dislord.discord.reference import Snowflake
+from dislord.types import ObjDict
 
 
-class DefaultReaction(BaseModel):
-    emoji_id: Snowflake | None
-    emoji_name: str | None
+class DefaultReaction(ObjDict):
+    emoji_id: Snowflake | None = None
+    emoji_name: str | None = None

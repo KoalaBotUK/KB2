@@ -1,7 +1,7 @@
-from dislord.discord.base import BaseModel
-from dislord.discord.type import Snowflake, ISOTimestamp, Missing
+from dislord.types import ObjDict
+from dislord.discord.reference import Snowflake, ISOTimestamp, Missing
 
 
-class MessageCall(BaseModel):
+class MessageCall(ObjDict):
     participants: list[Snowflake]
-    ended_timestamp: ISOTimestamp | Missing | None
+    ended_timestamp: ISOTimestamp | Missing | None = None

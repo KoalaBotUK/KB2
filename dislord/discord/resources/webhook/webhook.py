@@ -1,10 +1,10 @@
 from enum import IntEnum
 
-from dislord.discord.base import BaseModel
+from dislord.types import ObjDict
 from dislord.discord.resources.channel.channel import PartialChannel
 from dislord.discord.resources.guild.guild import PartialGuild
 from dislord.discord.resources.user.user import User
-from dislord.discord.type import Snowflake, Missing
+from dislord.discord.reference import Snowflake, Missing
 
 
 class WebhookType(IntEnum):
@@ -13,15 +13,15 @@ class WebhookType(IntEnum):
     APPLICATION = 3
 
 
-class Webhook(BaseModel):
+class Webhook(ObjDict):
     id: Snowflake
     type: WebhookType
-    guild_id: Snowflake | Missing | None
-    channel_id: Snowflake | None
-    user: User | None
-    avatar: str | None
-    token: str | Missing
-    application_id: Snowflake | None
-    source_guild: PartialGuild | Missing
-    source_channel: PartialChannel | Missing
-    url: str | Missing
+    guild_id: Snowflake | Missing | None = None
+    channel_id: Snowflake | None = None
+    user: User | None = None
+    avatar: str | None = None
+    token: str | Missing = None
+    application_id: Snowflake | None = None
+    source_guild: PartialGuild | Missing = None
+    source_channel: PartialChannel | Missing = None
+    url: str | Missing = None

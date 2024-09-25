@@ -1,7 +1,7 @@
 from enum import StrEnum
 
-from dislord.discord.base import BaseModel
-from dislord.discord.type import Snowflake
+from dislord.types import ObjDict
+from dislord.discord.reference import Snowflake
 
 
 class AllowedMentionType(StrEnum):
@@ -10,7 +10,7 @@ class AllowedMentionType(StrEnum):
     EVERYONE = "everyone"
 
 
-class AllowedMentions(BaseModel):
+class AllowedMentions(ObjDict):
     parse: list[AllowedMentionType]
     role: list[Snowflake]
     users: list[Snowflake]

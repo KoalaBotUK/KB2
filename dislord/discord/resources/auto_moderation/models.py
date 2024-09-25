@@ -1,19 +1,19 @@
-from dislord.discord.base import BaseModel
+from dislord.types import ObjDict
 from dislord.discord.resources.auto_moderation.enums import TriggerType, EventType, KeywordPresetType, ActionType
-from dislord.discord.type import Snowflake, Missing
+from dislord.discord.reference import Snowflake, Missing
 
-class ActionMetadata(BaseModel):
+class ActionMetadata(ObjDict):
     channel_id: Snowflake
     duration_seconds: int
-    custom_message: str | Missing
+    custom_message: str | Missing = None
 
 
-class AutoModerationAction(BaseModel):
+class AutoModerationAction(ObjDict):
     type: ActionType
-    metadata: ActionMetadata | Missing
+    metadata: ActionMetadata | Missing = None
 
 
-class TriggerMetadata(BaseModel):
+class TriggerMetadata(ObjDict):
     keyword_filter: list[str]
     regex_patterns: list[str]
     presets: list[KeywordPresetType]
@@ -22,7 +22,7 @@ class TriggerMetadata(BaseModel):
     mention_raid_protection_enabled: bool
 
 
-class AutoModerationRule(BaseModel):
+class AutoModerationRule(ObjDict):
     id: Snowflake
     guild_id: Snowflake
     name: str

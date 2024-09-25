@@ -1,9 +1,9 @@
 from enum import Enum
 
-from dislord.discord.base import BaseModel
+from dislord.types import ObjDict
 from dislord.discord.resources.guild.guild_member import PartialGuildMember
 from dislord.discord.resources.user.user import User
-from dislord.discord.type import Missing, Snowflake
+from dislord.discord.reference import Missing, Snowflake
 
 
 class InteractionType(Enum):
@@ -14,9 +14,9 @@ class InteractionType(Enum):
     MODAL_SUBMIT = 5
 
 
-class MessageInteraction(BaseModel):
+class MessageInteraction(ObjDict):
     id: Snowflake
     type: InteractionType
     name: str
     user: User
-    member: PartialGuildMember | Missing
+    member: PartialGuildMember | Missing = None

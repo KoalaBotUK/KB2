@@ -1,4 +1,4 @@
-/config
+./config/
 
 # Databases (avoid saving private info to git)
 *.db

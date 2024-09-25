@@ -1,8 +1,8 @@
-from dislord.discord.base import BaseModel
-from dislord.discord.type import ISOTimestamp
+from dislord.types import ObjDict
+from dislord.discord.reference import ISOTimestamp
 
 
-class InviteMetadata(BaseModel):
+class InviteMetadata(ObjDict):
     uses: int
     max_uses: int
     max_age: int

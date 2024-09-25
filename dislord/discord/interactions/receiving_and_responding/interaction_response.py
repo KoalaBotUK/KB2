@@ -1,33 +1,35 @@
 from enum import Enum
 
-from dislord.discord.base import BaseModel
+from dislord.types import ObjDict
 from dislord.discord.interactions.application_commands.models import ApplicationCommandOptionChoice
 from dislord.discord.interactions.components.models import Component
 from dislord.discord.resources.channel.allowed_mentions import AllowedMentions
 from dislord.discord.resources.channel.attachment import PartialAttachment
+from dislord.discord.resources.channel.embed import Embed
 from dislord.discord.resources.channel.message import MessageFlags
-from dislord.discord.type import Missing
+from dislord.discord.reference import Missing
+from dislord.discord.resources.poll.poll import Poll
 
 
-class ModalInteractionCallbackData(BaseModel):
+class ModalInteractionCallbackData(ObjDict):
     custom_id: str
     title: str
     components: list[Component]
 
 
-class AutocompleteInteractionCallbackData(BaseModel):
+class AutocompleteInteractionCallbackData(ObjDict):
     choices: list[ApplicationCommandOptionChoice]
 
 
-class MessagesInteractionCallbackData(BaseModel):
-    tts: bool | Missing
-    content: str | Missing
-    # embeds: list[Embed] | Missing FIXME
-    allowed_mentions: AllowedMentions | Missing
-    flags: MessageFlags
-    components: list[Component] | Missing
-    attachments: list[PartialAttachment] | Missing
-    # poll: Poll | Missing FIXME
+class MessagesInteractionCallbackData(ObjDict):
+    tts: bool | Missing = None
+    content: str | Missing = None
+    embeds: list[Embed] | Missing = None
+    allowed_mentions: AllowedMentions | Missing = None
+    flags: MessageFlags | Missing = None
+    components: list[Component] | Missing = None
+    attachments: list[PartialAttachment] | Missing = None
+    poll: Poll | Missing = None
 
 
 InteractionCallbackData = MessagesInteractionCallbackData | AutocompleteInteractionCallbackData | ModalInteractionCallbackData
@@ -44,16 +46,16 @@ class InteractionCallbackType(Enum):
     PREMIUM_REQUIRED = 10  # Not available for APPLICATION_COMMAND_AUTOCOMPLETE and PING receiving_and_responding.
 
 
-class InteractionResponse(BaseModel):
+class InteractionResponse(ObjDict):
     type: InteractionCallbackType
-    data: InteractionCallbackData | Missing
+    data: InteractionCallbackData | Missing = None
 
     @staticmethod
     def pong():
-        return InteractionResponse(InteractionCallbackType.PONG)
+        return InteractionResponse(type=InteractionCallbackType.PONG)
 
     @staticmethod
     def message(**kwargs):
-        cls = InteractionResponse(InteractionCallbackType.CHANNEL_MESSAGE_WITH_SOURCE,
-                                  MessagesInteractionCallbackData.from_dict(kwargs, None))
+        cls = InteractionResponse(type=InteractionCallbackType.CHANNEL_MESSAGE_WITH_SOURCE,
+                                  data=MessagesInteractionCallbackData(**kwargs))
         return cls

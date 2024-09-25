@@ -1,11 +1,11 @@
-from dislord.discord.base import BaseModel
-from dislord.discord.type import ISOTimestamp, Missing
+from dislord.types import ObjDict
+from dislord.discord.reference import ISOTimestamp, Missing
 
 
-class ThreadMetadata(BaseModel):
+class ThreadMetadata(ObjDict):
     archived: bool
     auto_archive_duration: int
     archive_timestamp: ISOTimestamp
     locked: bool
-    invitable: bool | Missing
-    create_timestamp: ISOTimestamp | Missing | None
+    invitable: bool | Missing = None
+    create_timestamp: ISOTimestamp | Missing | None = None

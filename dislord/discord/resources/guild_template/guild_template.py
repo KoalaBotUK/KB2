@@ -1,13 +1,13 @@
-from dislord.discord.base import BaseModel
+from dislord.types import ObjDict
 from dislord.discord.resources.guild.guild import PartialGuild
 from dislord.discord.resources.user.user import User
-from dislord.discord.type import Snowflake, ISOTimestamp
+from dislord.discord.reference import Snowflake, ISOTimestamp
 
 
-class GuildTemplate(BaseModel):
+class GuildTemplate(ObjDict):
     code: str
     name: str
-    description: str | None
+    description: str | None = None
     usage_count: int
     creator_id: Snowflake
     creator: User
@@ -15,4 +15,4 @@ class GuildTemplate(BaseModel):
     updated_at: ISOTimestamp
     source_guild_id: Snowflake
     serialized_source_guild: PartialGuild
-    is_dirty: bool | None
+    is_dirty: bool | None = None

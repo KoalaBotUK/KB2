@@ -1,8 +1,8 @@
 from enum import IntEnum
 
-from dislord.discord.base import BaseModel
+from dislord.types import ObjDict
 from dislord.discord.resources.user.user import User
-from dislord.discord.type import Snowflake, Missing
+from dislord.discord.reference import Snowflake, Missing
 
 
 class StickerFormatType(IntEnum):
@@ -17,16 +17,16 @@ class StickerType(IntEnum):
     GUILD = 2
 
 
-class Sticker(BaseModel):
+class Sticker(ObjDict):
     id: Snowflake
-    pack_id: Snowflake | Missing
+    pack_id: Snowflake | Missing = None
     name: str
-    description: str | None
+    description: str | None = None
     tags: str
     asset: str | Missing  # Deprecated
     type: StickerType
     format_type: StickerFormatType
-    available: bool | Missing
-    guild_id: Snowflake | Missing
-    user: User | Missing
-    sort_value: int | Missing
+    available: bool | Missing = None
+    guild_id: Snowflake | Missing = None
+    user: User | Missing = None
+    sort_value: int | Missing = None

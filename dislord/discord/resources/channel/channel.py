@@ -1,13 +1,13 @@
 from enum import IntFlag, IntEnum
 
-from dislord.discord.base import BaseModel
+from dislord.types import ObjDict
 from dislord.discord.resources.channel.default_reaction import DefaultReaction
 from dislord.discord.resources.channel.forum_tag import ForumTag
 from dislord.discord.resources.channel.overwrite import Overwrite
 from dislord.discord.resources.channel.thread_member import ThreadMember
 from dislord.discord.resources.channel.thread_metadata import ThreadMetadata
 from dislord.discord.resources.user.user import User
-from dislord.discord.type import Missing, Snowflake, ISOTimestamp
+from dislord.discord.reference import Missing, Snowflake, ISOTimestamp
 
 
 class ForumLayoutType(IntEnum):
@@ -48,42 +48,42 @@ class ChannelType(IntEnum):
     GUILD_MEDIA = 16
 
 
-class PartialChannel(BaseModel):
+class PartialChannel(ObjDict):
     id: Snowflake
     type: ChannelType
-    name: str | Missing | None
-    permissions: str | Missing
-    thread_metadata: ThreadMetadata | Missing
-    parent_id: Snowflake | Missing | None
+    name: str | Missing | None = None
+    permissions: str | Missing = None
+    thread_metadata: ThreadMetadata | Missing = None
+    parent_id: Snowflake | Missing | None = None
 
 
 class Channel(PartialChannel):
-    guild_id: Snowflake | Missing
-    position: int | Missing
-    permission_overwrites: list[Overwrite] | Missing
-    topic: str | Missing | None
-    nsfw: bool | Missing
-    last_message_id: Snowflake | Missing | None
-    bitrate: int | Missing
-    user_limit: int | Missing
-    rate_limit_per_user: int | Missing
-    recipients: list[User] | Missing
-    icon: str | Missing | None
-    owner_id: Snowflake | Missing
-    application_id: Snowflake | Missing
-    managed: bool | Missing
-    last_pin_timestamp: ISOTimestamp | Missing | None
-    rtc_region: str | Missing | None
-    video_quality_mode: int | Missing
-    message_count: int | Missing
-    member_count: int | Missing
-    member: ThreadMember | Missing
-    default_auto_archive_duration: int | Missing
-    flags: ChannelFlags | Missing
-    total_message_sent: int | Missing
-    available_tags: list[ForumTag] | Missing
-    applied_tags: list[Snowflake] | Missing
-    default_reaction_emoji: DefaultReaction | Missing | None
-    default_thread_rate_limit_per_user: int | Missing
-    default_sort_order: int | Missing | None
-    default_forum_layout: int | Missing
+    guild_id: Snowflake | Missing = None
+    position: int | Missing = None
+    permission_overwrites: list[Overwrite] | Missing = None
+    topic: str | Missing | None = None
+    nsfw: bool | Missing = None
+    last_message_id: Snowflake | Missing | None = None
+    bitrate: int | Missing = None
+    user_limit: int | Missing = None
+    rate_limit_per_user: int | Missing = None
+    recipients: list[User] | Missing = None
+    icon: str | Missing | None = None
+    owner_id: Snowflake | Missing = None
+    application_id: Snowflake | Missing = None
+    managed: bool | Missing = None
+    last_pin_timestamp: ISOTimestamp | Missing | None = None
+    rtc_region: str | Missing | None = None
+    video_quality_mode: int | Missing = None
+    message_count: int | Missing = None
+    member_count: int | Missing = None
+    member: ThreadMember | Missing = None
+    default_auto_archive_duration: int | Missing = None
+    flags: ChannelFlags | Missing = None
+    total_message_sent: int | Missing = None
+    available_tags: list[ForumTag] | Missing = None
+    applied_tags: list[Snowflake] | Missing = None
+    default_reaction_emoji: DefaultReaction | Missing | None = None
+    default_thread_rate_limit_per_user: int | Missing = None
+    default_sort_order: int | Missing | None = None
+    default_forum_layout: int | Missing = None

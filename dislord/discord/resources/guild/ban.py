@@ -1,7 +1,8 @@
-from dislord.discord.base import BaseModel
+
+from dislord.types import ObjDict
 from dislord.discord.resources.user.user import User
 
 
-class Ban(BaseModel):
-    reason: str | None
+class Ban(ObjDict):
+    reason: str | None = None
     user: User

@@ -1,7 +1,7 @@
-from dislord.discord.base import BaseModel
-from dislord.discord.type import Snowflake
+from dislord.types import ObjDict
+from dislord.discord.reference import Snowflake
 
 
-class GuildWidgetSettings(BaseModel):
+class GuildWidgetSettings(ObjDict):
     enabled: bool
-    channel_id: Snowflake | None
+    channel_id: Snowflake | None = None

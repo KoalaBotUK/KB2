@@ -1,12 +1,12 @@
 from enum import IntEnum
 
-from dislord.discord.base import BaseModel
+from dislord.types import ObjDict
 from dislord.discord.resources.user.user import User
-from dislord.discord.type import Snowflake, Missing, ISOTimestamp
+from dislord.discord.reference import Snowflake, Missing, ISOTimestamp
 
 
-class GuildScheduledEventEntityMetadata(BaseModel):
-    location: str | Missing
+class GuildScheduledEventEntityMetadata(ObjDict):
+    location: str | Missing = None
 
 
 class GuildScheduledEventStatus(IntEnum):
@@ -26,20 +26,20 @@ class GuildScheduledEventPrivacyLevel(IntEnum):
     GUILD_ONLY = 2
 
 
-class GuildScheduledEvent(BaseModel):
+class GuildScheduledEvent(ObjDict):
     id: Snowflake
     guild_id: Snowflake
-    channel_id: Snowflake | None
-    creator_id: Snowflake | Missing | None
+    channel_id: Snowflake | None = None
+    creator_id: Snowflake | Missing | None = None
     name: str
-    description: str | Missing | None
+    description: str | Missing | None = None
     scheduled_start_time: ISOTimestamp
-    scheduled_ent_time: ISOTimestamp | None
+    scheduled_ent_time: ISOTimestamp | None = None
     privacy_level: GuildScheduledEventPrivacyLevel
     status: GuildScheduledEventStatus
     entity_type: GuildScheduledEventEntityType
-    entity_id: Snowflake | None
-    entity_metadata: GuildScheduledEventEntityMetadata | None
-    creator: User | Missing
-    user_count: int | Missing
-    image: str | Missing | None
+    entity_id: Snowflake | None = None
+    entity_metadata: GuildScheduledEventEntityMetadata | None = None
+    creator: User | Missing = None
+    user_count: int | Missing = None
+    image: str | Missing | None = None

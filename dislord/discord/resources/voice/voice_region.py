@@ -1,7 +1,7 @@
-from dislord.discord.base import BaseModel
+from dislord.types import ObjDict
 
 
-class VoiceRegion(BaseModel):
+class VoiceRegion(ObjDict):
     id: str
     name: str
     optimal: bool

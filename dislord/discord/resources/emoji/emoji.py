@@ -1,17 +1,17 @@
-from dislord.discord.base import BaseModel
+from dislord.types import ObjDict
 from dislord.discord.resources.user.user import User
-from dislord.discord.type import Snowflake, Missing
+from dislord.discord.reference import Snowflake, Missing
 
 
-class PartialEmoji(BaseModel):
-    id: Snowflake | None
-    name: str | None
-    animated: bool | Missing
+class PartialEmoji(ObjDict):
+    id: Snowflake | None = None
+    name: str | None = None
+    animated: bool | Missing = None
 
 
 class Emoji(PartialEmoji):
-    roles: list[Snowflake] | Missing
+    roles: list[Snowflake] | Missing = None
     user: User
-    require_colons: bool | Missing
-    managed: bool | Missing
-    available: bool | Missing
+    require_colons: bool | Missing = None
+    managed: bool | Missing = None
+    available: bool | Missing = None

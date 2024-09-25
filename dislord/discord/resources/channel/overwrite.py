@@ -1,7 +1,7 @@
 from enum import IntEnum
 
-from dislord.discord.base import BaseModel
-from dislord.discord.type import Snowflake
+from dislord.types import ObjDict
+from dislord.discord.reference import Snowflake
 
 
 class OverwriteType(IntEnum):
@@ -9,7 +9,7 @@ class OverwriteType(IntEnum):
     MEMBER = 1
 
 
-class Overwrite(BaseModel):
+class Overwrite(ObjDict):
     id: Snowflake
     type: OverwriteType
     allow: str

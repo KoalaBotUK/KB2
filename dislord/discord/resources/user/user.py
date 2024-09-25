@@ -1,8 +1,7 @@
 from enum import IntEnum, IntFlag
 
-from dislord.discord.base import BaseModel
-from dislord.discord.locale import Locale
-from dislord.discord.type import Snowflake, Missing
+from dislord.types import ObjDict
+from dislord.discord.reference import Snowflake, Missing, Locale
 
 
 class PremiumType(IntEnum):
@@ -30,24 +29,24 @@ class UserFlags(IntFlag):
     ACTIVE_DEVELOPER = 1 << 22
 
 
-class PartialUser(BaseModel):
+class PartialUser(ObjDict):
     id: Snowflake
     username: str
     discriminator: str
-    avatar: str | None
+    avatar: str | None = None
 
 
 class User(PartialUser):
-    global_name: str | None
-    bot: bool | Missing
-    system: bool | Missing
-    mfa_enabled: bool | Missing
-    banner: str | Missing | None
-    accent_color: int | Missing | None
-    locale: Locale | Missing
-    verified: bool | Missing
-    email: str | Missing | None
-    flags: UserFlags | Missing
-    premium_type: PremiumType | Missing
-    public_flags: UserFlags | Missing
-    avatar_decoration: str | Missing | None
+    global_name: str | None = None
+    bot: bool | Missing = None
+    system: bool | Missing = None
+    mfa_enabled: bool | Missing = None
+    banner: str | Missing | None = None
+    accent_color: int | Missing | None = None
+    locale: Locale | Missing = None
+    verified: bool | Missing = None
+    email: str | Missing | None = None
+    flags: UserFlags | Missing = None
+    premium_type: PremiumType | Missing = None
+    public_flags: UserFlags | Missing = None
+    avatar_decoration: str | Missing | None = None
