@@ -6,15 +6,6 @@ from dislord.discord.reference import  Missing
 
 class ApplicationCommand(ApplicationCommandPayload):
 
-    @staticmethod
-    def from_payload(payload: ApplicationCommandPayload) -> 'ApplicationCommand':
-        return ApplicationCommand(
-            **payload
-        )
-
-    def to_payload(self) -> ApplicationCommandPayload:
-        return self
-
     def __eq__(self, other):
         eq_list = ['guild_id', 'name', 'description', 'type', 'name_localization', 'description_localizations',
                    'options', 'default_member_permissions', 'dm_permission', 'default_permission', 'nsfw']

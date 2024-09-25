@@ -25,6 +25,8 @@ ISOTimestamp = str  # ISO8601 Timestamp
 
 Missing = type(None)
 
+HexColor = int
+
 
 class Locale(Enum):
     INDONESIAN = 'id'

@@ -25,7 +25,6 @@ class DiscordApi:
             response_payload = json.loads(response.content)
             if type_hint:
                 return TypeAdapter(type_hint).validate_json(response.content)
-                # return cast(response_payload, type_hint, client=self.client)
             else:
                 return response_payload
         elif response.status_code == 429:
@@ -42,7 +41,6 @@ class DiscordApi:
         response = requests.delete(DISCORD_URL + endpoint, **kwargs, headers=self.auth_header)
         if response.ok:
             print(f"📬 Response from Discord API: {response.content}")
-            return
         elif response.status_code == 429:
             retry_after = response.json()["retry_after"]
             print(f"⚠️ Rate Limited, waiting {retry_after}s")
@@ -62,7 +60,6 @@ class DiscordApi:
         if response.ok:
             print(f"📬 Response from Discord API: {response.content}")
             return TypeAdapter(type_hint).validate_json(response.content)
-            # return cast(json.loads(response.content), type_hint, client=self.client)
         elif response.status_code == 429:
             retry_after = response.json()["retry_after"]
             print(f"⚠️ Rate Limited, waiting {retry_after}s")
@@ -82,7 +79,6 @@ class DiscordApi:
         if response.ok:
             print(f"📬 Response from Discord API: {response.content}")
             return TypeAdapter(type_hint).validate_json(response.content)
-            # return cast(json.loads(response.content), type_hint, client=self.client)
         elif response.status_code == 429:
             retry_after = response.json()["retry_after"]
             print(f"⚠️ Rate Limited, waiting {retry_after}s")

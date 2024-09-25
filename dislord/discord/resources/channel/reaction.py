@@ -1,5 +1,5 @@
+from dislord.discord.reference import HexColor
 from dislord.types import ObjDict
-from dislord.model.base import  HexColor
 from dislord.discord.resources.channel.reaction_count_details import ReactionCountDetails
 from dislord.discord.resources.emoji.emoji import PartialEmoji
 

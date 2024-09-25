@@ -2,4 +2,4 @@ from pydantic import BaseModel, ConfigDict
 
 
 class ObjDict(BaseModel):
-    pass
+    model_config = ConfigDict()

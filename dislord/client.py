@@ -12,14 +12,13 @@ from .discord.interactions.receiving_and_responding.interaction_response import 
 from .discord.reference import Snowflake, Missing
 from .discord.resources.application.models import Application
 from .api import DiscordApi
+from .discord.resources.channel.channel import Channel
 from .discord.resources.channel.message import Message
-from .discord.resources.guild.guild import PartialGuild
+from .discord.resources.guild.guild import PartialGuild, Guild
+from .discord.resources.user.user import User
 from .error import DiscordApiException
 from .model.api import HttpResponse, HttpUnauthorized, HttpOk
-from .model.channel import Channel
 from .model.commands import ApplicationCommand
-from .model.guild import Guild
-from .model.user import User
 
 
 class ApplicationClient:
@@ -156,17 +155,17 @@ class ApplicationClient:
         endpoint = f"/applications/{application_id if application_id else self.application.id}"
         if guild_id:
             endpoint += f"/guilds/{guild_id}"
-        return ApplicationCommand(**self._api.post(f"{endpoint}/commands", application_command,
-                                                   type_hint=ApplicationCommand))
+        return self._api.post(f"{endpoint}/commands", application_command,
+                              type_hint=ApplicationCommand)
 
     def get_user(self, user_id=None) -> User:
-        return User.from_payload(self._api.get(f"/users/{user_id if user_id else '@me'}"))
+        return self._api.get(f"/users/{user_id if user_id else '@me'}", type_hint=User)
 
     def get_guild(self, guild_id) -> Guild:
-        return Guild.from_payload(self._api.get(f"/guilds/{guild_id}"))
+        return self._api.get(f"/guilds/{guild_id}", type_hint=Guild)
 
     def _get_guilds(self) -> list[Guild]:
         return self._api.get("/users/@me/guilds", type_hint=list[PartialGuild])
 
     def get_channel(self, channel_id) -> list[Channel]:
-        return [Channel.from_payload(p) for p in self._api.get(f"/channels/{channel_id}")]
+        return self._api.get(f"/channels/{channel_id}", type_hint=list[Channel])
