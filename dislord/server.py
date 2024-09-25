@@ -38,7 +38,7 @@ def start_server(application_client, **kwargs):
 handler = Mangum(app)
 
 
-def serverless_handler(application_client, event, context):
+def serverless_handler(application_client, event, context, **kwargs):
     global __application_client
     __application_client = application_client
-    return handler(event, context)
+    return handler(event, context, **kwargs)
