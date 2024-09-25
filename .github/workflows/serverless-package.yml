@@ -56,9 +56,11 @@ jobs:
         # Constants
         S3_BUCKET=kb2
         S3_KEY=package.zip
-        LAMBDA_FUNCTION_NAME=KB2
         aws s3 cp package.zip s3://$S3_BUCKET/$S3_KEY
         # Update Lambda function code
+        LAMBDA_FUNCTION_NAME=KB2
+        aws lambda update-function-code --function-name $LAMBDA_FUNCTION_NAME --s3-bucket $S3_BUCKET --s3-key $S3_KEY
+        LAMBDA_FUNCTION_NAME=KB2-Sync
         aws lambda update-function-code --function-name $LAMBDA_FUNCTION_NAME --s3-bucket $S3_BUCKET --s3-key $S3_KEY
 
 
