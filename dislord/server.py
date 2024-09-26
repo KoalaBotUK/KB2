@@ -6,6 +6,7 @@ from typing import Annotated
 from mangum import Mangum
 
 app = FastAPI()
+handler = None
 
 __application_client: ApplicationClient
 
@@ -35,10 +36,14 @@ def start_server(application_client, **kwargs):
     uvicorn.run(app, host="0.0.0.0", port=8123)
 
 
-handler = Mangum(app, api_gateway_base_path="/default")
+def handler_singleton(**kwargs) -> Mangum:
+    global handler
+    if handler is None:
+        handler = Mangum(app, **kwargs)
+    return handler
 
 
-def serverless_handler(application_client, event, context):
+def serverless_handler(application_client, event, context, **kwargs):
     global __application_client
     __application_client = application_client
-    return handler(event, context)
+    return handler_singleton(**kwargs)(event, context)

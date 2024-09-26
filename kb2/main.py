@@ -7,7 +7,7 @@ owner_group = dislord.CommandGroup(client, name="owner", description="KoalaBot O
 
 
 def serverless_handler(event, context):  # Not needed if using server
-    return dislord.server.serverless_handler(client, event, context)
+    return dislord.server.serverless_handler(client, event, context, api_gateway_base_path="/default")
 
 
 def sync_serverless_handler(event, context):

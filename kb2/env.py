@@ -19,3 +19,5 @@ if LOGGING_FILE:
     LOG_PATH.mkdir(exist_ok=True, parents=True)
 
 ENV_PREFIX = os.environ.get("ENV_PREFIX", "local_")
+
+API_GATEWAY_BASE_PATH = os.environ.get("API_GATEWAY_BASE_PATH", "/")
