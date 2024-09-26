@@ -1,5 +1,6 @@
 import dislord
 from kb2 import env
+from kb2.log import logger
 
 client = dislord.ApplicationClient(env.PUBLIC_KEY, env.BOT_TOKEN)
 
@@ -7,6 +8,7 @@ owner_group = dislord.CommandGroup(client, name="owner", description="KoalaBot O
 
 
 def serverless_handler(event, context):  # Not needed if using server
+    logger.info(f"\nevent: {event}\ncontext: {context}")
     return dislord.server.serverless_handler(client, event, context, api_gateway_base_path=env.API_GATEWAY_BASE_PATH)
 
 
