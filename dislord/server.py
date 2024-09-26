@@ -16,7 +16,7 @@ class InteractionsHeaders(BaseModel):
     x_signature_timestamp: str
 
 
-@app.post("/interactions")
+@app.post("/")
 async def interactions_endpoint(interactions_headers: Annotated[InteractionsHeaders, Header()],
                                 request: Request, response: Response):
     raw_request = await request.body()
