@@ -16,7 +16,7 @@ class InteractionsHeaders(BaseModel):
     x_signature_timestamp: str
 
 
-@app.post("/")
+@app.post("/default/KB2") # FIXME: Add env overwrite
 async def interactions_endpoint(interactions_headers: Annotated[InteractionsHeaders, Header()],
                                 request: Request, response: Response):
     raw_request = await request.body()
@@ -39,7 +39,7 @@ def start_server(application_client, **kwargs):
 def handler_singleton(**kwargs) -> Mangum:
     global handler
     if handler is None:
-        handler = Mangum(app, **kwargs)
+        handler = Mangum(app)
     return handler
 
 
