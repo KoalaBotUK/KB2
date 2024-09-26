@@ -12,6 +12,7 @@ API_PORT = os.environ.get("API_PORT", 8080)
 
 # Logging
 LOGGING_FILE = eval(os.environ.get("LOGGING_FILE", "False"))
+LOG_PATH = None
 
 # Config Path
 if LOGGING_FILE:

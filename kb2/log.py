@@ -12,10 +12,9 @@ if LOGGING_FILE:
     _LOG_DIR = Path(LOG_PATH, str(date.today()))
     Path(_LOG_DIR).mkdir(exist_ok=True, parents=True)
 
-
-logging.basicConfig(filename=Path(_LOG_DIR, 'kb.log'),
-                    level=logging.WARN,
-                    format='%(asctime)s %(levelname)-8s %(message)s')
+    logging.basicConfig(filename=Path(_LOG_DIR, 'kb.log'),
+                        level=logging.WARN,
+                        format='%(asctime)s %(levelname)-8s %(message)s')
 
 
 def _get_default_warn_log():
