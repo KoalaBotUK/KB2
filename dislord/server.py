@@ -16,7 +16,7 @@ class InteractionsHeaders(BaseModel):
     x_signature_timestamp: str
 
 
-@app.post("/default/KB2") # FIXME: Add env overwrite
+@app.post("/default/KB2-Sync") # FIXME: Add env overwrite
 async def interactions_endpoint(interactions_headers: Annotated[InteractionsHeaders, Header()],
                                 request: Request, response: Response):
     raw_request = await request.body()
