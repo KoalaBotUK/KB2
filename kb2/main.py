@@ -11,7 +11,9 @@ def serverless_handler(event, context):  # Not needed if using server
     from kb2 import ext
     ext.register_all()
     logger.info(f"\nevent: {event}\ncontext: {context}")
-    return dislord.server.serverless_handler(client, event, context, api_gateway_base_path=env.API_GATEWAY_BASE_PATH)
+    response = dislord.server.serverless_handler(client, event, context, api_gateway_base_path=env.API_GATEWAY_BASE_PATH)
+    logger.info(f"\nresponse: {response}")
+    return response
 
 
 def sync_serverless_handler(event, context):
