@@ -8,6 +8,8 @@ owner_group = dislord.CommandGroup(client, name="owner", description="KoalaBot O
 
 
 def serverless_handler(event, context):  # Not needed if using server
+    from kb2 import ext
+    ext.register_all()
     logger.info(f"\nevent: {event}\ncontext: {context}")
     return dislord.server.serverless_handler(client, event, context, api_gateway_base_path=env.API_GATEWAY_BASE_PATH)
 
