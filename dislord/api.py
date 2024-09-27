@@ -33,6 +33,8 @@ class DiscordApi:
             sleep(retry_after)
             return self.get(endpoint, params, type_hint, **kwargs)
         else:
+            print(f"{response.status_code} {response.text} error when calling discord API "
+                  f"URL: GET {endpoint} Params: {params}")
             raise DiscordApiException(f"{response.status_code} {response.text} error when calling discord API "
                                       f"URL: GET {endpoint} Params: {params}")
 
