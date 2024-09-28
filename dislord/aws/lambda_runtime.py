@@ -17,7 +17,8 @@ class LambdaDeferredThread(DeferredThread):
         register_response = httpx.post(f"http://{runtime_api}/2020-01-01/extension/register",
                                        content='{"events": ["INVOKE"]}',
                                        headers={"Lambda-Extension-Name": "dislord",
-                                                "Content-Type": "application/json"},)
+                                                "Content-Type": "application/json"},
+                                       timeout=0.1)
 
         if register_response.status_code != 200:
             print(f"Failed to register. Status: {register_response.status_code}, Response: {register_response.text}")
