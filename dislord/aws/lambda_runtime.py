@@ -7,6 +7,7 @@ from dislord.defer import DeferredThread
 
 class LambdaDeferredThread(DeferredThread):
     def invocation_loop(self):
+        print("Starting LambdaDeferredThread")
         runtime_api = os.environ.get('AWS_LAMBDA_RUNTIME_API')
 
         if not runtime_api:
@@ -20,10 +21,11 @@ class LambdaDeferredThread(DeferredThread):
         if register_response.status_code != 200:
             print(f"Failed to register. Status: {register_response.status_code}, Response: {register_response.text}")
             return
+        else:
+            print("Registered Lambda extension")
 
         ext_id = register_response.headers.get("Lambda-Extension-Identifier")
 
-        print("Starting LambdaDeferredThread")
         while True:
             next_response = httpx.get(f"http://{runtime_api}/2020-01-01/extension/event/next",
                                       headers={"Lambda-Extension-Identifier": ext_id},
