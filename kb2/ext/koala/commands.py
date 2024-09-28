@@ -18,7 +18,7 @@ from kb2.ext.koala import core
 
 koala_group = CommandGroup(client, name="koala", description="KoalaBot Base Commands")
 # owner_koala_group = CommandGroup(client, name="koala", description="KoalaBot Base Owner Commands", parent=owner_group)
-guild_owner_koala_group = CommandGroup(client, name="guild", description="Guild Controls", parent=owner_group)
+guild_owner_koala_group = CommandGroup(client, name="guild", description="Guild Controls", parent=owner_group)  # FIXME: parent not used
 
 
 @koala_group.command(name="support", description="KoalaBot Support server link")

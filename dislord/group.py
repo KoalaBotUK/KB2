@@ -44,7 +44,7 @@ class CommandGroup:
         self.command_callbacks[command.name] = callback
 
         self.client.add_command(command=ApplicationCommand(
-            name=self.name, application_id=self.client.application.id, description=self.description, type=ApplicationCommandType.CHAT_INPUT,
+            name=self.name, description=self.description, type=ApplicationCommandType.CHAT_INPUT,
             dm_permission=self.dm_permission, nsfw=self.nsfw, guild_id=self.guild_id,
             options=list(self.commands.values())), callback=self.callback)
         self.update_parent()

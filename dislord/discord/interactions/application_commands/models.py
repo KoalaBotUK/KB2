@@ -50,7 +50,7 @@ class ApplicationCommandOption(ObjDict):
 class ApplicationCommand(ObjDict):
     id: Snowflake = None
     type: ApplicationCommandType | Missing = None
-    application_id: Snowflake
+    application_id: Snowflake = None
     guild_id: Snowflake | Missing = None
     name: str
     name_localizations: dict[Locale, str] | Missing | None = None

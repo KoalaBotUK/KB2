@@ -1,4 +1,6 @@
 import json
+import time
+from queue import Queue
 from typing import Callable
 
 from discord_interactions import verify_key, InteractionType
@@ -7,13 +9,14 @@ from pydantic import TypeAdapter
 from .discord.interactions.application_commands.enums import ApplicationCommandType
 from .discord.interactions.application_commands.models import ApplicationCommandOption
 from .discord.interactions.receiving_and_responding.interaction import Interaction
+from .discord.interactions.receiving_and_responding.interaction_callback import InteractionCallbackResponse
 from .discord.interactions.receiving_and_responding.interaction_response import InteractionResponse, \
-    MessagesInteractionCallbackData
+    MessagesInteractionCallbackData, InteractionCallbackType
 from .discord.reference import Snowflake, Missing
 from .discord.resources.application.models import Application
 from .api import DiscordApi
 from .discord.resources.channel.channel import Channel
-from .discord.resources.channel.message import Message
+from .discord.resources.channel.message import Message, MessageFlags
 from .discord.resources.guild.guild import PartialGuild, Guild
 from .discord.resources.user.user import User
 from .error import DiscordApiException
@@ -29,6 +32,7 @@ class ApplicationClient:
     _component_callbacks: dict[str, Callable] = {}
     _application: Application = Missing()
     _guilds: list[Guild] = Missing()
+    _deferred_queue: Queue[Interaction] = Queue()
 
     def __init__(self, public_key, bot_token):
         self._public_key = public_key
@@ -41,8 +45,6 @@ class ApplicationClient:
         return self.interact(TypeAdapter(Interaction).validate_json(raw_request))
 
     def interact(self, interaction: Interaction) -> HttpResponse:
-        # interaction = cast(request_json, Interaction, self)
-
         match interaction.type:
             case InteractionType.PING:  # PING
                 response_data = InteractionResponse.pong()  # PONG
@@ -60,6 +62,36 @@ class ApplicationClient:
                 raise DiscordApiException(DiscordApiException.UNKNOWN_INTERACTION_TYPE.format(interaction.type))
 
         return HttpOk(json.loads(response_data.model_dump_json()), headers={"Content-Type": "application/json"})
+
+    def verified_defer_interact(self, raw_request, signature, timestamp) -> HttpResponse:
+        if signature is None or timestamp is None or not verify_key(
+                raw_request, signature, timestamp, self._public_key):
+            return HttpUnauthorized('Bad request signature')
+        return self.defer_interact(TypeAdapter(Interaction).validate_json(raw_request))
+
+    def defer_interact(self, interaction: Interaction) -> HttpResponse:
+        match interaction.type:
+            case InteractionType.PING:  # PING
+                response_data = InteractionResponse.pong()  # PONG
+            case _:
+                self._deferred_queue.put(interaction)
+                response_data = InteractionResponse(type=InteractionCallbackType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+                                                    flags=MessageFlags.EPHEMERAL)
+        return HttpOk(json.loads(response_data.model_dump_json()), headers={"Content-Type": "application/json"})
+
+    def defer_queue_interact(self, sleep: int = 0):
+        interaction = self._deferred_queue.get()
+        time.sleep(sleep)
+        interact_http_response: HttpResponse = self.interact(interaction)
+        interact_response: MessagesInteractionCallbackData = (TypeAdapter(MessagesInteractionCallbackData)
+                                                  .validate_python(interact_http_response.body["data"]))
+        self.edit_original_response(interaction.token, interact_response)
+
+    def interaction_callback(self, interaction: Interaction,
+                             interaction_response: InteractionResponse) -> InteractionCallbackResponse:
+        return self._api.post(f"/interactions/{self.application.id}/{interaction.token}/callback",
+                              interaction_response,
+                              type_hint=InteractionCallbackResponse)
 
     def edit_original_response(self, interaction_token: Snowflake, response: MessagesInteractionCallbackData):
         self._api.patch(f"/webhooks/{self.application.id}/{interaction_token}/messages/@original", response,
@@ -80,10 +112,11 @@ class ApplicationClient:
             for guild_id in guild_ids:
                 if guild_id == "ALL":
                     guild_id = None
-                self.add_command(ApplicationCommand(name=name, application_id=self.application.id, description=description,
-                                                    type=ApplicationCommandType.CHAT_INPUT,
-                                                    dm_permission=dm_permission, nsfw=nsfw,
-                                                    guild_id=guild_id, options=options, client=self), func)
+                self.add_command(
+                    ApplicationCommand(name=name, description=description,
+                                       type=ApplicationCommandType.CHAT_INPUT,
+                                       dm_permission=dm_permission, nsfw=nsfw,
+                                       guild_id=guild_id, options=options, client=self), func)
             return func
 
         return decorator
@@ -94,7 +127,6 @@ class ApplicationClient:
             return func
 
         return decorator
-
 
     @property
     def application(self):
