@@ -15,11 +15,15 @@ class LambdaDeferredThread(DeferredThread):
             print("AWS_LAMBDA_RUNTIME_API is not set")
             return
 
-        register_response = httpx.post(f"http://{runtime_api}/2020-01-01/extension/register",
-                                       content='{"events": ["INVOKE"]}',
-                                       headers={"Lambda-Extension-Name": "dislord",
-                                                "Content-Type": "application/json"},
-                                       timeout=0.1)
+        try:
+            register_response = httpx.post(f"http://{runtime_api}/2020-01-01/extension/register",
+                                           content='{"events": ["INVOKE"]}',
+                                           headers={"Lambda-Extension-Name": "dislord",
+                                                    "Content-Type": "application/json"},
+                                           timeout=0.1)
+        except Exception as e:
+            print(f"Failed to register. Error: {e.__class__.__name__} {e} {traceback.format_exc()}")
+            return
 
         if register_response.status_code != 200:
             print(f"Failed to register. Status: {register_response.status_code}, Response: {register_response.text}")
