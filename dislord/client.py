@@ -80,11 +80,11 @@ class ApplicationClient:
         return HttpOk(json.loads(response_data.model_dump_json()), headers={"Content-Type": "application/json"})
 
     def defer_queue_interact(self, sleep: int = 0):
-        interaction = self._deferred_queue.get()
+        interaction = self._deferred_queue.get(timeout=5)
         time.sleep(sleep)
         interact_http_response: HttpResponse = self.interact(interaction)
         interact_response: MessagesInteractionCallbackData = (TypeAdapter(MessagesInteractionCallbackData)
-                                                  .validate_python(interact_http_response.body["data"]))
+                                                              .validate_python(interact_http_response.body["data"]))
         self.edit_original_response(interaction.token, interact_response)
 
     def interaction_callback(self, interaction: Interaction,
