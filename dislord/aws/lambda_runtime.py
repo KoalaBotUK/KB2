@@ -9,6 +9,7 @@ class LambdaDeferredThread(DeferredThread):
     def invocation_loop(self):
         print("Starting LambdaDeferredThread")
         runtime_api = os.environ.get('AWS_LAMBDA_RUNTIME_API')
+        print(f"Runtime API: {runtime_api}")
 
         if not runtime_api:
             print("AWS_LAMBDA_RUNTIME_API is not set")
