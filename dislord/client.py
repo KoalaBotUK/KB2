@@ -76,7 +76,7 @@ class ApplicationClient:
             case _:
                 self._deferred_queue.put(interaction)
                 response_data = InteractionResponse(type=InteractionCallbackType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-                                                    flags=MessageFlags.EPHEMERAL)
+                                                    data=MessagesInteractionCallbackData(flags=MessageFlags.EPHEMERAL))
         return HttpOk(json.loads(response_data.model_dump_json()), headers={"Content-Type": "application/json"})
 
     def defer_queue_interact(self, sleep: int = 0):
@@ -84,9 +84,11 @@ class ApplicationClient:
         print(f"DEFER QUEUE REQUEST: {interaction}")
         time.sleep(sleep)
         interact_http_response: HttpResponse = self.interact(interaction)
-        print(f"DEFER QUEUE RESPONSE: {interact_http_response}")
+        print(f"DEFER QUEUE RESPONSE: {interact_http_response.body}")
         interact_response: MessagesInteractionCallbackData = (TypeAdapter(MessagesInteractionCallbackData)
                                                               .validate_python(interact_http_response.body["data"]))
+        if interact_response.flags is None:
+            interact_response.flags = 0
         self.edit_original_response(interaction.token, interact_response)
 
     def interaction_callback(self, interaction: Interaction,

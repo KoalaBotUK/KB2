@@ -1,3 +1,4 @@
+from queue import Empty
 from threading import Thread
 
 from dislord import ApplicationClient
@@ -22,7 +23,12 @@ class DeferredThread:
     def invocation_loop(self):
         print("Starting DeferredThread")
         while True:
-            self.client.defer_queue_interact()
+            try:
+                self.client.defer_queue_interact()
+            except Empty:
+                continue
+            except Exception as e:
+                print(f"Failed to defer queue interact. Error: {e.__class__.__name__}")
 
     def start(self):
         if not self.thread_started:
