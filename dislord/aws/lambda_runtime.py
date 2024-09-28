@@ -8,6 +8,7 @@ from dislord.defer import DeferredThread
 class LambdaDeferredThread(DeferredThread):
     def invocation_loop(self):
         runtime_api = os.environ.get('AWS_LAMBDA_RUNTIME_API')
+        first = True
 
         if not runtime_api:
             print("AWS_LAMBDA_RUNTIME_API is not set")
@@ -15,8 +16,15 @@ class LambdaDeferredThread(DeferredThread):
 
         print("Starting LambdaDeferredThread")
         while True:
+            if first:
+                try:
+                    self.client.defer_queue_interact()
+                except Exception as e:
+                    print(f"Failed to defer queue interact. Error: {e}")
+                first = False
+
             response = httpx.get(f"http://{runtime_api}/2018-06-01/runtime/invocation/next",
-                                 timeout=None)
+                                     timeout=None)
 
             if response.status_code != 200:
                 print(f"Failed to get next invocation. Status: {response.status_code}, Response: {response.text}")

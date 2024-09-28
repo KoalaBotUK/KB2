@@ -81,8 +81,10 @@ class ApplicationClient:
 
     def defer_queue_interact(self, sleep: int = 0):
         interaction = self._deferred_queue.get(timeout=5)
+        print(f"DEFER QUEUE REQUEST: {interaction}")
         time.sleep(sleep)
         interact_http_response: HttpResponse = self.interact(interaction)
+        print(f"DEFER QUEUE RESPONSE: {interact_http_response}")
         interact_response: MessagesInteractionCallbackData = (TypeAdapter(MessagesInteractionCallbackData)
                                                               .validate_python(interact_http_response.body["data"]))
         self.edit_original_response(interaction.token, interact_response)
