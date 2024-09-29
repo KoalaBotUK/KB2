@@ -1,6 +1,6 @@
 import dislord
 from kb2 import env
-from kb2.defer import logger
+from kb2.log import logger
 from kb2.main import client
 
 logger.info("Starting server.py")
