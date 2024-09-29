@@ -7,15 +7,4 @@ LAMBDA_EXTENSION_NAME="$OWN_FILENAME" # (external) extension name has to match t
 
 echo "${LAMBDA_EXTENSION_NAME} launching extension"
 cd /opt
-
-cat > dislord_ws.py << EOF
-from dislord.defer_ws.lambda_ext import ws_ext, app
-
-import uvicorn
-asyncio.run(ws_ext.register())
-uvicorn.run(app, host="localhost", port=8765)
-EOF
-
-chmod +x dislord_ws.py
-
-python3 dislord_ws.py
+python3 lambda_ext.py
