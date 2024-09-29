@@ -6,4 +6,5 @@ OWN_FILENAME="$(basename $0)"
 LAMBDA_EXTENSION_NAME="$OWN_FILENAME" # (external) extension name has to match the filename
 
 echo "${LAMBDA_EXTENSION_NAME} launching extension"
-exec "/opt/dislord/defer_ws/lambda_ext.py"
+cd /opt
+exec "/usr/bin/env python3 /opt/dislord/defer_ws/lambda_ext.py"
