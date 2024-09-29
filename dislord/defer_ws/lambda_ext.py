@@ -101,14 +101,16 @@ ws_ext = WebsocketExtension()
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    logger.info(f"Client connected: {websocket.client.host}:{websocket.client.port}")
     await websocket.accept()
     while True:
         msg = await websocket.receive_text()
         await ws_ext.next()
-        await websocket.send_text(f"Message text was: {msg}")
+        logger.debug(f"Message text was: {msg}")
 
 
 if __name__ == '__main__':
     import uvicorn
+    logger.info("Starting uvicorn")
     asyncio.run(ws_ext.register())
     uvicorn.run(app, host="localhost", port=8765)
