@@ -7,4 +7,4 @@ LAMBDA_EXTENSION_NAME="$OWN_FILENAME" # (external) extension name has to match t
 
 echo "${LAMBDA_EXTENSION_NAME} launching extension"
 cd /opt
-/usr/bin/env/python3 /opt/dislord/defer_ws/lambda_ext.py
+python3 /opt/dislord/defer_ws/lambda_ext.py
