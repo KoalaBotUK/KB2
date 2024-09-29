@@ -4,12 +4,12 @@ import logging
 import os
 import sys
 import traceback
+from contextlib import asynccontextmanager
+
 import httpx
 import asyncio
 
 from fastapi import FastAPI, WebSocket
-from websockets.asyncio.server import serve
-
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -49,7 +49,6 @@ class WebsocketExtension:
                 logger.info("Registered Lambda extension")
 
             self._ext_id = register_response.headers.get("Lambda-Extension-Identifier")
-            await self.next()
 
         except Exception as e:
             logger.error(f"Failed to register. Error: {e.__class__.__name__} {e} {traceback.format_exc()}")
@@ -61,7 +60,8 @@ class WebsocketExtension:
                                                     timeout=None)
 
         if next_response.status_code != 200:
-            logger.error(f"Failed to get next event. Status: {next_response.status_code}, Response: {next_response.text}")
+            logger.error(
+                f"Failed to get next event. Status: {next_response.status_code}, Response: {next_response.text}")
         else:
             self._ext_req_id = next_response.headers.get("Lambda-Extension-Request-Id")
 
@@ -79,21 +79,16 @@ class WebsocketExtension:
             }
         )
 
-    async def process(self, websocket):
-        async for message in websocket:
-            logger.debug(message)
-            await self.next()
 
-    async def serve(self):
-        async with serve(self.process, self._host, self._port):
-            await asyncio.get_running_loop().create_future()  # run forever
-
-    async def run(self):
-        await self.register()
-        await self.serve()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Load the ML model
+    await ws_ext.next()
+    yield
+    # Clean up the ML models and release the resources
 
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 ws_ext = WebsocketExtension()
 
@@ -110,6 +105,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 if __name__ == '__main__':
     import uvicorn
+
     logger.info("Starting uvicorn")
     asyncio.run(ws_ext.register())
     uvicorn.run(app, host="localhost", port=8765)
