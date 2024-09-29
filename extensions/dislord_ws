@@ -16,4 +16,6 @@ asyncio.run(ws_ext.register())
 uvicorn.run(app, host="localhost", port=8765)
 EOF
 
+chmod +x dislord_ws.py
+
 python3 dislord_ws.py
