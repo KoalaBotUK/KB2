@@ -66,7 +66,7 @@ jobs:
         echo Layer version ARN: $LAYER_VERSION_ARN
         aws lambda update-function-configuration --function-name $LAMBDA_FUNCTION_NAME --layers $LAYER_VERSION_ARN
         
-        
+        aws lambda wait function-updated --function-name $LAMBDA_FUNCTION_NAME
         
         # Update Lambda function code
         LAMBDA_FUNCTION_NAME=KB2
