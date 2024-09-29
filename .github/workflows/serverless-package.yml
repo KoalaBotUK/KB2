@@ -25,10 +25,11 @@ jobs:
 
     - name: Add project code
       run: |
+        mv ./dislord/lambda_ext.py .
+        zip -r ./package.zip ./lambda_ext.py
         zip -r ./package.zip ./dislord
         zip -r ./package.zip ./kb2
         zip -r ./package.zip ./extensions
-        zip -r ./package.zip ./dislord/lambda_ext.py
 
     - uses: actions/upload-artifact@v3
       with:
