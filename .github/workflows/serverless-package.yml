@@ -61,7 +61,7 @@ jobs:
         
         # Update Lambda layer
         LAMBDA_LAYER_NAME=dislord_ws
-        LAYER_VERSION_ARN=$(aws lambda publish-layer-version --layer-name $LAMBDA_LAYER_NAME --s3-bucket $S3_BUCKET --s3-key $S3_KEY --compatible-runtimes python3.12 --compatible-architectures x86_64 arm64 --query LayerVersionArn --output text)
+        LAYER_VERSION_ARN=$(aws lambda publish-layer-version --layer-name $LAMBDA_LAYER_NAME --content S3Bucket=$S3_BUCKET,S3Key=$S3_KEY --compatible-runtimes python3.12 --compatible-architectures x86_64 arm64 --query LayerVersionArn --output text)
         
         # Update Lambda function code
         LAMBDA_FUNCTION_NAME=KB2
