@@ -110,13 +110,16 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-
+first = True
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     logger.info(f"Client connected: {websocket.client.host}:{websocket.client.port}")
     await websocket.accept()
-    await ws_ext.next()
+    global first
+    if first:
+        await ws_ext.next()
+        first = False
     while True:
         msg = await websocket.receive_text()
         interaction = TypeAdapter(Interaction).validate_json(msg)

@@ -3,7 +3,7 @@ import time
 from queue import Queue
 from typing import Callable
 
-import websockets
+import websockets.sync.client
 from discord_interactions import verify_key, InteractionType
 from pydantic import TypeAdapter
 from websockets import WebSocketClientProtocol
@@ -38,14 +38,14 @@ class ApplicationClient:
     _deferred_queue: Queue[Interaction] = Queue()
     _ws_host: str = "localhost"
     _ws_port: int = 8765
-    _defer_ws: WebSocketClientProtocol = None
+    _defer_ws: websockets.client.ClientConnection = None
 
     def __init__(self, public_key, bot_token):
         self._public_key = public_key
         self._api = DiscordApi(self, bot_token)
 
-    async def start_ws_client(self):
-        self._defer_ws: WebSocketClientProtocol = await websockets.connect(f"ws://{self._ws_host}:{self._ws_port}/ws")
+    def start_ws_client(self):
+        self._defer_ws = websockets.sync.client.connect(f"ws://{self._ws_host}:{self._ws_port}/ws")
 
     def verified_interact(self, raw_request, signature, timestamp) -> HttpResponse:
         if signature is None or timestamp is None or not verify_key(
@@ -84,8 +84,8 @@ class ApplicationClient:
                 response_data = InteractionResponse.pong()  # PONG
             case _:
                 if self._defer_ws is None:
-                    await self.start_ws_client()
-                await self._defer_ws.send(interaction.model_dump_json())
+                    self.start_ws_client()
+                self._defer_ws.send(interaction.model_dump_json())
                 response_data = InteractionResponse(type=InteractionCallbackType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
                                                     data=MessagesInteractionCallbackData(flags=MessageFlags.EPHEMERAL))
         return HttpOk(json.loads(response_data.model_dump_json()), headers={"Content-Type": "application/json"})
