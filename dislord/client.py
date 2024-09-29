@@ -20,6 +20,7 @@ from .discord.resources.channel.message import Message, MessageFlags
 from .discord.resources.guild.guild import PartialGuild, Guild
 from .discord.resources.user.user import User
 from .error import DiscordApiException
+from .log import logger
 from .model.api import HttpResponse, HttpUnauthorized, HttpOk
 from .model.commands import ApplicationCommand
 
@@ -81,10 +82,10 @@ class ApplicationClient:
 
     def defer_queue_interact(self, sleep: int = 0):
         interaction = self._deferred_queue.get(timeout=5)
-        print(f"DEFER QUEUE REQUEST: {interaction}")
+        logger.debug(f"DEFER QUEUE REQUEST: {interaction}")
         time.sleep(sleep)
         interact_http_response: HttpResponse = self.interact(interaction)
-        print(f"DEFER QUEUE RESPONSE: {interact_http_response.body}")
+        logger.debug(f"DEFER QUEUE RESPONSE: {interact_http_response.body}")
         interact_response: MessagesInteractionCallbackData = (TypeAdapter(MessagesInteractionCallbackData)
                                                               .validate_python(interact_http_response.body["data"]))
         if interact_response.flags is None:

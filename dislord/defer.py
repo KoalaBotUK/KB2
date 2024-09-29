@@ -5,6 +5,7 @@ from threading import Thread
 import websockets
 
 from dislord import ApplicationClient
+from dislord.log import logger
 
 
 class DeferredThread:
@@ -29,7 +30,7 @@ class DeferredThread:
         return cls._instance
 
     def invocation_loop(self):
-        print("Starting DeferredThread")
+        logger.info("Starting DeferredThread")
         asyncio.run(self.ws_connect())
         while True:
             try:
@@ -38,7 +39,7 @@ class DeferredThread:
             except Empty:
                 continue
             except Exception as e:
-                print(f"Failed to defer queue interact. Error: {e.__class__.__name__}")
+                logger.error(f"Failed to defer queue interact. Error: {e.__class__.__name__}")
 
     def start(self):
         if not self.thread_started:

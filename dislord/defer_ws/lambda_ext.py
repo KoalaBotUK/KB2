@@ -1,3 +1,4 @@
+import logging
 import os
 import traceback
 import httpx
@@ -5,6 +6,16 @@ import asyncio
 
 from fastapi import FastAPI, WebSocket
 from websockets.asyncio.server import serve
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+_FORMATTER = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setFormatter(_FORMATTER)
+logger.addHandler(stream_handler)
+app = FastAPI()
 
 
 class WebsocketExtension:
@@ -29,17 +40,17 @@ class WebsocketExtension:
                 headers={"Lambda-Extension-Name": "dislord",
                          "Content-Type": "application/json"}, )
             if register_response.status_code != 200:
-                print(
+                logger.error(
                     f"Failed to register. Status: {register_response.status_code}, Response: {register_response.text}")
                 return
             else:
-                print("Registered Lambda extension")
+                logger.info("Registered Lambda extension")
 
             self._ext_id = register_response.headers.get("Lambda-Extension-Identifier")
             await self.next()
 
         except Exception as e:
-            print(f"Failed to register. Error: {e.__class__.__name__} {e} {traceback.format_exc()}")
+            logger.error(f"Failed to register. Error: {e.__class__.__name__} {e} {traceback.format_exc()}")
             return
 
     async def next(self):
@@ -48,7 +59,7 @@ class WebsocketExtension:
                                                     timeout=None)
 
         if next_response.status_code != 200:
-            print(f"Failed to get next event. Status: {next_response.status_code}, Response: {next_response.text}")
+            logger.error(f"Failed to get next event. Status: {next_response.status_code}, Response: {next_response.text}")
         else:
             self._ext_req_id = next_response.headers.get("Lambda-Extension-Request-Id")
 
@@ -68,7 +79,7 @@ class WebsocketExtension:
 
     async def process(self, websocket):
         async for message in websocket:
-            print(message)
+            logger.debug(message)
             await self.next()
 
     async def serve(self):

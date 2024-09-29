@@ -54,3 +54,7 @@ def get_logger(log_name, log_level=_LOG_LEVEL, file_name=None, file_handler=True
 
 
 logger = get_logger(__name__)
+
+# dislord logging
+dislord_logger = logging.getLogger("dislord.log")
+dislord_logger.addHandler(_get_stdout_stream_handler(logging.DEBUG))

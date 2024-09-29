@@ -5,6 +5,8 @@ from typing import Annotated
 
 from mangum import Mangum
 
+from .log import logger
+
 app = FastAPI()
 handler = None
 
@@ -22,10 +24,10 @@ async def interactions_endpoint(interactions_headers: Annotated[InteractionsHead
     raw_request = await request.body()
     signature = interactions_headers.x_signature_ed25519
     timestamp = interactions_headers.x_signature_timestamp
-    print(f"👉 Request: {raw_request}")
+    logger.debug(f"👉 Request: {raw_request}")
     response_data = __application_client.verified_interact(raw_request, signature, timestamp)
     response_data = response_data.as_server_response(response)
-    print(f"🫴 Response: {response_data}")
+    logger.debug(f"🫴 Response: {response_data}")
     return response_data
 
 
@@ -35,10 +37,10 @@ async def interactions_endpoint(interactions_headers: Annotated[InteractionsHead
     raw_request = await request.body()
     signature = interactions_headers.x_signature_ed25519
     timestamp = interactions_headers.x_signature_timestamp
-    print(f"👉 Request: {raw_request}")
+    logger.debug(f"👉 Request: {raw_request}")
     response_data = __application_client.verified_defer_interact(raw_request, signature, timestamp)
     response_data = response_data.as_server_response(response)
-    print(f"🫴 Response: {response_data}")
+    logger.debug(f"🫴 Response: {response_data}")
     return response_data
 
 
