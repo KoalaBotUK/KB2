@@ -10,11 +10,22 @@ from fastapi import FastAPI, WebSocket
 from pydantic import TypeAdapter
 import httpx
 import asyncio
+from dotenv import load_dotenv
 
+import dislord
 from dislord.discord.interactions.receiving_and_responding.interaction import Interaction
 from dislord.discord.interactions.receiving_and_responding.interaction_response import MessagesInteractionCallbackData
 from dislord.model.api import HttpResponse
-from kb2.main import client
+
+load_dotenv()
+
+PUBLIC_KEY = os.environ.get("PUBLIC_KEY")
+BOT_TOKEN = os.environ.get("DISCORD_TOKEN")
+
+client = dislord.ApplicationClient(PUBLIC_KEY, BOT_TOKEN)
+
+owner_group = dislord.CommandGroup(client, name="owner", description="KoalaBot Owner Commands",
+                                   guild_id="1175756999040966656")  # TODO: set owner flag on dynamodb
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -98,7 +109,6 @@ class WebsocketExtension:
         )
 
 
-
 ws_ext = WebsocketExtension()
 
 
@@ -111,6 +121,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 first = True
+
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
