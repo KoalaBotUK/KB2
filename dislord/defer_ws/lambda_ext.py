@@ -18,7 +18,6 @@ _FORMATTER = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
 stream_handler = logging.StreamHandler(sys.stdout)
 stream_handler.setFormatter(_FORMATTER)
 logger.addHandler(stream_handler)
-app = FastAPI()
 
 
 class WebsocketExtension:
@@ -40,7 +39,7 @@ class WebsocketExtension:
             register_response = await self._async_httpx.post(
                 f"http://{self._runtime_api}/2020-01-01/extension/register",
                 content='{"events": ["INVOKE"]}',
-                headers={"Lambda-Extension-Name": "dislord",
+                headers={"Lambda-Extension-Name": "dislord_ws",
                          "Content-Type": "application/json"}, )
             if register_response.status_code != 200:
                 logger.error(
