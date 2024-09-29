@@ -80,10 +80,9 @@ class ApplicationClient:
                                                     data=MessagesInteractionCallbackData(flags=MessageFlags.EPHEMERAL))
         return HttpOk(json.loads(response_data.model_dump_json()), headers={"Content-Type": "application/json"})
 
-    def defer_queue_interact(self, sleep: int = 0):
-        interaction = self._deferred_queue.get(timeout=5)
+    def defer_queue_interact(self):
+        interaction = self._deferred_queue.get()
         logger.debug(f"DEFER QUEUE REQUEST: {interaction}")
-        time.sleep(sleep)
         interact_http_response: HttpResponse = self.interact(interaction)
         logger.debug(f"DEFER QUEUE RESPONSE: {interact_http_response.body}")
         interact_response: MessagesInteractionCallbackData = (TypeAdapter(MessagesInteractionCallbackData)

@@ -19,7 +19,7 @@ class DeferredThread:
 
     def __init__(self, client: ApplicationClient, ws_host: str = None, ws_port: int = None):
         self.client = client
-        self.thread = Thread(target=self.invocation_loop)
+        self.thread = Thread(target=self.run_loop)
         self._ws_host = ws_host
         self._ws_port = ws_port
 
@@ -29,17 +29,19 @@ class DeferredThread:
             cls._instance = cls(client, ws_host, ws_port)
         return cls._instance
 
-    def invocation_loop(self):
-        logger.info("Starting DeferredThread")
-        asyncio.run(self.ws_connect())
-        while True:
-            try:
-                self.client.defer_queue_interact()
-                asyncio.run(self.ws_send())
-            except Empty:
-                continue
-            except Exception as e:
-                logger.error(f"Failed to defer queue interact. Error: {e.__class__.__name__}")
+    async def invocation_loop(self):
+        async with websockets.connect(f"ws://{self._ws_host}:{self._ws_port}/ws") as ws:
+            while True:
+                try:
+                    self.client.defer_queue_interact()
+                    await ws.send("next")
+                except Empty:
+                    continue
+                except Exception as e:
+                    logger.error(f"Failed to defer queue interact. Error: {e.__class__.__name__}")
+
+    def run_loop(self):
+        asyncio.run(self.invocation_loop())
 
     def start(self):
         if not self.thread_started:
