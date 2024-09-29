@@ -25,8 +25,8 @@ jobs:
 
     - name: Add project code
       run: |
-        mv ./dislord/defer_ws/lambda_ext.py .
-        zip -r ./package.zip ./lambda_ext.py
+        mv ./kb2/defer.py .
+        zip -r ./package.zip ./defer.py
         zip -r ./package.zip ./dislord
         zip -r ./package.zip ./kb2
         zip -r ./package.zip ./extensions
@@ -63,7 +63,7 @@ jobs:
         
         # Update Lambda layer
         LAMBDA_FUNCTION_NAME=KB2        
-        LAMBDA_LAYER_NAME=dislord_ws
+        LAMBDA_LAYER_NAME=kb2_defer
         LAYER_VERSION_ARN=$(aws lambda publish-layer-version --layer-name $LAMBDA_LAYER_NAME --content S3Bucket=$S3_BUCKET,S3Key=$S3_KEY --compatible-runtimes python3.12 --compatible-architectures x86_64 arm64 --query LayerVersionArn --output text)
         echo Layer version ARN: $LAYER_VERSION_ARN
         aws lambda update-function-configuration --function-name $LAMBDA_FUNCTION_NAME --layers $LAYER_VERSION_ARN

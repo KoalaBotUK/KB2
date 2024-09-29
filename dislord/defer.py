@@ -33,7 +33,7 @@ class DeferredThread:
         async with websockets.connect(f"ws://{self._ws_host}:{self._ws_port}/ws") as ws:
             while True:
                 try:
-                    self.client.defer_queue_interact()
+                    # self.client.defer_queue_interact()
                     await ws.send("next")
                 except Empty:
                     continue

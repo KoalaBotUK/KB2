@@ -38,7 +38,7 @@ async def interactions_endpoint(interactions_headers: Annotated[InteractionsHead
     signature = interactions_headers.x_signature_ed25519
     timestamp = interactions_headers.x_signature_timestamp
     logger.debug(f"👉 Request: {raw_request}")
-    response_data = __application_client.verified_defer_interact(raw_request, signature, timestamp)
+    response_data = await __application_client.verified_defer_interact(raw_request, signature, timestamp)
     response_data = response_data.as_server_response(response)
     logger.debug(f"🫴 Response: {response_data}")
     return response_data

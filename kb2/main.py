@@ -1,5 +1,4 @@
 import dislord
-from dislord.defer import DeferredThread
 from kb2 import env
 from kb2.log import logger
 
@@ -22,10 +21,6 @@ def sync_serverless_handler(event, context):
     client.sync_commands()
     client.sync_commands(guild_ids=[g.id for g in client.guilds])
     return {"statusCode": 200}
-
-
-runtime_thread: DeferredThread = DeferredThread.instance(client, ws_host="localhost", ws_port=8765)
-runtime_thread.start()
 
 if __name__ == '__main__':  # Not needed if using serverless
     # client.sync_commands()

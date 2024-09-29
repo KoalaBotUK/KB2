@@ -3,8 +3,10 @@ import time
 from queue import Queue
 from typing import Callable
 
+import websockets
 from discord_interactions import verify_key, InteractionType
 from pydantic import TypeAdapter
+from websockets import WebSocketClientProtocol
 
 from .discord.interactions.application_commands.enums import ApplicationCommandType
 from .discord.interactions.application_commands.models import ApplicationCommandOption
@@ -34,10 +36,16 @@ class ApplicationClient:
     _application: Application = Missing()
     _guilds: list[Guild] = Missing()
     _deferred_queue: Queue[Interaction] = Queue()
+    _ws_host: str = "localhost"
+    _ws_port: int = 8765
+    _defer_ws: WebSocketClientProtocol = None
 
     def __init__(self, public_key, bot_token):
         self._public_key = public_key
         self._api = DiscordApi(self, bot_token)
+
+    async def start_ws_client(self):
+        self._defer_ws: WebSocketClientProtocol = await websockets.connect(f"ws://{self._ws_host}:{self._ws_port}/ws")
 
     def verified_interact(self, raw_request, signature, timestamp) -> HttpResponse:
         if signature is None or timestamp is None or not verify_key(
@@ -64,18 +72,20 @@ class ApplicationClient:
 
         return HttpOk(json.loads(response_data.model_dump_json()), headers={"Content-Type": "application/json"})
 
-    def verified_defer_interact(self, raw_request, signature, timestamp) -> HttpResponse:
+    async def verified_defer_interact(self, raw_request, signature, timestamp) -> HttpResponse:
         if signature is None or timestamp is None or not verify_key(
                 raw_request, signature, timestamp, self._public_key):
             return HttpUnauthorized('Bad request signature')
-        return self.defer_interact(TypeAdapter(Interaction).validate_json(raw_request))
+        return await self.defer_interact(TypeAdapter(Interaction).validate_json(raw_request))
 
-    def defer_interact(self, interaction: Interaction) -> HttpResponse:
+    async def defer_interact(self, interaction: Interaction) -> HttpResponse:
         match interaction.type:
             case InteractionType.PING:  # PING
                 response_data = InteractionResponse.pong()  # PONG
             case _:
-                self._deferred_queue.put(interaction)
+                if self._defer_ws is None:
+                    await self.start_ws_client()
+                await self._defer_ws.send(interaction.model_dump_json())
                 response_data = InteractionResponse(type=InteractionCallbackType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
                                                     data=MessagesInteractionCallbackData(flags=MessageFlags.EPHEMERAL))
         return HttpOk(json.loads(response_data.model_dump_json()), headers={"Content-Type": "application/json"})
