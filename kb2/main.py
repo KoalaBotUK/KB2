@@ -1,8 +1,4 @@
-import os
-from threading import Thread
-
 import dislord
-from dislord.defer_ws import lambda_ext
 from dislord.defer import DeferredThread
 from kb2 import env
 from kb2.log import logger
@@ -28,11 +24,7 @@ def sync_serverless_handler(event, context):
     return {"statusCode": 200}
 
 
-runtime_thread: DeferredThread
-if os.environ.get('AWS_LAMBDA_RUNTIME_API'):
-    runtime_thread = lambda_runtime.LambdaDeferredThread.instance(client)
-else:
-    runtime_thread = DeferredThread.instance(client, ws_host="localhost", ws_port=8765)
+runtime_thread: DeferredThread = DeferredThread.instance(client, ws_host="localhost", ws_port=8765)
 runtime_thread.start()
 
 if __name__ == '__main__':  # Not needed if using serverless
