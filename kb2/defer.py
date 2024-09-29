@@ -74,6 +74,7 @@ class WebsocketExtension:
             logger.error(
                 f"Failed to get next event. Status: {next_response.status_code}, Response: {next_response.text}")
         else:
+            logger.info(f"Next Lambda extension event {next_response.json()}")
             self._ext_req_id = next_response.headers.get("Lambda-Extension-Request-Id")
 
     async def error(self, e: Exception):
@@ -92,6 +93,7 @@ class WebsocketExtension:
                 "Lambda-Runtime-Function-Error-Type": f"Runtime.{e.__class__.__name__}"
             }
         )
+
 
 
 ws_ext = WebsocketExtension()

@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from .client import ApplicationClient
 from fastapi import FastAPI, Header, Request, Response
 from pydantic import BaseModel
@@ -7,10 +9,18 @@ from mangum import Mangum
 
 from .log import logger
 
-app = FastAPI()
-handler = None
-
 __application_client: ApplicationClient
+__handler = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Load the ML model
+    await __application_client.start_ws_client()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 class InteractionsHeaders(BaseModel):
@@ -52,11 +62,11 @@ def start_server(application_client, *, port: int = 8000, **kwargs):
 
 
 def handler_singleton(**kwargs) -> Mangum:
-    global handler
-    if handler is None:
+    global __handler
+    if __handler is None:
         app.root_path = kwargs.get("root_path")
-        handler = Mangum(app)
-    return handler
+        __handler = Mangum(app)
+    return __handler
 
 
 def serverless_handler(application_client, event, context, **kwargs):
