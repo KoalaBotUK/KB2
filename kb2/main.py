@@ -1,3 +1,5 @@
+import asyncio
+
 import dislord
 from kb2 import env
 from kb2.log import logger
@@ -16,6 +18,7 @@ def serverless_handler(event, context):  # Not needed if using server
     logger.info(f"\nresponse: {response}")
     return response
 
+task = asyncio.get_event_loop().create_task(client.start_ws_client())
 
 def sync_serverless_handler(event, context):
     client.sync_commands()

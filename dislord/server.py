@@ -12,15 +12,7 @@ from .log import logger
 __application_client: ApplicationClient
 __handler = None
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Load the ML model
-    await __application_client.start_ws_client()
-    yield
-
-
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 
 class InteractionsHeaders(BaseModel):

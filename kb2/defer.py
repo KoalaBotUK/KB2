@@ -40,6 +40,7 @@ class WebsocketExtension:
         self._async_httpx = httpx.AsyncClient()
 
     async def register(self):
+        logger.info("Registering Lambda extension")
         if self._runtime_api is None:
             return
 
@@ -63,6 +64,7 @@ class WebsocketExtension:
             return
 
     async def next(self):
+        logger.info("Getting next Lambda extension event")
         if self._runtime_api is None:
             return
 
@@ -78,6 +80,7 @@ class WebsocketExtension:
             self._ext_req_id = next_response.headers.get("Lambda-Extension-Request-Id")
 
     async def error(self, e: Exception):
+        logger.error(f"Error: {e.__class__.__name__} {e} {traceback.format_exc()}")
         if self._runtime_api is None:
             return
 
