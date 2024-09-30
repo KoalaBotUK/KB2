@@ -12,7 +12,7 @@ from dislord.discord.interactions.receiving_and_responding.interaction_response 
 from dislord.discord.resources.channel.message import MessageFlags
 from dislord.discord.resources.emoji.emoji import PartialEmoji
 from kb2.ext.koala.models import Guilds
-from kb2.main import client, owner_group
+from kb2.client import client, owner_group
 from kb2.ext.koala import core
 
 koala_group = CommandGroup(client, name="koala", description="KoalaBot Base Commands")

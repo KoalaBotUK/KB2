@@ -1,7 +1,7 @@
 from dislord.discord.interactions.components.enums import ButtonStyle
 from dislord.discord.interactions.components.models import  ActionRow, Button
 from dislord.discord.interactions.receiving_and_responding.interaction_response import InteractionResponse
-from kb2.main import client
+from kb2.client import client
 from dislord.discord.interactions.receiving_and_responding.interaction import Interaction
 
 
