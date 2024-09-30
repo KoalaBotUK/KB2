@@ -4,7 +4,7 @@ from http.client import UNAUTHORIZED, OK
 from websockets.sync.client import connect
 from discord_interactions import verify_key
 
-import env
+from .env import PUBLIC_KEY
 from .log import logger
 
 ws = connect("ws://localhost:8765/ws")
@@ -17,8 +17,7 @@ def serverless_handler(event, context):
         raw_headers = event["headers"]
         signature = raw_headers.get('x-signature-ed25519')
         timestamp = raw_headers.get('x-signature-timestamp')
-        if signature is None or timestamp is None or not verify_key(event["body"], signature, timestamp,
-                                                                    env.PUBLIC_KEY):
+        if signature is None or timestamp is None or not verify_key(event["body"], signature, timestamp, PUBLIC_KEY):
             return {"statusCode": UNAUTHORIZED,
                     "body": "Bad request signature",
                     "headers": None}
