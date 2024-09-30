@@ -126,9 +126,9 @@ async def websocket_endpoint(websocket: WebSocket):
     logger.info(f"Client connected: {websocket.client.host}:{websocket.client.port}")
     await websocket.accept()
     global first
-    # if first:
-    #     await ws_ext.next()
-    #     first = False
+    if first:
+        await ws_ext.next()
+        first = False
     while True:
         msg = await websocket.receive_bytes()
         interaction = TypeAdapter(Interaction).validate_json(msg)
