@@ -116,6 +116,7 @@ ws_ext = WebsocketExtension()
 async def lifespan(app: FastAPI):
     # Load the ML model
     await ws_ext.register()
+    await ws_ext.next()
     yield
 
 
@@ -128,9 +129,6 @@ async def websocket_endpoint(websocket: WebSocket):
     logger.info(f"Client connected: {websocket.client.host}:{websocket.client.port}")
     await websocket.accept()
     global first
-    if first:
-        await ws_ext.next()
-        first = False
     while True:
         msg = await websocket.receive_text()
         interaction = TypeAdapter(Interaction).validate_json(msg)
