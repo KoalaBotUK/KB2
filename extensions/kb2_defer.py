@@ -113,7 +113,7 @@ ws_ext = WebsocketExtension()
 async def lifespan(app: FastAPI):
     # Load the ML model
     await ws_ext.register()
-    await ws_ext.next()
+    # await ws_ext.next()
     yield
 
 
