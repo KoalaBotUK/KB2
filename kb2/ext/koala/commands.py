@@ -9,7 +9,6 @@ from dislord.discord.interactions.components.models import ActionRow, SelectMenu
 from dislord.discord.interactions.receiving_and_responding.interaction import Interaction
 from dislord.discord.interactions.receiving_and_responding.interaction_response import InteractionResponse, \
     InteractionCallbackType, MessagesInteractionCallbackData
-from dislord.discord.reference import Snowflake
 from dislord.discord.resources.channel.message import MessageFlags
 from dislord.discord.resources.emoji.emoji import PartialEmoji
 from kb2.ext.koala.models import Guilds

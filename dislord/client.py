@@ -45,7 +45,8 @@ class ApplicationClient:
         self._api = DiscordApi(self, bot_token)
 
     def start_ws_client(self):
-        self._defer_ws = websockets.sync.client.connect(f"ws://{self._ws_host}:{self._ws_port}/ws")
+        if self._defer_ws is not None:
+            self._defer_ws = websockets.sync.client.connect(f"ws://{self._ws_host}:{self._ws_port}/ws")
 
     def verified_interact(self, raw_request, signature, timestamp) -> HttpResponse:
         if signature is None or timestamp is None or not verify_key(
