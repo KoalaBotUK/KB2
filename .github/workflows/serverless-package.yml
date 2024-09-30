@@ -17,14 +17,14 @@ jobs:
       - name: Install pip requirements
         run: |
           mkdir entrypoint
-          pip install -r kb2-entrypoint/requirements.txt --target ./entrypoint
+          pip install -r kb2_entrypoint/requirements.txt --target ./entrypoint
           cd entrypoint
           zip -r ../entrypoint.zip .
           cd ..
 
       - name: Add project code
         run: |
-          zip -r ./entrypoint.zip ./kb2-entrypoint
+          zip -r ./entrypoint.zip ./kb2_entrypoint
 
       - uses: actions/upload-artifact@v3
         with:

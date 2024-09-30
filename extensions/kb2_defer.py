@@ -16,16 +16,13 @@ import dislord
 from dislord.discord.interactions.receiving_and_responding.interaction import Interaction
 from dislord.discord.interactions.receiving_and_responding.interaction_response import MessagesInteractionCallbackData
 from dislord.model.api import HttpResponse
+from kb2.client import client
 
 load_dotenv()
 
 PUBLIC_KEY = os.environ.get("PUBLIC_KEY")
 BOT_TOKEN = os.environ.get("DISCORD_TOKEN")
 
-client = dislord.ApplicationClient(PUBLIC_KEY, BOT_TOKEN)
-
-owner_group = dislord.CommandGroup(client, name="owner", description="KoalaBot Owner Commands",
-                                   guild_id="1175756999040966656")  # TODO: set owner flag on dynamodb
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -133,7 +130,7 @@ async def websocket_endpoint(websocket: WebSocket):
     #     await ws_ext.next()
     #     first = False
     while True:
-        msg = await websocket.receive_text()
+        msg = await websocket.receive_bytes()
         interaction = TypeAdapter(Interaction).validate_json(msg)
         logger.debug(f"DEFER QUEUE REQUEST: {interaction}")
         interact_http_response: HttpResponse = client.interact(interaction)
