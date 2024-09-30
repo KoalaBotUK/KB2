@@ -36,7 +36,7 @@ class ApplicationClient:
     _application: Application = Missing()
     _guilds: list[Guild] = Missing()
     _deferred_queue: Queue[Interaction] = Queue()
-    _ws_host: str = "localhost"
+    _ws_host: str = "127.0.0.1"
     _ws_port: int = 8765
     _defer_ws: websockets.client.ClientConnection = None
 

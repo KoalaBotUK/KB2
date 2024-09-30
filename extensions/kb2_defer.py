@@ -44,7 +44,7 @@ class WebsocketExtension:
     _ext_req_id: str
     _async_httpx: httpx.AsyncClient
 
-    def __init__(self, host: str = "localhost", port: int = 8765):
+    def __init__(self, host: str = "127.0.0.1", port: int = 8765):
         self._host = host
         self._port = port
         self._runtime_api = os.environ.get('AWS_LAMBDA_RUNTIME_API')
@@ -129,6 +129,9 @@ async def websocket_endpoint(websocket: WebSocket):
     logger.info(f"Client connected: {websocket.client.host}:{websocket.client.port}")
     await websocket.accept()
     global first
+    # if first:
+    #     await ws_ext.next()
+    #     first = False
     while True:
         msg = await websocket.receive_text()
         interaction = TypeAdapter(Interaction).validate_json(msg)
@@ -153,4 +156,4 @@ if __name__ == '__main__':
         asyncio.new_event_loop()
 
     logger.info("Starting uvicorn")
-    uvicorn.run(app, host="localhost", port=8765)
+    uvicorn.run(app, host="127.0.0.1", port=8765)

@@ -7,7 +7,7 @@ from discord_interactions import verify_key
 from .env import PUBLIC_KEY
 from .log import logger
 
-ws = connect("ws://localhost:8765/ws")
+ws = connect("ws://127.0.0.1:8765/ws")
 
 
 def serverless_handler(event, context):
