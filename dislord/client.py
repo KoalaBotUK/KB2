@@ -1,24 +1,21 @@
 import json
-import time
 from queue import Queue
 from typing import Callable
 
-import websockets.sync.client
 from discord_interactions import verify_key, InteractionType
 from pydantic import TypeAdapter
-from websockets import WebSocketClientProtocol
 
+from .api import DiscordApi
 from .discord.interactions.application_commands.enums import ApplicationCommandType
 from .discord.interactions.application_commands.models import ApplicationCommandOption
 from .discord.interactions.receiving_and_responding.interaction import Interaction
 from .discord.interactions.receiving_and_responding.interaction_callback import InteractionCallbackResponse
 from .discord.interactions.receiving_and_responding.interaction_response import InteractionResponse, \
-    MessagesInteractionCallbackData, InteractionCallbackType
+    MessagesInteractionCallbackData
 from .discord.reference import Snowflake, Missing
 from .discord.resources.application.models import Application
-from .api import DiscordApi
 from .discord.resources.channel.channel import Channel
-from .discord.resources.channel.message import Message, MessageFlags
+from .discord.resources.channel.message import Message
 from .discord.resources.guild.guild import PartialGuild, Guild
 from .discord.resources.user.user import User
 from .error import DiscordApiException
@@ -36,17 +33,10 @@ class ApplicationClient:
     _application: Application = Missing()
     _guilds: list[Guild] = Missing()
     _deferred_queue: Queue[Interaction] = Queue()
-    _ws_host: str = "127.0.0.1"
-    _ws_port: int = 8765
-    _defer_ws: websockets.client.ClientConnection = None
 
     def __init__(self, public_key, bot_token):
         self._public_key = public_key
         self._api = DiscordApi(self, bot_token)
-
-    def start_ws_client(self):
-        if self._defer_ws is None:
-            self._defer_ws = websockets.sync.client.connect(f"ws://{self._ws_host}:{self._ws_port}/ws")
 
     def verified_interact(self, raw_request, signature, timestamp) -> HttpResponse:
         if signature is None or timestamp is None or not verify_key(
@@ -71,24 +61,6 @@ class ApplicationClient:
             case _:
                 raise DiscordApiException(DiscordApiException.UNKNOWN_INTERACTION_TYPE.format(interaction.type))
 
-        return HttpOk(json.loads(response_data.model_dump_json()), headers={"Content-Type": "application/json"})
-
-    async def verified_defer_interact(self, raw_request, signature, timestamp) -> HttpResponse:
-        if signature is None or timestamp is None or not verify_key(
-                raw_request, signature, timestamp, self._public_key):
-            return HttpUnauthorized('Bad request signature')
-        return await self.defer_interact(TypeAdapter(Interaction).validate_json(raw_request))
-
-    async def defer_interact(self, interaction: Interaction) -> HttpResponse:
-        match interaction.type:
-            case InteractionType.PING:  # PING
-                response_data = InteractionResponse.pong()  # PONG
-            case _:
-                if self._defer_ws is None:
-                    self.start_ws_client()
-                self._defer_ws.send(interaction.model_dump_json())
-                response_data = InteractionResponse(type=InteractionCallbackType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-                                                    data=MessagesInteractionCallbackData(flags=MessageFlags.EPHEMERAL))
         return HttpOk(json.loads(response_data.model_dump_json()), headers={"Content-Type": "application/json"})
 
     def defer_queue_interact(self):

@@ -5,8 +5,6 @@ from kb2.log import logger
 
 
 logger.info("Starting main.py")
-client.start_ws_client()
-
 
 def serverless_handler(event, context):  # Not needed if using server
     from kb2 import ext

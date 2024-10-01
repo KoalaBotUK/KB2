@@ -1,3 +1,2 @@
 discord-interactions~=0.4
 python-dotenv~=1.0
-websockets~=13.1

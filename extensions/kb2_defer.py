@@ -1,28 +1,28 @@
 #!/usr/bin/env python3
-
+import asyncio
+import json
 import logging
 import os
+import socket
 import sys
 import traceback
-from contextlib import asynccontextmanager
+from datetime import datetime
 
-from fastapi import FastAPI, WebSocket
-from pydantic import TypeAdapter
 import httpx
-import asyncio
 from dotenv import load_dotenv
+from pydantic import TypeAdapter
 
-import dislord
 from dislord.discord.interactions.receiving_and_responding.interaction import Interaction
 from dislord.discord.interactions.receiving_and_responding.interaction_response import MessagesInteractionCallbackData
 from dislord.model.api import HttpResponse
+from dislord.types import ObjDict
 from kb2.client import client
 
 load_dotenv()
 
 PUBLIC_KEY = os.environ.get("PUBLIC_KEY")
 BOT_TOKEN = os.environ.get("DISCORD_TOKEN")
-
+SOCKET_PATH = "/tmp/kb2.sock"
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -33,7 +33,23 @@ stream_handler.setFormatter(_FORMATTER)
 logger.addHandler(stream_handler)
 
 
-class WebsocketExtension:
+def socket_connect() -> socket.socket:
+    if sys.platform == "win32":
+        sock_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        global SOCKET_PATH
+        SOCKET_PATH = (socket.gethostname(), 8765)
+        return sock_client
+    else:
+        sock_client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        return sock_client
+
+
+class DeferredRequest(ObjDict):
+    api_start_time: datetime
+    interaction: Interaction
+
+
+class LambdaExtension:
     _host: str
     _port: int
     _runtime_api: str
@@ -106,58 +122,62 @@ class WebsocketExtension:
         )
 
 
-ws_ext = WebsocketExtension()
+l_ext = LambdaExtension()
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Load the ML model
-    await ws_ext.register()
-    # await ws_ext.next()
-    yield
+def update_original_response(interaction: Interaction, response: HttpResponse):
+    interact_response: MessagesInteractionCallbackData = (TypeAdapter(MessagesInteractionCallbackData)
+                                                          .validate_python(response.body["data"]))
+    if interact_response.flags is None:
+        interact_response.flags = 0
+
+    logger.debug(f"/defer/process Sending Response {interaction.id}")
+    success = False
+    while not success:
+        try:
+            client.edit_original_response(interaction.token, interact_response)
+            success = True
+        except Exception as e:
+            logger.error(f"Failed to edit original response. Error: {e.__class__.__name__} {e}")
 
 
-app = FastAPI(lifespan=lifespan)
-first = True
+async def socket_process():
+    server = socket_connect()
+    await l_ext.register()
+    try:
+        server.bind(SOCKET_PATH)
+        server.listen(1)
 
+        while True:
+            await l_ext.next()
+            conn, _ = server.accept()
+            with conn:
+                # Receive data from the entrypoint Lambda function
+                data = conn.recv(4096)
+                if data:
+                    deferred_request: DeferredRequest = TypeAdapter(DeferredRequest).validate_json(data.decode())
+                    interaction = deferred_request.interaction
+                    logger.debug(f"/defer/process Received Interaction {interaction.id}")
+                    interact_http_response: HttpResponse = client.interact(interaction)
 
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    logger.info(f"Client connected: {websocket.client.host}:{websocket.client.port}")
-    await websocket.accept()
-    global first
-    if first:
-        await ws_ext.next()
-        first = False
-    while True:
-        msg = await websocket.receive_text()
-        interaction = TypeAdapter(Interaction).validate_json(msg)
-        logger.debug(f"DEFER QUEUE REQUEST: {interaction}")
-        interact_http_response: HttpResponse = client.interact(interaction)
-        logger.debug(f"DEFER QUEUE RESPONSE: {interact_http_response.body}")
-        interact_response: MessagesInteractionCallbackData = (TypeAdapter(MessagesInteractionCallbackData)
-                                                              .validate_python(interact_http_response.body["data"]))
-        if interact_response.flags is None:
-            interact_response.flags = 0
+                    elapsed_time = datetime.now().timestamp() - deferred_request.api_start_time.timestamp()
+                    if elapsed_time < 2.5:
+                        # If processing finishes within 3 seconds, send the result back to the function
+                        conn.sendall(json.dumps(interact_http_response.as_serverless_response()).encode())
+                    else:
+                        # If processing takes longer, return nothing and handle deferred API call
+                        update_original_response(interaction, interact_http_response)
 
-        success = False
-        while not success:
-            try:
-                client.edit_original_response(interaction.token, interact_response)
-                success = True
-            except Exception as e:
-                logger.error(f"Failed to edit original response. Error: {e.__class__.__name__} {e}")
-        await ws_ext.next()
-        logger.debug(f"Message text was: {msg}")
+                conn.close()
+
+    except Exception as e:
+        print(f"Error in extension: {str(e)}")
+        await l_ext.error(e)
+
+    finally:
+        server.close()
 
 
 if __name__ == '__main__':
-    import uvicorn
-
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        asyncio.new_event_loop()
-
-    logger.info("Starting uvicorn")
-    uvicorn.run(app, host="127.0.0.1", port=8765)
+    logger.info("Starting kb2_defer")
+    asyncio.run(socket_process())
