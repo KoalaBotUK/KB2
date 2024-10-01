@@ -151,6 +151,8 @@ async def socket_process():
         while True:
             await l_ext.next()
             conn, _ = server.accept()
+            conn.setblocking(True)
+
             with conn:
                 # Receive data from the entrypoint Lambda function
                 data = conn.recv(4096)
