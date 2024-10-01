@@ -45,7 +45,7 @@ def socket_connect() -> socket.socket:
 
 
 class DeferredRequest(ObjDict):
-    api_start_time: datetime
+    api_start_time_ms: float
     interaction: Interaction
 
 
@@ -162,8 +162,7 @@ async def socket_process():
                     logger.debug(f"/defer/process Received Interaction {interaction.id}")
                     interact_http_response: HttpResponse = client.interact(interaction)
 
-                    elapsed_time = datetime.now().timestamp() - deferred_request.api_start_time.timestamp()
-                    if elapsed_time < 2.5:
+                    if datetime.now().timestamp()*1000 - deferred_request.api_start_time_ms < 2500:
                         # If processing finishes within 3 seconds, send the result back to the function
                         conn.sendall(json.dumps(interact_http_response.as_serverless_response()).encode())
                     else:

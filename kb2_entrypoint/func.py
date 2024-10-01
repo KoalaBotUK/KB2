@@ -12,8 +12,11 @@ from kb2_entrypoint.log import logger
 
 logger.info("Starting Entrypoint")
 SOCKET_PATH = "/tmp/kb2.sock"
-RESPONSE_TIME_SLA = 2.5
+RESPONSE_TIME_SLA_MS = 2500
 
+
+def now_ms() -> float:
+    return datetime.datetime.now().timestamp()*1000
 
 def socket_connect() -> socket.socket:
     if sys.platform == "win32":
@@ -28,29 +31,28 @@ def socket_connect() -> socket.socket:
 
 def process_interact(event: dict):
     try:
-        api_start_time = event['requestContext']['requestTimeEpoch']/1000
-        respond_by = datetime.timedelta(seconds=RESPONSE_TIME_SLA) + datetime.datetime.fromtimestamp(api_start_time)
+        api_start_time_ms = event['requestContext']['requestTimeEpoch']
+        respond_by_ms = api_start_time_ms + RESPONSE_TIME_SLA_MS
         client = socket_connect()
 
         # Send the payload to the extension for processing
-        request = ('{"api_start_time":' + str(api_start_time)
+        request = ('{"api_start_time_ms":' + str(api_start_time_ms)
                    + ',"interaction":' + event["body"] + '}')
 
         logger.debug(f"Sending interaction: {request.encode()}")
         client.sendall(request.encode())
 
         # Set a timeout of 3 seconds to receive the response
-        client.settimeout((respond_by - datetime.datetime.now()).seconds)
-        logger.debug(f"Setting timeout to: {respond_by} - {datetime.datetime.now()} {client.gettimeout()}")
+        client.settimeout((respond_by_ms - now_ms())/1000)
+        logger.debug(f"Setting timeout to: {respond_by_ms} - {now_ms()} = {client.gettimeout()}")
 
-        client.setblocking(True)
         # Wait for the response from the extension
         try:
             data = client.recv(4096)
             if data:
                 response = data.decode()
                 # Check if the response came within 3 seconds
-                if datetime.datetime.now() < respond_by:
+                if now_ms() < respond_by_ms:
                     logger.debug(f"Defer response for interaction: {response}")
                     return json.loads(response)
                 else:
