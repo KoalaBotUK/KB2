@@ -14,7 +14,7 @@ from dislord.discord.resources.emoji.emoji import PartialEmoji
 from kb2.ext.koala.models import Guilds
 from kb2.client import client, owner_group
 from kb2.ext.koala import core
-from log import logger
+from kb2.log import logger
 
 koala_group = CommandGroup(client, name="koala", description="KoalaBot Base Commands")
 # owner_koala_group = CommandGroup(client, name="koala", description="KoalaBot Base Owner Commands", parent=owner_group)
