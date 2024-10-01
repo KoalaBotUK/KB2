@@ -40,12 +40,12 @@ def serverless_handler(event, context):
                         "Content-Type": "application/json"
                     }}
         else:
-            # try:
-            #     ws.send(event["body"])
-            # except Exception as e:
-            #     logger.error(f"Failed to send. Error: {e.__class__.__name__} {e} {traceback.format_exc()}")
-            #     connect_ws()
-            #     ws.send(event["body"])
+            try:
+                ws.send(event["body"])
+            except Exception as e:
+                logger.error(f"Failed to send. Error: {e.__class__.__name__} {e} {traceback.format_exc()}")
+                connect_ws()
+                ws.send(event["body"])
 
             return {"statusCode": OK,
                     "body": json.dumps({"type": 5, "data": {"flags": 64}}),
