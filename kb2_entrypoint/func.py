@@ -30,7 +30,7 @@ def serverless_handler(event, context):
                     "headers": None}
         if json.loads(event["body"]).get("type") == 1:
             return {"statusCode": OK,
-                    "body": {"type": 1},
+                    "body": '{"type":1}',
                     "headers": None}
         else:
             try:
@@ -41,7 +41,7 @@ def serverless_handler(event, context):
                 ws.send(event["body"])
 
             return {"statusCode": OK,
-                    "body": {"type": 5, "data": {"flags": 64}},
+                    "body": '{"type":5,"data":{"flags":64}}',
                     "headers": None}
 
 
