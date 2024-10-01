@@ -19,9 +19,3 @@ def sync_serverless_handler(event, context):
     client.sync_commands()
     client.sync_commands(guild_ids=[g.id for g in client.guilds])
     return {"statusCode": 200}
-
-
-if __name__ == '__main__':  # Not needed if using serverless
-    # client.sync_commands()
-    # client.sync_commands(guild_ids=[g.id for g in client.guilds])
-    dislord.server.start_server(client, port=8123)
