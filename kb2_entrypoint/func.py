@@ -25,7 +25,7 @@ def serverless_handler(event, context):
         raw_headers = event["headers"]
         signature = raw_headers.get('x-signature-ed25519')
         timestamp = raw_headers.get('x-signature-timestamp')
-        if signature is None or timestamp is None or not verify_key(event["body"], signature, timestamp, PUBLIC_KEY):
+        if signature is None or timestamp is None or not verify_key(event["body"].encode("utf-8"), signature, timestamp, PUBLIC_KEY):
             return {"statusCode": UNAUTHORIZED,
                     "body": "Bad request signature",
                     "headers": None}
@@ -55,7 +55,7 @@ def server():
     @app.post("/deferred-interactions")
     async def deferred_interactions(request: Request, response: Response):
         sl_response = serverless_handler({"httpMethod": request.method,
-                                   "body": await request.body(),
+                                   "body": (await request.body()).decode("utf-8"),
                                    "headers": request.headers}, None)
 
         response.status_code = sl_response['statusCode']
