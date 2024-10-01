@@ -139,7 +139,14 @@ async def websocket_endpoint(websocket: WebSocket):
                                                               .validate_python(interact_http_response.body["data"]))
         if interact_response.flags is None:
             interact_response.flags = 0
-        client.edit_original_response(interaction.token, interact_response)
+
+        success = False
+        while not success:
+            try:
+                client.edit_original_response(interaction.token, interact_response)
+                success = True
+            except Exception as e:
+                logger.error(f"Failed to edit original response. Error: {e.__class__.__name__} {e}")
         await ws_ext.next()
         logger.debug(f"Message text was: {msg}")
 
