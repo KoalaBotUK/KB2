@@ -130,7 +130,7 @@ async def websocket_endpoint(websocket: WebSocket):
         await ws_ext.next()
         first = False
     while True:
-        msg = await websocket.receive_bytes()
+        msg = await websocket.receive_text()
         interaction = TypeAdapter(Interaction).validate_json(msg)
         logger.debug(f"DEFER QUEUE REQUEST: {interaction}")
         interact_http_response: HttpResponse = client.interact(interaction)

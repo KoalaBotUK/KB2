@@ -2,8 +2,7 @@ import json
 import traceback
 from http.client import UNAUTHORIZED, OK
 
-from websockets.client import ClientConnection
-from websockets.sync.client import connect
+from websockets.sync.client import connect, ClientConnection
 from discord_interactions import verify_key
 
 from kb2_entrypoint.env import PUBLIC_KEY
