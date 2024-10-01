@@ -14,6 +14,7 @@ from dislord.discord.resources.emoji.emoji import PartialEmoji
 from kb2.ext.koala.models import Guilds
 from kb2.client import client, owner_group
 from kb2.ext.koala import core
+from log import logger
 
 koala_group = CommandGroup(client, name="koala", description="KoalaBot Base Commands")
 # owner_koala_group = CommandGroup(client, name="koala", description="KoalaBot Base Owner Commands", parent=owner_group)
@@ -85,7 +86,9 @@ def extension_select(interaction: Interaction):
 
 @client.command(name="extensions", description="KoalaBot Extensions", dm_permission=False)
 def extensions(interaction: Interaction):
+    logger.debug("Getting Guild")
     extensions = Guilds.get_or_add(interaction.guild_id).extensions
+    logger.debug("Got Guild")
 
     components = []
     for i in range(0, len(extensions), 5):
