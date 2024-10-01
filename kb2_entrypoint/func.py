@@ -41,7 +41,7 @@ def process_interact(event: dict):
 
         # Set a timeout of 3 seconds to receive the response
         client.settimeout((respond_by - datetime.datetime.now()).seconds)
-        logger.debug(f"Setting timeout to: {client.gettimeout()}")
+        logger.debug(f"Setting timeout to: {respond_by} - {datetime.datetime.now()} {client.gettimeout()}")
 
         client.setblocking(True)
         # Wait for the response from the extension
