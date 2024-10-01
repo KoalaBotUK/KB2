@@ -28,7 +28,7 @@ def socket_connect() -> socket.socket:
 
 def process_interact(event: dict):
     try:
-        api_start_time = event['requestContext']['requestTimeEpoch']
+        api_start_time = event['requestContext']['requestTimeEpoch']/1000
         respond_by = datetime.timedelta(seconds=RESPONSE_TIME_SLA) + datetime.datetime.fromtimestamp(api_start_time)
         client = socket_connect()
 
@@ -108,7 +108,7 @@ def server():
                                           "body": (await request.body()).decode("utf-8"),
                                           "headers": request.headers,
                                           "requestContext": {
-                                              "requestTimeEpoch": datetime.datetime.now().timestamp()
+                                              "requestTimeEpoch": datetime.datetime.now().timestamp()*1000
                                           }}, None)
 
         response.status_code = sl_response['statusCode']
