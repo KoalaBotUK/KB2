@@ -5,15 +5,17 @@ from pynamodb.exceptions import DoesNotExist
 import kb2
 from .models import Guilds
 
+
 # Constants
 
 
 def get_version():
     return kb2.__version__
 
+
 class Extension(enum.StrEnum):
     # KB2
-    VERIFY = "Verify" # Name, Emoji, Version
+    VERIFY = "Verify"  # Name, Emoji, Version
 
     # KB1
     ANNOUNCE = "Announce"
@@ -25,7 +27,7 @@ class Extension(enum.StrEnum):
     VOTE = "Vote"
 
 
-def set_extension(guild_id: str, extension ):
+def set_extension(guild_id: str, extension):
     Guilds.get(guild_id).enabled_extensions = extension
 
 

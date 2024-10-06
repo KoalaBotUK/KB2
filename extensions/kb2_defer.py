@@ -14,6 +14,7 @@ from pydantic import TypeAdapter
 
 from dislord.discord.interactions.receiving_and_responding.interaction import Interaction
 from dislord.discord.interactions.receiving_and_responding.interaction_response import MessagesInteractionCallbackData
+from dislord.discord.resources.channel.message import MessageFlags
 from dislord.model.api import HttpResponse
 from dislord.types import ObjDict
 from kb2.client import client
@@ -130,7 +131,7 @@ def update_original_response(interaction: Interaction, response: HttpResponse):
     interact_response: MessagesInteractionCallbackData = (TypeAdapter(MessagesInteractionCallbackData)
                                                           .validate_python(response.body["data"]))
     if interact_response.flags is None:
-        interact_response.flags = 0
+        interact_response.flags = MessageFlags.NONE
 
     logger.debug(f"/defer/process Sending Response {interaction.id}")
     success = False

@@ -19,6 +19,7 @@ from dislord.discord.reference import Missing, Snowflake
 
 
 class MessageFlags(IntFlag):
+    NONE = 0
     CROSSPOSTED = 1 << 0
     IS_CROSSPOST = 1 << 1
     SUPPRESS_EMBEDS = 1 << 2

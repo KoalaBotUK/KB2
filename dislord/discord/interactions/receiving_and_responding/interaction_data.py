@@ -1,16 +1,14 @@
-from typing import Self
-
-from dislord.discord.interactions.components.enums import ComponentType
-from dislord.types import ObjDict
 from dislord.discord.interactions.application_commands.enums import ApplicationCommandOptionType
-from dislord.discord.interactions.components.models import  Component
-from dislord.discord.topics.permissions.role import Role
+from dislord.discord.interactions.components.enums import ComponentType
+from dislord.discord.interactions.components.models import Component
+from dislord.discord.reference import Snowflake, Missing
 from dislord.discord.resources.channel.attachment import Attachment
 from dislord.discord.resources.channel.channel import PartialChannel
 from dislord.discord.resources.channel.partial_message import PartialMessage
 from dislord.discord.resources.guild.guild_member import PartialGuildMember
 from dislord.discord.resources.user.user import User
-from dislord.discord.reference import Snowflake, Missing
+from dislord.discord.topics.permissions.role import Role
+from dislord.types import ObjDict
 
 
 class ApplicationCommandInteractionDataOption(ObjDict):

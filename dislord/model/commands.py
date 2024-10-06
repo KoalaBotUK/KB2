@@ -3,9 +3,10 @@ from typing import Callable, Self
 from dislord.discord.interactions.application_commands.models import ApplicationCommand as ApplicationCommandPayload, \
     ApplicationCommandOption
 from dislord.discord.interactions.receiving_and_responding.interaction_response import InteractionResponse, \
-    InteractionCallbackType
+    InteractionCallbackType, MessagesInteractionCallbackData
 from dislord.discord.interactions.receiving_and_responding.message_interaction import InteractionType
 from dislord.discord.reference import Missing
+from dislord.discord.resources.channel.message import MessageFlags
 from dislord.types import ObjDict
 
 
@@ -58,4 +59,4 @@ class GroupCallbackDTO(CallbackDTO):
 
 class ComponentCallbackDTO(CallbackDTO):
     interaction_type: InteractionType = InteractionType.MESSAGE_COMPONENT
-    defer: InteractionResponse | None = InteractionResponse(type=InteractionCallbackType.DEFERRED_UPDATE_MESSAGE)
+    defer: InteractionResponse | None

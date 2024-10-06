@@ -58,7 +58,11 @@ def sync(interaction: Interaction):
                                        flags=MessageFlags.EPHEMERAL)
 
 
-@client.component_callback("extension_enable")
+@client.component_callback("extension_enable",
+                           defer=InteractionResponse(
+                               type=InteractionCallbackType.UPDATE_MESSAGE,
+                               data=MessagesInteractionCallbackData(content="Loading...",
+                                   flags=MessageFlags.LOADING | MessageFlags.EPHEMERAL)))
 def extension_select(interaction: Interaction):
     modified_components = interaction.message.components
     extension_id = interaction.data.custom_id.split("$")[1]
@@ -77,7 +81,8 @@ def extension_select(interaction: Interaction):
     return InteractionResponse(
         type=InteractionCallbackType.UPDATE_MESSAGE,
         data=MessagesInteractionCallbackData(
-            components=modified_components
+            components=modified_components,
+            flags=MessageFlags.NONE
         ))
 
 
@@ -98,7 +103,7 @@ def extensions(interaction: Interaction):
                 label=ext.name,
                 custom_id=f"extension_enable${ext.id}",
                 emoji=PartialEmoji(name=ext.emoji)
-            ) for ext in k_extensions[i:i+5] if not ext.hidden
+            ) for ext in k_extensions[i:i + 5] if not ext.hidden
         ]
         components.append(ActionRow(type=ComponentType.ACTION_ROW, components=row_buttons))
 

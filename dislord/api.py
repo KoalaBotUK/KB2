@@ -84,7 +84,7 @@ class DiscordApi:
             retry_after = response.json()["retry_after"]
             logger.warning(f"⚠️ Rate Limited, waiting {retry_after}s")
             sleep(retry_after)
-            return self.post(endpoint, body, type_hint, **kwargs)
+            return self.patch(endpoint, body, type_hint, **kwargs)
         else:
             raise DiscordApiException(f"{response.status_code} {response.text} error when calling discord API "
                                       f"URL: PATCH {endpoint} Body: {body_json}")

@@ -16,7 +16,7 @@ from .discord.interactions.receiving_and_responding.message_interaction import I
 from .discord.reference import Snowflake, Missing
 from .discord.resources.application.models import Application
 from .discord.resources.channel.channel import Channel
-from .discord.resources.channel.message import Message
+from .discord.resources.channel.message import Message, MessageFlags
 from .discord.resources.guild.guild import PartialGuild, Guild
 from .discord.resources.user.user import User
 from .error import DiscordApiException
@@ -46,11 +46,13 @@ class ApplicationClient:
         return self.interact(TypeAdapter(Interaction).validate_json(raw_request))
 
     def get_callback_dto_and_args(self, interaction: Interaction) -> (CallbackDTO, dict[str, any]):
+        interaction_options = []
         match interaction.type:
             case InteractionType.PING:  # PING
                 key = "ping"
             case InteractionType.APPLICATION_COMMAND:
                 key = interaction.data.name
+                interaction_options = interaction.data.options
             case InteractionType.MESSAGE_COMPONENT:
                 key = interaction.data.custom_id.split("$")[0]
             case _:
@@ -58,7 +60,6 @@ class ApplicationClient:
 
         callback_dto = self._callbacks[interaction.type][key]
 
-        interaction_options = interaction.data.options
         while (interaction_options and interaction_options[0].type in
                [ApplicationCommandOptionType.SUB_COMMAND_GROUP, ApplicationCommandOptionType.SUB_COMMAND]):
             key = interaction.data.options[0].name
@@ -92,7 +93,7 @@ class ApplicationClient:
         interact_response: MessagesInteractionCallbackData = (TypeAdapter(MessagesInteractionCallbackData)
                                                               .validate_python(interact_http_response.body["data"]))
         if interact_response.flags is None:
-            interact_response.flags = 0
+            interact_response.flags = MessageFlags.NONE
         self.edit_original_response(interaction.token, interact_response)
 
     def interaction_callback(self, interaction: Interaction,
@@ -134,9 +135,9 @@ class ApplicationClient:
 
         return decorator
 
-    def component_callback(self, name: str):
+    def component_callback(self, name: str, defer: InteractionResponse | None = None):
         def decorator(func):
-            self.add_callback(ComponentCallbackDTO(key=name, callback=func))
+            self.add_callback(ComponentCallbackDTO(key=name, callback=func, defer=defer))
             return func
 
         return decorator
