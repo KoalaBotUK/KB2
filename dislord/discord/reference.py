@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import StrEnum
 
 from dislord.types import ObjDict
 
@@ -6,7 +6,7 @@ DISCORD_API_VERSION = 10
 DISCORD_URL = f"https://discord.com/api/v{DISCORD_API_VERSION}"
 
 
-class TokenType(Enum):
+class TokenType(StrEnum):
     BOT = "Bot"
     OAUTH2 = "Bearer"
 
@@ -28,7 +28,7 @@ Missing = type(None)
 HexColor = int
 
 
-class Locale(Enum):
+class Locale(StrEnum):
     INDONESIAN = 'id'
     DANISH = 'da'
     GERMAN = 'de'

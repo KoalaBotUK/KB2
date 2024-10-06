@@ -2,16 +2,17 @@ import json
 from queue import Queue
 from typing import Callable
 
-from discord_interactions import verify_key, InteractionType
+from discord_interactions import verify_key
 from pydantic import TypeAdapter
 
 from .api import DiscordApi
-from .discord.interactions.application_commands.enums import ApplicationCommandType
+from .discord.interactions.application_commands.enums import ApplicationCommandType, ApplicationCommandOptionType
 from .discord.interactions.application_commands.models import ApplicationCommandOption
 from .discord.interactions.receiving_and_responding.interaction import Interaction
 from .discord.interactions.receiving_and_responding.interaction_callback import InteractionCallbackResponse
 from .discord.interactions.receiving_and_responding.interaction_response import InteractionResponse, \
     MessagesInteractionCallbackData
+from .discord.interactions.receiving_and_responding.message_interaction import InteractionType
 from .discord.reference import Snowflake, Missing
 from .discord.resources.application.models import Application
 from .discord.resources.channel.channel import Channel
@@ -21,15 +22,13 @@ from .discord.resources.user.user import User
 from .error import DiscordApiException
 from .log import logger
 from .model.api import HttpResponse, HttpUnauthorized, HttpOk
-from .model.commands import ApplicationCommand
+from .model.commands import ApplicationCommand, PingCallbackDTO, CommandCallbackDTO, ComponentCallbackDTO, CallbackDTO
 
 
 class ApplicationClient:
     _public_key: str
     _api: DiscordApi
-    _commands: dict[Snowflake, dict[str, ApplicationCommand]] = {}
-    _command_callbacks: dict[str, Callable] = {}
-    _component_callbacks: dict[str, Callable] = {}
+    _callbacks: dict[InteractionType, dict[str, CallbackDTO]]
     _application: Application = Missing()
     _guilds: list[Guild] = Missing()
     _deferred_queue: Queue[Interaction] = Queue()
@@ -37,6 +36,8 @@ class ApplicationClient:
     def __init__(self, public_key, bot_token):
         self._public_key = public_key
         self._api = DiscordApi(self, bot_token)
+        self._callbacks = {k: {} for k in InteractionType}
+        self._callbacks[InteractionType.PING] = {"ping": PingCallbackDTO()}
 
     def verified_interact(self, raw_request, signature, timestamp) -> HttpResponse:
         if signature is None or timestamp is None or not verify_key(
@@ -44,22 +45,42 @@ class ApplicationClient:
             return HttpUnauthorized('Bad request signature')
         return self.interact(TypeAdapter(Interaction).validate_json(raw_request))
 
-    def interact(self, interaction: Interaction) -> HttpResponse:
+    def get_callback_dto_and_args(self, interaction: Interaction) -> (CallbackDTO, dict[str, any]):
         match interaction.type:
             case InteractionType.PING:  # PING
-                response_data = InteractionResponse.pong()  # PONG
+                key = "ping"
             case InteractionType.APPLICATION_COMMAND:
-                data = interaction.data
-                command_name = data.name
-                kwargs = {}
-                for option in data.options or []:
-                    kwargs[option.name] = option.value
-                response_data = self._command_callbacks[command_name](interaction=interaction, **kwargs)
+                key = interaction.data.name
             case InteractionType.MESSAGE_COMPONENT:
-                data = interaction.data
-                response_data = self._component_callbacks[data.custom_id.split("$")[0]](interaction=interaction)
+                key = interaction.data.custom_id.split("$")[0]
             case _:
                 raise DiscordApiException(DiscordApiException.UNKNOWN_INTERACTION_TYPE.format(interaction.type))
+
+        callback_dto = self._callbacks[interaction.type][key]
+
+        interaction_options = interaction.data.options
+        while (interaction_options and interaction_options[0].type in
+               [ApplicationCommandOptionType.SUB_COMMAND_GROUP, ApplicationCommandOptionType.SUB_COMMAND]):
+            key = interaction.data.options[0].name
+            callback_dto = callback_dto.sub_command_callbacks[interaction.type][key]
+            interaction_options = interaction_options[0].options
+
+        kwargs = {}
+        for option in interaction_options or []:
+            kwargs[option.name] = option.value
+
+        return callback_dto, kwargs
+
+    def defer(self, interaction: Interaction) -> HttpResponse:
+        callback_dto, _ = self.get_callback_dto_and_args(interaction)
+        if callback_dto.defer:
+            return HttpOk(json.loads(callback_dto.defer.model_dump_json()), headers={"Content-Type": "application/json"})
+        else:
+            return HttpOk("{}", headers={"Content-Type": "application/json"})
+
+    def interact(self, interaction: Interaction) -> HttpResponse:
+        callback_dto, kwargs = self.get_callback_dto_and_args(interaction)
+        response_data = callback_dto.callback(interaction=interaction, **kwargs)
 
         return HttpOk(json.loads(response_data.model_dump_json()), headers={"Content-Type": "application/json"})
 
@@ -84,14 +105,11 @@ class ApplicationClient:
         self._api.patch(f"/webhooks/{self.application.id}/{interaction_token}/messages/@original", response,
                         type_hint=Message)
 
-    def add_command(self, command: ApplicationCommand, callback: Callable):
-        if self._commands.get(command.guild_id) is None:
-            self._commands[command.guild_id] = {}
-        self._command_callbacks[command.name] = callback
-        self._commands.get(command.guild_id)[command.name] = command
+    def add_callback(self, callback_dto: CallbackDTO):
+        self._callbacks[callback_dto.interaction_type][callback_dto.key] = callback_dto
 
     def command(self, *, name, description, dm_permission=True, nsfw=False, guild_ids: list[Snowflake] = None,
-                options: list[ApplicationCommandOption] = None):
+                options: list[ApplicationCommandOption] = None, defer: InteractionResponse | None = None):
         if guild_ids is None:
             guild_ids = ["ALL"]
 
@@ -99,18 +117,26 @@ class ApplicationClient:
             for guild_id in guild_ids:
                 if guild_id == "ALL":
                     guild_id = None
-                self.add_command(
-                    ApplicationCommand(name=name, description=description,
-                                       type=ApplicationCommandType.CHAT_INPUT,
-                                       dm_permission=dm_permission, nsfw=nsfw,
-                                       guild_id=guild_id, options=options, client=self), func)
+
+                self.add_callback(
+                    CommandCallbackDTO(
+                        key=name,
+                        command=ApplicationCommand(name=name, description=description,
+                                                   type=ApplicationCommandType.CHAT_INPUT,
+                                                   dm_permission=dm_permission, nsfw=nsfw,
+                                                   guild_id=guild_id, options=options, client=self),
+                        callback=func,
+                        defer=defer
+                    )
+                )
+
             return func
 
         return decorator
 
     def component_callback(self, name: str):
         def decorator(func):
-            self._component_callbacks[name] = func
+            self.add_callback(ComponentCallbackDTO(key=name, callback=func))
             return func
 
         return decorator
@@ -137,8 +163,8 @@ class ApplicationClient:
                 self.sync_commands(guild_id=g_id, application_id=application_id)
 
         registered_commands = self._get_commands(guild_id)
-        client_commands = self._commands.get(guild_id)
-        missing_commands = list(client_commands.values()) if client_commands else []
+        missing_commands = [dto.command for dto in self._callbacks[InteractionType.APPLICATION_COMMAND].values()
+                            if dto.command.guild_id == guild_id]
         for registered_command in registered_commands:
             if registered_command not in missing_commands:
                 self._delete_commands(command_id=registered_command.id, guild_id=guild_id,

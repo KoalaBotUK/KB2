@@ -1,12 +1,12 @@
-from enum import Enum
+from enum import IntEnum
 
-from dislord.types import ObjDict
+from dislord.discord.reference import Missing, Snowflake
 from dislord.discord.resources.guild.guild_member import PartialGuildMember
 from dislord.discord.resources.user.user import User
-from dislord.discord.reference import Missing, Snowflake
+from dislord.types import ObjDict
 
 
-class InteractionType(Enum):
+class InteractionType(IntEnum):
     PING = 1
     APPLICATION_COMMAND = 2
     MESSAGE_COMPONENT = 3

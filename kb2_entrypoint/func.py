@@ -46,34 +46,27 @@ def process_interact(event: dict):
         client.settimeout((respond_by_ms - now_ms())/1000)
         logger.debug(f"Setting timeout to: {respond_by_ms} - {now_ms()} = {client.gettimeout()}")
 
+        defer = json.loads(client.recv(4096).decode())
+
         # Wait for the response from the extension
         try:
             data = client.recv(4096)
             if data:
-                response = data.decode()
+                response = json.loads(data.decode())
                 # Check if the response came within 3 seconds
-                if now_ms() < respond_by_ms:
-                    logger.debug(f"Defer response for interaction: {response}")
-                    return json.loads(response)
-                else:
-                    return {"statusCode": OK,
-                            "body": json.dumps({"type": 5, "data": {"flags": 64}}),
-                            "headers": {
-                                "Content-Type": "application/json"
-                            }}
+                logger.debug(f"Defer response for interaction: {response}")
+                return response
+
         except socket.timeout:
             # If no response within 3 seconds, return "DEFER"
-            return {"statusCode": OK,
-                    "body": json.dumps({"type": 5, "data": {"flags": 64}}),
-                    "headers": {
-                        "Content-Type": "application/json"
-                    }}
+            return defer
         finally:
             client.close()
 
     except Exception as e:
         logger.error("Error in kb2_entrypoint", exc_info=e)
         raise e
+
 
 def serverless_handler(event, context):
     logger.debug(f"Recieved Event\nevent: {event}\ncontext: {context}")

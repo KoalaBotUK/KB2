@@ -6,6 +6,12 @@ logger.info("Starting client.py")
 
 client = dislord.ApplicationClient(env.PUBLIC_KEY, env.BOT_TOKEN)
 
-owner_group = dislord.CommandGroup(client, name="owner", description="KoalaBot Owner Commands",
-                                   guild_id="1175756999040966656")  # TODO: set owner flag on dynamodb
 
+class OwnerCommandGroup(dislord.CommandGroup):
+    def __init__(self, *args, **kwargs):
+        self.guild_id = "1175756999040966656"
+        super().__init__(*args, **kwargs)
+
+
+owner_group = OwnerCommandGroup(client, name="owner",
+                                description="KoalaBot Owner Commands")  # TODO: set owner flag on dynamodb

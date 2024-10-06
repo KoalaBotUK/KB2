@@ -1,14 +1,14 @@
-from enum import Enum
+from enum import IntEnum
 
-from dislord.types import ObjDict
 from dislord.discord.interactions.application_commands.models import ApplicationCommandOptionChoice
 from dislord.discord.interactions.components.models import Component
+from dislord.discord.reference import Missing
 from dislord.discord.resources.channel.allowed_mentions import AllowedMentions
 from dislord.discord.resources.channel.attachment import PartialAttachment
 from dislord.discord.resources.channel.embed import Embed
 from dislord.discord.resources.channel.message import MessageFlags
-from dislord.discord.reference import Missing
 from dislord.discord.resources.poll.poll import Poll
+from dislord.types import ObjDict
 
 
 class ModalInteractionCallbackData(ObjDict):
@@ -35,7 +35,7 @@ class MessagesInteractionCallbackData(ObjDict):
 InteractionCallbackData = MessagesInteractionCallbackData | AutocompleteInteractionCallbackData | ModalInteractionCallbackData
 
 
-class InteractionCallbackType(Enum):
+class InteractionCallbackType(IntEnum):
     PONG = 1
     CHANNEL_MESSAGE_WITH_SOURCE = 4
     DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE = 5

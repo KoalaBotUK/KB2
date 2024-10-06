@@ -23,6 +23,7 @@ load_dotenv()
 PUBLIC_KEY = os.environ.get("PUBLIC_KEY")
 BOT_TOKEN = os.environ.get("DISCORD_TOKEN")
 SOCKET_PATH = "/tmp/kb2.sock"
+RESPONSE_TIME_SLA_MS = 2500
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -133,12 +134,14 @@ def update_original_response(interaction: Interaction, response: HttpResponse):
 
     logger.debug(f"/defer/process Sending Response {interaction.id}")
     success = False
-    while not success:
+    failures = 0
+    while not success and failures < 3:
         try:
             client.edit_original_response(interaction.token, interact_response)
             success = True
         except Exception as e:
             logger.error(f"Failed to edit original response. Error: {e.__class__.__name__} {e}")
+            failures += 1
 
 
 async def socket_process():
@@ -160,9 +163,14 @@ async def socket_process():
                     deferred_request: DeferredRequest = TypeAdapter(DeferredRequest).validate_json(data.decode())
                     interaction = deferred_request.interaction
                     logger.debug(f"/defer/process Received Interaction {interaction.id}")
+                    defer = client.defer(interaction)
+                    if defer:
+                        conn.sendall(json.dumps(defer.as_serverless_response()).encode())
+                    else:
+                        conn.sendall("None".encode())
                     interact_http_response: HttpResponse = client.interact(interaction)
 
-                    if datetime.now().timestamp()*1000 - deferred_request.api_start_time_ms < 2500:
+                    if datetime.now().timestamp()*1000 - deferred_request.api_start_time_ms < RESPONSE_TIME_SLA_MS:
                         # If processing finishes within 3 seconds, send the result back to the function
                         conn.sendall(json.dumps(interact_http_response.as_serverless_response()).encode())
                     else:

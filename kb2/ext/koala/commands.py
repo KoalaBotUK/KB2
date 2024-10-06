@@ -1,33 +1,34 @@
-import asyncio
-import threading
-
 from dislord import CommandGroup
 from dislord.discord.interactions.application_commands.enums import ApplicationCommandOptionType
 from dislord.discord.interactions.application_commands.models import ApplicationCommandOption
 from dislord.discord.interactions.components.enums import ComponentType, ButtonStyle
-from dislord.discord.interactions.components.models import ActionRow, SelectMenu, SelectOption, Button
+from dislord.discord.interactions.components.models import ActionRow, Button
 from dislord.discord.interactions.receiving_and_responding.interaction import Interaction
 from dislord.discord.interactions.receiving_and_responding.interaction_response import InteractionResponse, \
     InteractionCallbackType, MessagesInteractionCallbackData
 from dislord.discord.resources.channel.message import MessageFlags
 from dislord.discord.resources.emoji.emoji import PartialEmoji
-from kb2.ext.koala.models import Guilds
-from kb2.client import client, owner_group
+from kb2.client import client, owner_group, OwnerCommandGroup
 from kb2.ext.koala import core
+from kb2.ext.koala.models import Guilds
 from kb2.log import logger
 
 koala_group = CommandGroup(client, name="koala", description="KoalaBot Base Commands")
-# owner_koala_group = CommandGroup(client, name="koala", description="KoalaBot Base Owner Commands", parent=owner_group)
-guild_owner_koala_group = CommandGroup(client, name="guild", description="Guild Controls", parent=owner_group)  # FIXME: parent not used
+owner_koala_group = OwnerCommandGroup(client, name="owner-koala", description="KoalaBot Base Owner Commands")
+guild_owner_koala_group = CommandGroup(client, name="guild", description="Guild Controls", parent=owner_koala_group)
 
 
-@koala_group.command(name="support", description="KoalaBot Support server link")
+@koala_group.command(name="support", description="KoalaBot Support server link",
+                     defer=InteractionResponse(
+                         type=InteractionCallbackType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE))
 def support(interaction: Interaction):
     return InteractionResponse.message(
         content="Join our support server for more help! https://discord.gg/5etEjVd")
 
 
-@owner_group.command(name="version", description="KoalaBot Version")
+@owner_group.command(name="version", description="KoalaBot Version",
+                     defer=InteractionResponse(
+                         type=InteractionCallbackType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE))
 def version(interaction: Interaction):
     return InteractionResponse.message(
         content=core.get_version())
@@ -36,29 +37,25 @@ def version(interaction: Interaction):
 @guild_owner_koala_group.command(name="delete", description="Delete all data for a guild from KoalaBot",
                                  options=[
                                      ApplicationCommandOption(name="guild_id", description="Guild ID",
-                                                              type=ApplicationCommandOptionType.STRING, required=True)])
+                                                              type=ApplicationCommandOptionType.STRING, required=True)],
+                                 defer=InteractionResponse(
+                                     type=InteractionCallbackType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE))
 def delete_guild(interaction: Interaction, guild_id: str):
     core.delete_guild(guild_id)
     return InteractionResponse.message(
         content="Deleted data for this guild")
 
 
-def sync_task(interaction: Interaction):
+@owner_group.command(name="sync", description="Sync commands for all guilds",
+                     defer=InteractionResponse(
+                         type=InteractionCallbackType.CHANNEL_MESSAGE_WITH_SOURCE,
+                         data=MessagesInteractionCallbackData(content="Syncing commands for all guilds...",
+                                                              flags=MessageFlags.EPHEMERAL | MessageFlags.LOADING)))
+def sync(interaction: Interaction):
     client.sync_commands()
     client.sync_commands(guild_ids=[guild.id for guild in client.guilds])
-    client.edit_original_response(interaction.token,
-                                  MessagesInteractionCallbackData(content="Synced commands for all guilds",
-                                                                  flags=MessageFlags.EPHEMERAL))
-
-
-@owner_group.command(name="sync", description="Sync commands for all guilds")
-def sync(interaction: Interaction):
-    threading.Thread(target=sync_task, args=(interaction,)).start()
-    return InteractionResponse.message(content="Syncing commands for all guilds...",
-                                       flags=MessageFlags.EPHEMERAL | MessageFlags.LOADING)
-
-
-available_extensions = ["verify", "vote"]
+    return InteractionResponse.message(content="Synced commands for all guilds",
+                                       flags=MessageFlags.EPHEMERAL)
 
 
 @client.component_callback("extension_enable")
@@ -84,14 +81,16 @@ def extension_select(interaction: Interaction):
         ))
 
 
-@client.command(name="extensions", description="KoalaBot Extensions", dm_permission=False)
+@client.command(name="extensions", description="KoalaBot Extensions", dm_permission=False,
+                defer=InteractionResponse(type=InteractionCallbackType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+                                          flags=MessageFlags.EPHEMERAL))
 def extensions(interaction: Interaction):
     logger.debug("Getting Guild")
-    extensions = Guilds.get_or_add(interaction.guild_id).extensions
+    k_extensions = Guilds.get_or_add(interaction.guild_id).extensions
     logger.debug("Got Guild")
 
     components = []
-    for i in range(0, len(extensions), 5):
+    for i in range(0, len(k_extensions), 5):
         row_buttons = [
             Button(
                 type=ComponentType.BUTTON,
@@ -99,7 +98,7 @@ def extensions(interaction: Interaction):
                 label=ext.name,
                 custom_id=f"extension_enable${ext.id}",
                 emoji=PartialEmoji(name=ext.emoji)
-            ) for ext in extensions[i:i+5] if not ext.hidden
+            ) for ext in k_extensions[i:i+5] if not ext.hidden
         ]
         components.append(ActionRow(type=ComponentType.ACTION_ROW, components=row_buttons))
 

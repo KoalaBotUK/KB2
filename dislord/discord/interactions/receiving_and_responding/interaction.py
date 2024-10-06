@@ -1,21 +1,20 @@
-from enum import Enum
+from enum import IntEnum
 from typing import Literal
 
-from dislord.types import ObjDict
 from dislord.discord.interactions.receiving_and_responding.interaction_data import InteractionData, \
     ApplicationCommandData, MessageComponentData, ModalSubmitData
 from dislord.discord.interactions.receiving_and_responding.message_interaction import InteractionType
+from dislord.discord.reference import Snowflake, Missing, Locale
 from dislord.discord.resources.application.enums import ApplicationIntegrationType
-from dislord.discord.resources.application.models import ApplicationIntegrationTypeConfiguration
 from dislord.discord.resources.channel.channel import PartialChannel
 from dislord.discord.resources.channel.message import Message
-from dislord.discord.resources.guild.guild import Guild, PartialGuild
+from dislord.discord.resources.guild.guild import PartialGuild
 from dislord.discord.resources.guild.guild_member import GuildMember
 from dislord.discord.resources.user.user import User
-from dislord.discord.reference import Snowflake, Missing, Locale
+from dislord.types import ObjDict
 
 
-class InteractionContextType(Enum):
+class InteractionContextType(IntEnum):
     GUILD = 0
     BOT_DM = 1
     PRIVATE_CHANNEL = 2
@@ -44,22 +43,22 @@ class __Interaction(ObjDict):
 
 
 class PingInteraction(__Interaction):
-    type: Literal[1]
+    type: Literal[InteractionType.PING]
     data: Missing = None
 
 
 class ApplicationCommandInteraction(__Interaction):
-    type: Literal[2, 4]
+    type: Literal[InteractionType.APPLICATION_COMMAND, InteractionType.APPLICATION_COMMAND_AUTOCOMPLETE]
     data: ApplicationCommandData
 
 
 class MessageInteraction(__Interaction):
-    type: Literal[3]
+    type: Literal[InteractionType.MESSAGE_COMPONENT]
     data: MessageComponentData
 
 
 class ModalSubmitInteraction(__Interaction):
-    type: Literal[5]
+    type: Literal[InteractionType.MODAL_SUBMIT]
     data: ModalSubmitData
 
 

@@ -1,13 +1,13 @@
-from enum import Enum
+from enum import IntEnum
 
 
-class ApplicationCommandType(Enum):
+class ApplicationCommandType(IntEnum):
     CHAT_INPUT = 1
     USER = 2
     MESSAGE = 3
 
 
-class ApplicationCommandOptionType(Enum):
+class ApplicationCommandOptionType(IntEnum):
     SUB_COMMAND = 1
     SUB_COMMAND_GROUP = 2
     STRING = 3
@@ -38,7 +38,7 @@ class ApplicationCommandOptionType(Enum):
     #         return False
 
 
-class ApplicationCommandPermissionType(Enum):
+class ApplicationCommandPermissionType(IntEnum):
     ROLE = 1
     USER = 2
     CHANNEL = 3

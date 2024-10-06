@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class TeamMemberRoleType(Enum):
+class TeamMemberRoleType(StrEnum):
     OWNER = None
     ADMIN = "admin"
     DEVELOPER = "developer"

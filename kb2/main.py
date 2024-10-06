@@ -3,8 +3,8 @@ import kb2.env as env
 from kb2.client import client
 from kb2.log import logger
 
-
 logger.info("Starting main.py")
+
 
 def serverless_handler(event, context):  # Not needed if using server
     from kb2 import ext
@@ -19,3 +19,7 @@ def sync_serverless_handler(event, context):
     client.sync_commands()
     client.sync_commands(guild_ids=[g.id for g in client.guilds])
     return {"statusCode": 200}
+
+
+if __name__ == '__main__':
+    sync_serverless_handler(None, None)

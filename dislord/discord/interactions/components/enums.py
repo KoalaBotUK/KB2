@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import IntEnum
 
 
-class ComponentType(Enum):
+class ComponentType(IntEnum):
     ACTION_ROW = 1
     BUTTON = 2
     STRING_SELECT = 3
@@ -12,7 +12,7 @@ class ComponentType(Enum):
     CHANNEL_SELECT = 8
 
 
-class ButtonStyle(Enum):
+class ButtonStyle(IntEnum):
     PRIMARY = 1
     SECONDARY = 2
     SUCCESS = 3
@@ -20,6 +20,6 @@ class ButtonStyle(Enum):
     LINK = 5
 
 
-class TextInputStyle(Enum):
+class TextInputStyle(IntEnum):
     SHORT = 1
     PARAGRAPH = 2
