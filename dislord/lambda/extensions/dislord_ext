@@ -7,4 +7,4 @@ LAMBDA_EXTENSION_NAME="$OWN_FILENAME" # (external) extension name has to match t
 
 echo "${LAMBDA_EXTENSION_NAME} launching extension"
 cd /opt
-exec python3 extensions/main.py -X importtime
+exec python3 extensions/dislord_ext.py -X importtime
