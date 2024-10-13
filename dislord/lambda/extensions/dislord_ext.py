@@ -27,7 +27,7 @@ SOCKET_PATH = "/tmp/kb2.sock"
 RESPONSE_TIME_SLA_MS = 2500
 SOCKET_SIZE = 2 ** 14
 DISLORD_CLIENT = os.environ.get("DISLORD_CLIENT").split(".")
-client = importlib.import_module(".".join(DISLORD_CLIENT[:-1]), DISLORD_CLIENT[-1])
+client = getattr(importlib.import_module(".".join(DISLORD_CLIENT[:-1])), DISLORD_CLIENT[-1])
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
