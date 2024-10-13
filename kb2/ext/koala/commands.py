@@ -62,7 +62,7 @@ def sync(interaction: Interaction):
                            defer=InteractionResponse(
                                type=InteractionCallbackType.UPDATE_MESSAGE,
                                data=MessagesInteractionCallbackData(content="Loading...",
-                                   flags=MessageFlags.LOADING | MessageFlags.EPHEMERAL)))
+                                                                    flags=MessageFlags.LOADING | MessageFlags.EPHEMERAL)))
 def extension_select(interaction: Interaction):
     modified_components = interaction.message.components
     extension_id = interaction.data.custom_id.split("$")[1]
@@ -89,7 +89,9 @@ def extension_select(interaction: Interaction):
 
 @client.command(name="extensions", description="KoalaBot Extensions", dm_permission=False,
                 defer=InteractionResponse(type=InteractionCallbackType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-                                          flags=MessageFlags.EPHEMERAL))
+                                          data=MessagesInteractionCallbackData(
+                                              content="Loading...",
+                                              flags=MessageFlags.LOADING | MessageFlags.EPHEMERAL)))
 def extensions(interaction: Interaction):
     logger.debug("Getting Guild")
     k_extensions = Guild.get_or_add(interaction.guild_id).extensions
