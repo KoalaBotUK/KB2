@@ -14,6 +14,7 @@ class RoleTags(ObjDict):
 
 
 class RoleFlags(IntFlag):
+    NONE = 0
     IN_PROMPT = 1 << 0
 
 
@@ -29,4 +30,4 @@ class Role(ObjDict):
     managed: bool
     mentionable: bool
     tags: RoleTags | Missing = None
-    flags: RoleFlags
+    flags: RoleFlags = RoleFlags.NONE

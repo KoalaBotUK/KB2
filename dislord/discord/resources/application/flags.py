@@ -2,6 +2,7 @@ from enum import IntFlag
 
 
 class ApplicationFlags(IntFlag):
+    NONE = 0
     APPLICATION_AUTO_MODERATION_RULE_CREATE_BADGE = 1 << 6
     GATEWAY_PRESENCE = 1 << 12
     GATEWAY_PRESENCE_LIMITED = 1 << 13

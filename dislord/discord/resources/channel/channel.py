@@ -22,6 +22,7 @@ class SortOrderType(IntEnum):
 
 
 class ChannelFlags(IntFlag):
+    NONE = 0
     PINNED = 1 << 1
     REQUIRE_TAG = 1 << 4
     HIDE_MEDIA_DOWNLOAD_OPTIONS = 1 << 15
@@ -79,7 +80,7 @@ class Channel(PartialChannel):
     member_count: int | Missing = None
     member: ThreadMember | Missing = None
     default_auto_archive_duration: int | Missing = None
-    flags: ChannelFlags | Missing = None
+    flags: ChannelFlags | Missing = ChannelFlags.NONE
     total_message_sent: int | Missing = None
     available_tags: list[ForumTag] | Missing = None
     applied_tags: list[Snowflake] | Missing = None

@@ -12,6 +12,7 @@ class PremiumType(IntEnum):
 
 
 class UserFlags(IntFlag):
+    NONE = 0
     STAFF = 1 << 0
     PARTNER = 1 << 1
     HYPESQUAD = 1 << 2
@@ -46,7 +47,7 @@ class User(PartialUser):
     locale: Locale | Missing = None
     verified: bool | Missing = None
     email: str | Missing | None = None
-    flags: UserFlags | Missing = None
+    flags: UserFlags | Missing = UserFlags.NONE
     premium_type: PremiumType | Missing = None
-    public_flags: UserFlags | Missing = None
+    public_flags: UserFlags | Missing = UserFlags.NONE
     avatar_decoration: str | Missing | None = None

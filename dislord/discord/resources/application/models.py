@@ -38,7 +38,7 @@ class Application(PartialApplication):
     primary_sku_id: Snowflake | Missing = None
     slug: str | Missing = None
     cover_image: str | Missing = None
-    flags: ApplicationFlags | Missing = None
+    flags: ApplicationFlags | Missing = ApplicationFlags.NONE
     approximate_guild_count: int | Missing = None
     redirect_uris: list[str] | Missing = None
     interactions_endpoint_url: str | Missing = None

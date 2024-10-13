@@ -5,6 +5,7 @@ from dislord.discord.reference import Snowflake, Missing
 
 
 class AttachmentFlag(IntFlag):
+    NONE = 0
     IS_REMIX = 1 << 2
 
 
@@ -24,4 +25,4 @@ class Attachment(PartialAttachment):
     ephemeral: bool | Missing = None
     duration_secs: float | Missing = None
     waveform: str | Missing = None
-    flags: AttachmentFlag
+    flags: AttachmentFlag = AttachmentFlag.NONE

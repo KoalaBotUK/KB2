@@ -26,7 +26,7 @@ class MessagesInteractionCallbackData(ObjDict):
     content: str | Missing = None
     embeds: list[Embed] | Missing = None
     allowed_mentions: AllowedMentions | Missing = None
-    flags: MessageFlags | Missing = None
+    flags: MessageFlags | Missing = MessageFlags.NONE
     components: list[Component] | Missing = None
     attachments: list[PartialAttachment] | Missing = None
     poll: Poll | Missing = None

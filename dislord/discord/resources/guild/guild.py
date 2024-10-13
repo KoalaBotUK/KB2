@@ -51,6 +51,7 @@ class GuildFeatures(Flag):
 
 
 class SystemChannelFlags(IntFlag):
+    NONE = 0
     SUPPRESS_JOIN_NOTIFICATIONS = 1 << 0
     SUPPRESS_PREMIUM_SUBSCRIPTIONS = 1 << 1
     SUPPRESS_GUILD_REMINDER_NOTIFICATIONS = 1 << 2
@@ -125,7 +126,7 @@ class Guild(PartialGuild):
     features: list[GuildFeatures]
     mfa_level: MfaLevel
     application_id: Snowflake | None = None
-    system_channel_flags: SystemChannelFlags
+    system_channel_flags: SystemChannelFlags = SystemChannelFlags.NONE
     rules_channel_id: Snowflake | None = None
     max_presences: int | Missing | None = None
     max_members: int | Missing = None

@@ -7,6 +7,7 @@ from dislord.discord.reference import Missing, Snowflake, ISOTimestamp
 
 
 class GuildMemberFlags(IntFlag):
+    NONE = 0
     DID_REJOIN = 1 << 0
     COMPLETED_ONBOARDING = 1 << 1
     BYPASSES_VERIFICATION = 1 << 2
@@ -19,7 +20,7 @@ class PartialGuildMember(ObjDict):
     roles: list[Snowflake]
     joined_at: ISOTimestamp
     premium_since: ISOTimestamp | Missing | None = None
-    flags: GuildMemberFlags
+    flags: GuildMemberFlags = GuildMemberFlags.NONE
     pending: bool | Missing = None
     permissions: str | Missing = None
     communication_disabled_until: ISOTimestamp | Missing | None = None

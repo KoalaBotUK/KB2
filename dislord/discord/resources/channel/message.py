@@ -53,7 +53,7 @@ class Message(PartialMessage):
     application: PartialApplication | Missing = None
     application_id: Snowflake | Missing = None
     message_reference: MessageReference | Missing = None
-    flags: MessageFlags | Missing = None
+    flags: MessageFlags | Missing = MessageFlags.NONE
     referenced_message: Self | Missing | None = None
     interaction_metadata: MessageInteractionMetadata | Missing = None
     interaction: MessageInteraction | Missing = None
