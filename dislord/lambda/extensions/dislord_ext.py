@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import asyncio
+import importlib
 import json
 import logging
 import os
@@ -17,7 +18,6 @@ from dislord.discord.interactions.receiving_and_responding.interaction_response 
 from dislord.discord.resources.channel.message import MessageFlags
 from dislord.model.api import HttpResponse
 from dislord.types import ObjDict
-from kb2.client import client
 
 load_dotenv()
 
@@ -25,6 +25,9 @@ PUBLIC_KEY = os.environ.get("PUBLIC_KEY")
 BOT_TOKEN = os.environ.get("DISCORD_TOKEN")
 SOCKET_PATH = "/tmp/kb2.sock"
 RESPONSE_TIME_SLA_MS = 2500
+SOCKET_SIZE = 2 ** 14
+DISLORD_CLIENT = os.environ.get("DISLORD_CLIENT").split(".")
+client = importlib.import_module(".".join(DISLORD_CLIENT[:-1]), DISLORD_CLIENT[-1])
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -74,7 +77,7 @@ class LambdaExtension:
             register_response = await self._async_httpx.post(
                 f"http://{self._runtime_api}/2020-01-01/extension/register",
                 content='{"events": ["INVOKE"]}',
-                headers={"Lambda-Extension-Name": "kb2_defer",
+                headers={"Lambda-Extension-Name": "dislord_ext",
                          "Content-Type": "application/json"}, )
             if register_response.status_code != 200:
                 logger.error(
@@ -157,9 +160,9 @@ async def socket_process():
             conn, _ = server.accept()
             conn.setblocking(True)
 
-            with conn:
+            with conn:  # TODO: Error handling for invalid recieve/response not closing old connection
                 # Receive data from the entrypoint Lambda function
-                data = conn.recv(4096)
+                data = conn.recv(SOCKET_SIZE)  # TODO: Optimize multiple reads
                 if data:
                     deferred_request: DeferredRequest = TypeAdapter(DeferredRequest).validate_json(data.decode())
                     interaction = deferred_request.interaction
@@ -189,5 +192,5 @@ async def socket_process():
 
 
 if __name__ == '__main__':
-    logger.info("Starting kb2_defer")
+    logger.info("Starting dislord_ext")
     asyncio.run(socket_process())

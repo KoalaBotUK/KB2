@@ -1,6 +1,6 @@
 from pynamodb.attributes import MapAttribute, ListAttribute, UnicodeAttribute, NumberAttribute, DynamicMapAttribute
 
-from kb2.ext.koala.models import ExtensionAttr, Guilds
+from kb2.ext.koala.models import ExtensionAttr, Guild
 
 
 class VerifyRoleAttr(MapAttribute):

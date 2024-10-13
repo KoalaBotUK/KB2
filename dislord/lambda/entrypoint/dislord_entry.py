@@ -1,22 +1,42 @@
 import json
+import logging
+import os
 import socket
 import sys
-import traceback
 import datetime
 from http.client import UNAUTHORIZED, OK
 
 from discord_interactions import verify_key
+from dotenv import load_dotenv
 
-from kb2_entrypoint.env import PUBLIC_KEY
-from kb2_entrypoint.log import logger
-
-logger.info("Starting Entrypoint")
+# Constants
 SOCKET_PATH = "/tmp/kb2.sock"
 RESPONSE_TIME_SLA_MS = 2500
+SOCKET_SIZE = 2 ** 14
+
+load_dotenv()
+PUBLIC_KEY = os.environ.get("PUBLIC_KEY")
+BOT_TOKEN = os.environ.get("DISCORD_TOKEN")
+
+# Logging
+_LOG_LEVEL = logging.DEBUG
+_FORMATTER = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
+stdout_handler = logging.StreamHandler(sys.stdout)
+stdout_handler.setFormatter(_FORMATTER)
+stdout_handler.setLevel(_LOG_LEVEL)
+
+logger = logging.getLogger(__name__)
+logger.setLevel(_LOG_LEVEL)
+logger.addHandler(stdout_handler)
+logger.info("Starting Entrypoint")
+
+
+# Code
 
 
 def now_ms() -> float:
-    return datetime.datetime.now().timestamp()*1000
+    return datetime.datetime.now().timestamp() * 1000
+
 
 def socket_connect() -> socket.socket:
     if sys.platform == "win32":
@@ -43,14 +63,14 @@ def process_interact(event: dict):
         client.sendall(request.encode())
 
         # Set a timeout of 3 seconds to receive the response
-        client.settimeout((respond_by_ms - now_ms())/1000)
+        client.settimeout((respond_by_ms - now_ms()) / 1000)
         logger.debug(f"Setting timeout to: {respond_by_ms} - {now_ms()} = {client.gettimeout()}")
 
-        defer = json.loads(client.recv(4096).decode())
+        defer = json.loads(client.recv(SOCKET_SIZE).decode())
 
         # Wait for the response from the extension
         try:
-            data = client.recv(4096)
+            data = client.recv(SOCKET_SIZE)
             if data:
                 response = json.loads(data.decode())
                 # Check if the response came within 3 seconds
@@ -68,6 +88,17 @@ def process_interact(event: dict):
         raise e
 
 
+def serverless_handler_no_auth(event, context):
+    if json.loads(event["body"]).get("type") == 1:
+        return {"statusCode": OK,
+                "body": json.dumps({"type": 1}),
+                "headers": {
+                    "Content-Type": "application/json"
+                }}
+    else:
+        return process_interact(event)
+
+
 def serverless_handler(event, context):
     logger.debug(f"Recieved Event\nevent: {event}\ncontext: {context}")
 
@@ -82,15 +113,7 @@ def serverless_handler(event, context):
                     "headers": {
                         "Content-Type": "application/json"
                     }}
-        if json.loads(event["body"]).get("type") == 1:
-            return {"statusCode": OK,
-                    "body": json.dumps({"type": 1}),
-                    "headers": {
-                        "Content-Type": "application/json"
-                    }}
-        else:
-            return process_interact(event)
-
+    return serverless_handler_no_auth(event, context)
 
 
 def server():
@@ -105,8 +128,20 @@ def server():
                                           "body": (await request.body()).decode("utf-8"),
                                           "headers": request.headers,
                                           "requestContext": {
-                                              "requestTimeEpoch": datetime.datetime.now().timestamp()*1000
+                                              "requestTimeEpoch": datetime.datetime.now().timestamp() * 1000
                                           }}, None)
+
+        response.status_code = sl_response['statusCode']
+        return json.loads(sl_response['body'])
+
+    @app.post("/deferred-interactions-no-auth")
+    async def deferred_interactions(request: Request, response: Response):
+        sl_response = serverless_handler_no_auth({"httpMethod": request.method,
+                                                  "body": (await request.body()).decode("utf-8"),
+                                                  "headers": request.headers,
+                                                  "requestContext": {
+                                                      "requestTimeEpoch": datetime.datetime.now().timestamp() * 1000
+                                                  }}, None)
 
         response.status_code = sl_response['statusCode']
         return json.loads(sl_response['body'])

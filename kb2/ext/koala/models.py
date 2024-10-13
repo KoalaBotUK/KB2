@@ -37,7 +37,7 @@ class LegacyExtension(ExtensionAttr, discriminator="legacy"):
     pass
 
 
-class Guilds(Model):
+class Guild(Model):
     """
     {
         "guild_id": "1234567890123456789", # guild_id DEFAULT is default
@@ -96,9 +96,9 @@ class Guilds(Model):
     @staticmethod
     def get_or_add(guild_id):
         try:
-            return Guilds.get(guild_id)
+            return Guild.get(guild_id)
         except DoesNotExist:
-            return Guilds(guild_id, extensions=Guilds.get("DEFAULT").extensions)
+            return Guild(guild_id, extensions=Guild.get("DEFAULT").extensions)
 
 
 DEFAULT_LEGACY_EXTENSIONS = [
@@ -112,11 +112,11 @@ DEFAULT_LEGACY_EXTENSIONS = [
 ]
 
 if __name__ == '__main__':
-    print(Guilds.Meta.table_name)
-    Guilds.create_table(wait=True)
-    new_guild = Guilds('DEFAULT')
+    print(Guild.Meta.table_name)
+    Guild.create_table(wait=True)
+    new_guild = Guild('DEFAULT')
     new_guild.extensions = DEFAULT_LEGACY_EXTENSIONS
     new_guild.save()
-    new_guild = Guilds.get('DEFAULT')
-    print(Guilds.get('DEFAULT').extensions)
+    new_guild = Guild.get('DEFAULT')
+    print(Guild.get('DEFAULT').extensions)
     print(new_guild.extensions)

@@ -1,9 +1,7 @@
 import enum
 
-from pynamodb.exceptions import DoesNotExist
-
 import kb2
-from .models import Guilds
+from .models import Guild
 
 
 # Constants
@@ -11,6 +9,14 @@ from .models import Guilds
 
 def get_version():
     return kb2.__version__
+
+
+def get_guild(guild_id):
+    return Guild.get(guild_id)
+
+
+def delete_guild(guild_id):
+    get_guild(guild_id).delete()
 
 
 class Extension(enum.StrEnum):
@@ -28,15 +34,15 @@ class Extension(enum.StrEnum):
 
 
 def set_extension(guild_id: str, extension):
-    Guilds.get(guild_id).enabled_extensions = extension
+    Guild.get(guild_id).enabled_extensions = extension
 
 
 def get_extensions(guild_id: str):
-    return {"enabled": Guilds.get(guild_id).enabled_extensions, "available": Guilds.get(guild_id).allowed_extensions}
+    return {"enabled": Guild.get(guild_id).enabled_extensions, "available": Guild.get(guild_id).allowed_extensions}
 
 
 def enable_extension(guild_id, extension_id):
-    guild_model = Guilds.get_or_add(guild_id)
+    guild_model = Guild.get_or_add(guild_id)
 
     extension_attr = guild_model.find_extension(extension_id)
 
@@ -51,7 +57,7 @@ def enable_extension(guild_id, extension_id):
 
 
 def disable_extension(guild_id, extension_id):
-    guild_model = Guilds.get_or_add(guild_id)
+    guild_model = Guild.get_or_add(guild_id)
 
     extension_attr = guild_model.find_extension(extension_id)
 
@@ -63,7 +69,3 @@ def disable_extension(guild_id, extension_id):
 
     extension_attr.enabled = False
     guild_model.save()
-
-
-def delete_guild(guild_id):
-    Guilds.get(guild_id).delete()

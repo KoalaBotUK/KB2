@@ -10,7 +10,7 @@ from dislord.discord.resources.channel.message import MessageFlags
 from dislord.discord.resources.emoji.emoji import PartialEmoji
 from kb2.client import client, owner_group, OwnerCommandGroup
 from kb2.ext.koala import core
-from kb2.ext.koala.models import Guilds
+from kb2.ext.koala.models import Guild
 from kb2.log import logger
 
 koala_group = CommandGroup(client, name="koala", description="KoalaBot Base Commands")
@@ -81,8 +81,9 @@ def extension_select(interaction: Interaction):
     return InteractionResponse(
         type=InteractionCallbackType.UPDATE_MESSAGE,
         data=MessagesInteractionCallbackData(
-            components=modified_components,
-            flags=MessageFlags.NONE
+            content="Select extensions to enable/disable:",
+            flags=MessageFlags.EPHEMERAL,
+            components=modified_components
         ))
 
 
@@ -91,7 +92,7 @@ def extension_select(interaction: Interaction):
                                           flags=MessageFlags.EPHEMERAL))
 def extensions(interaction: Interaction):
     logger.debug("Getting Guild")
-    k_extensions = Guilds.get_or_add(interaction.guild_id).extensions
+    k_extensions = Guild.get_or_add(interaction.guild_id).extensions
     logger.debug("Got Guild")
 
     components = []

@@ -17,14 +17,14 @@ jobs:
       - name: Install pip requirements
         run: |
           mkdir entrypoint
-          pip install -r kb2_entrypoint/requirements.txt --target ./entrypoint
+          pip install -r ./dislord/lambda/entrypoint/requirements.txt --target ./entrypoint
           cd entrypoint
           zip -r ../entrypoint.zip .
           cd ..
 
       - name: Add project code
         run: |
-          zip -r ./entrypoint.zip ./kb2_entrypoint
+          zip -r ./entrypoint.zip ./dislord/lambda/entrypoint/
 
       - uses: actions/upload-artifact@v3
         with:
@@ -86,11 +86,12 @@ jobs:
 
     - name: Add project code
       run: |
-        mv ./extensions/kb2_defer.py .
-        zip -r ./layer.zip ./kb2_defer.py
+        mv ./dislord/lambda/extensions .
+        mv extensions/dislord_ext.py .
+        zip -r ./layer.zip ./extensions
+        zip -r ./layer.zip ./dislord_ext.py
         zip -r ./layer.zip ./dislord
         zip -r ./layer.zip ./kb2
-        zip -r ./layer.zip ./extensions
 
     - uses: actions/upload-artifact@v3
       with:
@@ -124,7 +125,7 @@ jobs:
         
         # Update Lambda layer
         LAMBDA_FUNCTION_NAME=KB2        
-        LAMBDA_LAYER_NAME=kb2_defer
+        LAMBDA_LAYER_NAME=dislord_ext
         LAYER_VERSION_ARN=$(aws lambda publish-layer-version --layer-name $LAMBDA_LAYER_NAME --content S3Bucket=$S3_BUCKET,S3Key=$S3_KEY --compatible-runtimes python3.11 --compatible-architectures x86_64 --query LayerVersionArn --output text)
         echo Layer version ARN: $LAYER_VERSION_ARN
         aws lambda wait function-updated --function-name $LAMBDA_FUNCTION_NAME
