@@ -3,6 +3,8 @@ from fastapi import HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt
 from starlette.status import HTTP_403_FORBIDDEN
+
+from kb2 import env
 from kb2.log import logger
 
 
@@ -23,6 +25,24 @@ class JWTBearer(HTTPBearer):
             raise HTTPException(
                 status_code=HTTP_403_FORBIDDEN, detail="Wrong authentication method"
             )
+        try:
+            return jwt.decode(credentials.credentials, self.jwks, audience="kb2", issuer="temp.auther.koalabot.uk")
+        except (jwt.JWTError, jwt.ExpiredSignatureError, jwt.JWTClaimsError) as e:
+            logger.exception("JWT Error: %s", e, exc_info=e)
+            raise HTTPException(
+                status_code=HTTP_403_FORBIDDEN, detail="Invalid token"
+            )
 
-        return jwt.decode(credentials.credentials, self.jwks, audience="kb2", issuer="temp.auther.koalabot.uk")
+    async def assert_scope(self, request: Request, scope: str):
+        jwt_auth = await self(request)
+        if not jwt_auth:
+            return False
+        if scope not in jwt_auth.get("scope").split(" "):
+            raise HTTPException(
+                status_code=HTTP_403_FORBIDDEN, detail="Incorrect scope"
+            )
 
+    async def is_owner(self, request: Request):
+        await self.assert_scope(request, "owner")
+
+auth = JWTBearer(env.JWKS_URL)
