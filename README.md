@@ -36,16 +36,16 @@ These instructions will get you a copy of the project up and running on your loc
 ## Prerequisites
 This application uses python 3.11 which you can download [here](https://www.python.org/downloads/)
 
-All python packages you need to run on serverless can be found in the [requirements.txt](requirements.txt).
+All python packages you need to run on serverless can be found in the [lambda-requirements.txt](lambda-requirements.txt).
 Before running the bot you must install these as so:
 
 ```bash
-$ pip3 install -r requirements.txt
+$ pip3 install -r lambda-requirements.txt
 ``` 
 
-If you would like to run a server version locally, you will also need to install FastAPI with standard libraries
+If you would like to run a server version locally, you will instead need to install from [requirements.txt](requirements.txt)
 ```bash
-$ pip3 install fastapi[standard]
+$ pip3 install -r requirements.txt
 ```
 
 ### Environment Variables

@@ -1,5 +1,5 @@
-./config/
-./logs/
+config/
+logs/
 
 # Databases (avoid saving private info to git)
 *.db

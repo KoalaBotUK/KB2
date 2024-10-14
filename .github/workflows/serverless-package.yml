@@ -17,7 +17,7 @@ jobs:
       - name: Install pip requirements
         run: |
           mkdir entrypoint
-          pip install -r ./dislord/lambda/entrypoint/requirements.txt --target ./entrypoint
+          pip install -r ./dislord/lambda/entrypoint/lambda-requirements.txt --target ./entrypoint
           cd entrypoint
           zip -r ../entrypoint.zip .
           cd ..
@@ -79,7 +79,7 @@ jobs:
     - name: Install pip requirements
       run: |
         mkdir layer
-        pip install -r requirements.txt --target ./layer
+        pip install -r lambda-requirements.txt --target ./layer
         cd layer
         zip -r ../layer.zip .
         cd ..
