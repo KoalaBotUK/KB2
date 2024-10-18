@@ -131,3 +131,9 @@ jobs:
         aws lambda wait function-updated --function-name $LAMBDA_FUNCTION_NAME
         aws lambda update-function-configuration --function-name $LAMBDA_FUNCTION_NAME --layers $LAYER_VERSION_ARN
         aws lambda wait function-updated --function-name $LAMBDA_FUNCTION_NAME
+
+        # Update Lambda function code
+        LAMBDA_FUNCTION_NAME=KB2-API
+        aws lambda wait function-updated --function-name $LAMBDA_FUNCTION_NAME
+        aws lambda update-function-code --function-name $LAMBDA_FUNCTION_NAME --s3-bucket $S3_BUCKET --s3-key $S3_KEY
+        aws lambda wait function-updated --function-name $LAMBDA_FUNCTION_NAME
