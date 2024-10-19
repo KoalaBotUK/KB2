@@ -10,7 +10,7 @@ from discord_interactions import verify_key
 from dotenv import load_dotenv
 
 # Constants
-SOCKET_PATH = "/tmp/kb2.sock"
+BASE_SOCKET_PATH = "/tmp/kb2-%s.sock"
 RESPONSE_TIME_SLA_MS = 2500
 SOCKET_SIZE = 2 ** 14
 
@@ -34,6 +34,13 @@ logger.info("Starting Entrypoint")
 # Code
 
 
+def get_socket_address() -> tuple[any, ...] | str:
+    if sys.platform == "win32":
+        return socket.gethostname(), 8765
+    else:
+        return BASE_SOCKET_PATH.format(os.environ.get("_X_AMZN_TRACE_ID"))
+
+
 def now_ms() -> float:
     return datetime.datetime.now().timestamp() * 1000
 
@@ -41,11 +48,11 @@ def now_ms() -> float:
 def socket_connect() -> socket.socket:
     if sys.platform == "win32":
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.connect((socket.gethostname(), 8765))
+        client.connect(get_socket_address())
         return client
     else:
         client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        client.connect(SOCKET_PATH)
+        client.connect(get_socket_address())
         return client
 
 

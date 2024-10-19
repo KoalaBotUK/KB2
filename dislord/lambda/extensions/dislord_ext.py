@@ -23,7 +23,7 @@ load_dotenv()
 
 PUBLIC_KEY = os.environ.get("PUBLIC_KEY")
 BOT_TOKEN = os.environ.get("DISCORD_TOKEN")
-SOCKET_PATH = "/tmp/kb2.sock"
+BASE_SOCKET_PATH = "/tmp/kb2-%s.sock"
 RESPONSE_TIME_SLA_MS = 2500
 SOCKET_SIZE = 2 ** 14
 DISLORD_CLIENT = os.environ.get("DISLORD_CLIENT").split(".")
@@ -38,11 +38,16 @@ stream_handler.setFormatter(_FORMATTER)
 logger.addHandler(stream_handler)
 
 
+def get_socket_address() -> tuple[any, ...] | str:
+    if sys.platform == "win32":
+        return socket.gethostname(), 8765
+    else:
+        return BASE_SOCKET_PATH.format(os.environ.get("_X_AMZN_TRACE_ID"))
+
+
 def socket_connect() -> socket.socket:
     if sys.platform == "win32":
         sock_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        global SOCKET_PATH
-        SOCKET_PATH = (socket.gethostname(), 8765)
         return sock_client
     else:
         sock_client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -152,7 +157,7 @@ async def socket_process():
     server = socket_connect()
     await l_ext.register()
     try:
-        server.bind(SOCKET_PATH)
+        server.bind(get_socket_address())
         server.listen(1)
 
         while True:
