@@ -48,12 +48,11 @@ def now_ms() -> float:
 def socket_connect() -> socket.socket:
     if sys.platform == "win32":
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.connect(get_socket_address())
-        return client
     else:
         client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        client.connect(get_socket_address())
-        return client
+    logger.debug(f"Binding to socket {get_socket_address()}")
+    client.connect(get_socket_address())
+    return client
 
 
 def process_interact(event: dict):

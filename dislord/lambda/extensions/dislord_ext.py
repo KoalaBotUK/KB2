@@ -157,6 +157,7 @@ async def socket_process():
     server = socket_connect()
     await l_ext.register()
     try:
+        logger.debug(f"Binding to socket {get_socket_address()}")
         server.bind(get_socket_address())
         server.listen(1)
 
