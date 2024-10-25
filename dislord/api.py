@@ -61,6 +61,8 @@ class DiscordApi:
         response = httpx.post(DISCORD_URL + endpoint, content=body_json, **kwargs, headers=headers)
         if response.is_success:
             logger.debug(f"📬 Response from Discord API: {response.content}")
+            if not type_hint:
+                return
             return TypeAdapter(type_hint).validate_json(response.content)
         elif response.status_code == 429:
             retry_after = response.json()["retry_after"]

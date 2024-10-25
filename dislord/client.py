@@ -1,5 +1,6 @@
 import json
 from queue import Queue
+from types import NoneType
 from typing import Callable
 
 from discord_interactions import verify_key
@@ -98,9 +99,9 @@ class ApplicationClient:
 
     def interaction_callback(self, interaction: Interaction,
                              interaction_response: InteractionResponse) -> InteractionCallbackResponse:
-        return self._api.post(f"/interactions/{self.application.id}/{interaction.token}/callback",
+        return self._api.post(f"/interactions/{interaction.id}/{interaction.token}/callback",
                               interaction_response,
-                              type_hint=InteractionCallbackResponse)
+                              type_hint=None)
 
     def edit_original_response(self, interaction_token: Snowflake, response: MessagesInteractionCallbackData):
         self._api.patch(f"/webhooks/{self.application.id}/{interaction_token}/messages/@original", response,

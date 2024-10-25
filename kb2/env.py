@@ -23,4 +23,4 @@ ENV_PREFIX = os.environ.get("ENV_PREFIX", "local_")
 
 API_GATEWAY_BASE_PATH = os.environ.get("API_GATEWAY_BASE_PATH", "/")
 
-JWKS_URL = os.environ.get("JWKS_URL", "https://koalabot.uk/.well-known/jwks.json")
+JWKS_URL = os.environ.get("JWKS_URL", "https://auther.jackdraper.co.uk/.well-known/jwks.json")

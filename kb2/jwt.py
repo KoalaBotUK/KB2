@@ -26,7 +26,7 @@ class JWTBearer(HTTPBearer):
                 status_code=HTTP_403_FORBIDDEN, detail="Wrong authentication method"
             )
         try:
-            return jwt.decode(credentials.credentials, self.jwks, audience="kb2", issuer="temp.auther.koalabot.uk")
+            return jwt.decode(credentials.credentials, self.jwks, audience="kb2", issuer="auther.jackdraper.co.uk")
         except (jwt.JWTError, jwt.ExpiredSignatureError, jwt.JWTClaimsError) as e:
             logger.exception("JWT Error: %s", e, exc_info=e)
             raise HTTPException(
