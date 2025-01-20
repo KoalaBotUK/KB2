@@ -1,4 +1,4 @@
-from . import koala, verify
+from . import koala, verify, verifyme
 
 
 def register_all():

@@ -1,9 +1,11 @@
 import httpx
 from fastapi import HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security.utils import get_authorization_scheme_param
 from jose import jwt
 from starlette.status import HTTP_403_FORBIDDEN
 
+from dislord.client import UserClient
 from kb2 import env
 from kb2.log import logger
 
@@ -45,4 +47,26 @@ class JWTBearer(HTTPBearer):
     async def is_owner(self, request: Request):
         await self.assert_scope(request, "owner")
 
-auth = JWTBearer(env.JWKS_URL)
+class DiscordBearer(HTTPBearer):
+    def __init__(self, auto_error: bool = True):
+        super().__init__(auto_error=auto_error, scheme_name="Discord")
+
+    async def __call__(self, request: Request) -> UserClient | None:
+        authorization = request.headers.get("Authorization")
+        scheme, credentials = get_authorization_scheme_param(authorization)
+
+        if not credentials:
+            raise HTTPException(
+                status_code=HTTP_403_FORBIDDEN, detail="Wrong authentication method"
+            )
+
+        if scheme != "Discord":
+            raise HTTPException(
+                status_code=HTTP_403_FORBIDDEN, detail="Wrong authentication method"
+            )
+
+        return UserClient(credentials)
+
+
+jwt_auth = JWTBearer(env.JWKS_URL)
+discord_auth = DiscordBearer()

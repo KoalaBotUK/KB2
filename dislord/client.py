@@ -1,4 +1,5 @@
 import json
+from functools import cached_property
 from queue import Queue
 from types import NoneType
 from typing import Callable
@@ -20,6 +21,7 @@ from .discord.resources.channel.channel import Channel
 from .discord.resources.channel.message import Message, MessageFlags
 from .discord.resources.guild.guild import PartialGuild, Guild
 from .discord.resources.user.user import User
+from .discord.topics.oauth2.shared_resources import AuthorizationInformation
 from .error import DiscordApiException
 from .log import logger
 from .model.api import HttpResponse, HttpUnauthorized, HttpOk
@@ -36,7 +38,7 @@ class ApplicationClient:
 
     def __init__(self, public_key, bot_token):
         self._public_key = public_key
-        self._api = DiscordApi(self, bot_token)
+        self._api = DiscordApi(self, bot_token, is_bot=True)
         self._callbacks = {k: {} for k in InteractionType}
         self._callbacks[InteractionType.PING] = {"ping": PingCallbackDTO()}
 
@@ -143,20 +145,15 @@ class ApplicationClient:
 
         return decorator
 
-    @property
+    @cached_property
     def application(self):
-        if self._application is Missing():
-            self._application = self.get_application()
-        return self._application
+        return self._api.get("/applications/@me", type_hint=Application)
 
     @property
     def guilds(self) -> list[Guild]:
         if self._guilds is Missing():
             self._guilds = self._get_guilds()
         return self._guilds
-
-    def get_application(self):
-        return self._api.get("/applications/@me", type_hint=Application)
 
     def sync_commands(self, guild_id: Snowflake = None, guild_ids: list[Snowflake] = None,
                       application_id: Snowflake = None):
@@ -216,3 +213,26 @@ class ApplicationClient:
 
     def get_channel(self, channel_id) -> list[Channel]:
         return self._api.get(f"/channels/{channel_id}", type_hint=list[Channel])
+
+
+class UserClient:
+    _api: DiscordApi
+
+    def __init__(self, token: str):
+        self._api = DiscordApi(client=self, token=token, base_url="https://discord.com")
+
+    @cached_property
+    def _auth_information(self) -> AuthorizationInformation:
+        return self._api.get("/api/oauth2/@me", type_hint=AuthorizationInformation)
+
+    @property
+    def application(self):
+        return self._auth_information.application
+
+    @property
+    def scopes(self):
+        return self._auth_information.scopes
+
+    @property
+    def user(self):
+        return self._auth_information.user

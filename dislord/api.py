@@ -13,21 +13,26 @@ from .log import logger
 
 
 class DiscordApi:
-    def __init__(self, client, bot_token):
+    def __init__(self, client, token, is_bot=False, base_url=DISCORD_URL):
         self.client = client
-        self.bot_token = bot_token
-        self.auth_header = {"Authorization": "Bot " + self.bot_token}
+        self.token = token
+        self.auth_header = {"Authorization": "Bot " if is_bot else "Bearer " + self.token}
+        self.base_url = base_url
 
     def get(self, endpoint: str, params: dict = None, type_hint: type = None, **kwargs):
         logger.debug(f"📨 Sending to Discord API GET: {endpoint}, {params}")
-        response = httpx.get(DISCORD_URL + endpoint, params=params, **kwargs, headers=self.auth_header)
+        response = httpx.get(self.base_url + endpoint, params=params, **kwargs, headers=self.auth_header)
         if response.is_success:
             logger.debug(f"📬 Response from Discord API: {response.content}")
-            response_payload = json.loads(response.content)
-            if type_hint:
-                return TypeAdapter(type_hint).validate_json(response.content)
-            else:
-                return response_payload
+            try:
+                response_payload = json.loads(response.content)
+                if type_hint:
+                    return TypeAdapter(type_hint).validate_json(response.content)
+                else:
+                    return response_payload
+            except json.JSONDecodeError as err:
+                logger.error(f"{err} error when calling discord API URL: GET {endpoint} Params: {params} Response: {response.text}")
+                raise err
         elif response.status_code == 429:
             retry_after = response.json()["retry_after"]
             logger.warning(f"⚠️ Rate Limited, waiting {retry_after}s")
@@ -41,7 +46,7 @@ class DiscordApi:
 
     def delete(self, endpoint: str, **kwargs):
         logger.debug(f"📨 Sending to Discord API DELETE: {endpoint}")
-        response = httpx.delete(DISCORD_URL + endpoint, **kwargs, headers=self.auth_header)
+        response = httpx.delete(self.base_url + endpoint, **kwargs, headers=self.auth_header)
         if response.is_success:
             logger.debug(f"📬 Response from Discord API: {response.content}")
         elif response.status_code == 429:
@@ -58,7 +63,7 @@ class DiscordApi:
         logger.debug(f"📨 Sending to Discord API POST: {endpoint}, {body_json}")
         headers = self.auth_header
         headers["Content-Type"] = "application/json"
-        response = httpx.post(DISCORD_URL + endpoint, content=body_json, **kwargs, headers=headers)
+        response = httpx.post(self.base_url + endpoint, content=body_json, **kwargs, headers=headers)
         if response.is_success:
             logger.debug(f"📬 Response from Discord API: {response.content}")
             if not type_hint:
@@ -78,7 +83,7 @@ class DiscordApi:
         logger.debug(f"📨 Sending to Discord API PATCH: {endpoint}, {body_json}")
         headers = self.auth_header
         headers["Content-Type"] = "application/json"
-        response = httpx.patch(DISCORD_URL + endpoint, content=body_json, **kwargs, headers=headers)
+        response = httpx.patch(self.base_url + endpoint, content=body_json, **kwargs, headers=headers)
         if response.is_success:
             logger.debug(f"📬 Response from Discord API: {response.content}")
             return TypeAdapter(type_hint).validate_json(response.content)

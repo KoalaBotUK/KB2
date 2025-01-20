@@ -6,21 +6,6 @@ from pynamodb.attributes import UnicodeAttribute, MapAttribute, NumberAttribute,
 from dislord.discord.reference import Snowflake
 from kb2 import env
 
-#
-# class DynModelMeta(MetaModel):
-#     def __new__(cls, name, bases, namespace, discriminator=None):
-#         new_class = super().__new__(cls, name, bases, namespace, discriminator=None)
-#
-#         # Define the Meta class if not defined
-#         if not hasattr(new_class, 'Meta'):
-#             class Meta:
-#                 region = 'eu-west-2'
-#             new_class.Meta = Meta
-#
-#         class_name = name.lower()
-#         new_class.Meta.table_name = f'{env.ENV_PREFIX}kb_{class_name.lower()}'
-#         return new_class
-
 
 class ExtensionAttr(MapAttribute):
     cls = DiscriminatorAttribute()

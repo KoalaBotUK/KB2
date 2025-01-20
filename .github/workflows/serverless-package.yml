@@ -26,7 +26,7 @@ jobs:
         run: |
           zip -r ./entrypoint.zip ./dislord/lambda/entrypoint/
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: sl-entrypoint
           path: ./entrypoint.zip
@@ -38,7 +38,7 @@ jobs:
     needs: build-entrypoint
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: sl-entrypoint
 
@@ -93,7 +93,7 @@ jobs:
         zip -r ./layer.zip ./dislord
         zip -r ./layer.zip ./kb2
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: sl-layer
         path: ./layer.zip
@@ -104,7 +104,7 @@ jobs:
     needs: build-layer
     steps:
     - name: Download artifact
-      uses: actions/download-artifact@4.1.7
+      uses: actions/download-artifact@v4
       with:
         name: sl-layer
 
