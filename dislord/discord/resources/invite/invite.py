@@ -30,7 +30,7 @@ class Invite(ObjDict):
     target_type: InviteTargetType | Missing = None
     target_user: User | Missing = None
     target_application: PartialApplication | Missing = None
-    approximate_presence_count = int | Missing = None
+    approximate_presence_count: int | Missing = None
     approximate_member_count: int | Missing = None
     expires_at: ISOTimestamp | Missing | None = None
     stage_instance: InviteStageInstance | Missing = None
