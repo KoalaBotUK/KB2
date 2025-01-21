@@ -7,7 +7,7 @@ import {linkEmail} from "../../helpers/verify";
 
 const props = defineProps({
   organization: String,
-  token: String
+  code: String
 })
 
 const errorRef = ref()
@@ -15,13 +15,13 @@ const errorRef = ref()
 function redirectHome() { window.location.href = 'http://localhost:3000/verify' }
 
 function linkThenRedirect(overwrite){
-  console.log("Trying to link with token: ", props.token)
-  if (!props.token){
+  console.log("Trying to link with code: ", props.code)
+  if (!props.code){
     // Waiting for token to be provided
     return
   }
 
-  linkEmail(props.organization, props.token, overwrite)
+  linkEmail(props.organization, props.code, overwrite)
       .then(redirectHome)
       .catch(
           (err) => {

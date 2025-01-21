@@ -5,6 +5,7 @@ import uuid
 from pynamodb.exceptions import DoesNotExist
 
 from kb2.errors import ErrorCodeException, KoalaErrorCode
+from kb2.ext.verifyme import env
 from kb2.ext.verifyme.dtos import Organization
 from kb2.ext.verifyme.errors import VerifymeErrorCode
 from kb2.ext.verifyme.models import Email
@@ -50,7 +51,7 @@ def send_email(user_id, email):
     email_model.token = token
     email_model.token_expiry = datetime.datetime.now() + datetime.timedelta(hours=1)
     email_model.save()
-    callback_link = f"http://localhost:3000/verify/email/callback?{urllib.parse.urlencode({'token': token})}"
+    callback_link = f"{env.EMAIL_REDIRECT_URI}?{urllib.parse.urlencode({'token': token})}"
 
     # TODO: Send email
     print("Email Link: " + callback_link)

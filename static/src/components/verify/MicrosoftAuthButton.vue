@@ -19,7 +19,7 @@ crypto.subtle.digest('SHA-256', new TextEncoder().encode(codeVerifier)).then((ha
       .replace(/\//g, '_'); // Replace / with _
 
   // Update the AUTHORIZE_URL to include the code challenge
-  msAuthorizeUrl.value = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?response_type=code&client_id=${clientId}&scope=openid+email&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fverify%2Fmicrosoft%2Fcallback&code_challenge=${codeChallenge}&code_challenge_method=S256&prompt=select_account`;
+  msAuthorizeUrl.value = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?response_type=code&client_id=${clientId}&scope=openid+email&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fverify%2Fmicrosoft%2Fcallback&prompt=select_account`;
 
   // Store the code verifier for later use
   localStorage.setItem('codeVerifier', codeVerifier);

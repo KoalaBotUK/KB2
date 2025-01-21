@@ -6,5 +6,5 @@ const token = urlParams.get('token');
 </script>
 
 <template>
-  <BaseVerifyCallback organization="email" :token="token" />
+  <BaseVerifyCallback organization="email" :code="token" />
 </template>

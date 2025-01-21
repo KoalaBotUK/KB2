@@ -21,7 +21,7 @@ class EmailDto(BaseModel):
 
 class LinkEmailRequest(BaseModel):
     organization: Organization
-    token: str
+    code: str
     overwrite: bool | None = None
 
 

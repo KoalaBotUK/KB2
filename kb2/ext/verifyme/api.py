@@ -31,7 +31,7 @@ async def link_email(req: LinkEmailRequest, resp: Response,
 
     validator = ValidatorFactory().get(req.organization)
 
-    if not validator.validate(req.token):
+    if not validator.validate(req.code):
         raise ErrorCodeException(VerifymeErrorCode.INVALID_TOKEN, "Invalid third party token")
 
     core.add_email(user_id, validator.email, req.organization, req.overwrite)

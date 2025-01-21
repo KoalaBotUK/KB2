@@ -7,13 +7,14 @@ import {onMounted, ref, toRef} from "vue";
 import axios from "axios";
 import ConfirmModal from "../ConfirmModal.vue";
 
+const VITE_KB_API_URL = import.meta.env.VITE_KB_API_URL
 const userRef = toRef(getUser())
 const linkedAccounts = ref(undefined)
 const activeEvent = ref()
 
 function loadAccounts() {
   //Call with user.token
-  axios.get('http://localhost:8000/verify/email', {
+  axios.get(`${VITE_KB_API_URL}/verify/email`, {
     headers: {
       'Authorization': 'Discord ' + userRef.value.token.accessToken
     }
@@ -32,7 +33,7 @@ function unloadAccounts() {
 function unlinkAccount(event) {
   let toBeRemoved = linkedAccounts.value[event.target.id]
   delete linkedAccounts.value[event.target.id]
-  axios.post('http://localhost:8000/verify/email/unlink', {
+  axios.post(`${VITE_KB_API_URL}/verify/email/unlink`, {
         email: toBeRemoved.email,
       },
       {
