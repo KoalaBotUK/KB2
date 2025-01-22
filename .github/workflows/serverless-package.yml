@@ -142,6 +142,7 @@ jobs:
   
 
   deploy-static:
+    environment: dev
     name: Build Static Zip 📦
     runs-on: ubuntu-latest
     defaults:
@@ -158,13 +159,6 @@ jobs:
 
       - name: Install npm requirements
         run: npm install
-
-      - name: Set Environment Variables
-        run: |
-          echo "VITE_KB_API_URL=${{ secrets.KB_API_URL }}" >> $GITHUB_ENV
-          echo "VITE_DISCORD_CLIENT_ID=${{ secrets.DISCORD_CLIENT_ID }}" >> $GITHUB_ENV
-          echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> $GITHUB_ENV
-          echo "VITE_MICROSOFT_CLIENT_ID=${{ secrets.MICROSOFT_CLIENT_ID }}" >> $GITHUB_ENV
 
       - name: Build npm
         run: npm run build
