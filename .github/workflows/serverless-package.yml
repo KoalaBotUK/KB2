@@ -182,4 +182,4 @@ jobs:
           # Constants
           S3_BUCKET=dev.koalabot.uk
 
-          aws s3 sync ./build s3://$S3_BUCKET
+          aws s3 sync ./dist s3://$S3_BUCKET
