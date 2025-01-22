@@ -3,6 +3,7 @@
 import {onMounted, ref} from "vue";
 import {linkEmail} from "../../helpers/verify";
 import {OauthFlow} from "../../helpers/auth";
+import {internalRedirect} from "../../helpers/redirect";
 
 const props = defineProps({
   organization: String,
@@ -11,7 +12,7 @@ const props = defineProps({
 
 const errorRef = ref()
 
-function redirectHome() { window.location.pathname = '/verify' }
+function redirectHome() { internalRedirect('/verify') }
 
 async function linkThenRedirect(overwrite){
   await props.authFlow.callback()

@@ -3,6 +3,7 @@
 import {onMounted} from "vue";
 import {DiscordUser, setUser} from "../../stores/auth";
 import {AuthorizationFlowPKCE} from "../../helpers/auth";
+import {internalRedirect} from "../../helpers/redirect";
 
 onMounted(
     async () => {
@@ -14,9 +15,9 @@ onMounted(
       setUser(newUser)
 
       if (window.location.pathname === '/verify/discord/callback') {
-        window.location.pathname = '/verify'
+        internalRedirect('/verify')
       } else {
-        window.location.pathname = '/'
+        internalRedirect('/')
       }
     }
 )

@@ -1,8 +1,8 @@
 import axios from "axios";
 import {OauthToken} from "../stores/auth";
+import {formatInternalRedirect} from "./redirect";
 
 const KB_API_URL = import.meta.env.VITE_KB_API_URL;
-const PROTO_HOST = window.location.protocol + '//' + window.location.host
 
 export class OauthFlow {
   clientId
@@ -63,17 +63,16 @@ export class AuthorizationFlowPKCE extends OauthFlow {
   async authorize() {
     await this.generateCodeChallenge()
     this.save()
-    window.location.href = `${this.authorizeUrl}?response_type=code&client_id=${this.clientId}&code_challenge=${this.codeChallenge}&code_challenge_method=S256&scope=openid+email&redirect_uri=${encodeURIComponent(PROTO_HOST + this.redirectPath)}${this.authorizeAdditionalParams}`;
+    window.location.href = `${this.authorizeUrl}?response_type=code&client_id=${this.clientId}&code_challenge=${this.codeChallenge}&code_challenge_method=S256&scope=openid+email&redirect_uri=${encodeURIComponent(formatInternalRedirect(this.redirectPath))}${this.authorizeAdditionalParams}`;
   }
 
   async callback() {
     let urlParams = new URLSearchParams(window.location.search);
-
     try {
       let res = await axios.post(this.tokenUrl, {
           grant_type: 'authorization_code',
           code: urlParams.get('code'),
-          redirect_uri: PROTO_HOST + this.redirectPath,
+          redirect_uri: formatInternalRedirect(this.redirectPath),
           scope: 'openid email',
           code_verifier: this.codeVerifier,
           client_id: this.clientId
@@ -126,7 +125,7 @@ export class ImplicitFlow extends OauthFlow {
 
   async authorize() {
     this.save()
-    window.location.href = `${this.authorizeUrl}?response_type=token&client_id=${this.clientId}&scope=${encodeURIComponent(this.scope)}&redirect_uri=${encodeURIComponent(PROTO_HOST + this.redirectPath)}`;
+    window.location.href = `${this.authorizeUrl}?response_type=token&client_id=${this.clientId}&scope=${encodeURIComponent(this.scope)}&redirect_uri=${encodeURIComponent(formatInternalRedirect(this.redirectPath))}`;
   }
 
   async callback() {

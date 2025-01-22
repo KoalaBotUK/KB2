@@ -3,6 +3,7 @@
 import axios from "axios";
 import {getUser} from "../../stores/auth";
 import {ref} from "vue";
+import {internalRedirect} from "../../helpers/redirect";
 
 const KB_API_URL = import.meta.env.VITE_KB_API_URL
 
@@ -28,7 +29,7 @@ function sendEmail() {
   }
   ).then(
       (res) => {
-        window.location.pathname = '/verify/email/wait'
+        internalRedirect('/verify/email/wait')
       }
   )
 }
