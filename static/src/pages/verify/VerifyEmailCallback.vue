@@ -10,7 +10,7 @@ class EmailCustomFlow extends OauthFlow {
   constructor(token) {
     super()
     this.token = new OauthToken()
-    this.token.access_token = token
+    this.token.accessToken = token
   }
 
   async callback() {

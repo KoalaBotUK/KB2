@@ -18,7 +18,7 @@ async function linkThenRedirect(overwrite){
   await props.authFlow.callback()
 
   try {
-    await linkEmail(props.organization, props.authFlow.token.access_token, overwrite)
+    await linkEmail(props.organization, props.authFlow.token.accessToken, overwrite)
     redirectHome()
   } catch (err) {
     console.log(err)

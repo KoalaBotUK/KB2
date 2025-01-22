@@ -4,10 +4,10 @@ import {getUser} from "../stores/auth";
 const VITE_KB_API_URL = import.meta.env.VITE_KB_API_URL
 const user = getUser()
 
-export async function linkEmail(organization, code, overwrite=false) {
+export async function linkEmail(organization, token, overwrite=false) {
   await axios.post(`${VITE_KB_API_URL}/verify/email/link`, {
       'organization': organization,
-      'token': code,
+      'token': token,
       'overwrite': overwrite
     },
     {
