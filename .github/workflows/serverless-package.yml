@@ -169,15 +169,6 @@ jobs:
       - name: Build npm
         run: npm run build
 
-      - name: Zip build
-        run: |
-          zip -r ./entrypoint.zip ./dislord/lambda/entrypoint/
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: sl-entrypoint
-          path: ./entrypoint.zip
-
       - name: Setup AWS CLI
         uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
         with:
