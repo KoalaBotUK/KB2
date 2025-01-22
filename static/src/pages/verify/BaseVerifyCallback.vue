@@ -11,7 +11,7 @@ const props = defineProps({
 
 const errorRef = ref()
 
-function redirectHome() { window.location.href = 'http://localhost:3000/verify' }
+function redirectHome() { window.location.pathname = '/verify' }
 
 async function linkThenRedirect(overwrite){
   await props.authFlow.callback()

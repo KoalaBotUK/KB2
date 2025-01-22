@@ -14,9 +14,9 @@ onMounted(
       setUser(newUser)
 
       if (window.location.pathname === '/verify/discord/callback') {
-        window.location.href = 'http://localhost:3000/verify'
+        window.location.pathname = '/verify'
       } else {
-        window.location.href = 'http://localhost:3000/'
+        window.location.pathname = '/'
       }
     }
 )

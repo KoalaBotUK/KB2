@@ -28,7 +28,7 @@ function sendEmail() {
   }
   ).then(
       (res) => {
-        window.location.href = `${window.location.protocol}//${window.location.host}/verify/email/wait`
+        window.location.pathname = '/verify/email/wait'
       }
   )
 }
