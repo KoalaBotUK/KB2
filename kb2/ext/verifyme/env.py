@@ -3,12 +3,4 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MICROSOFT_CLIENT_ID = os.environ.get("MICROSOFT_CLIENT_ID")
-MICROSOFT_CLIENT_SECRET = os.environ.get("MICROSOFT_CLIENT_SECRET")
-MICROSOFT_REDIRECT_URI = os.environ.get("MICROSOFT_REDIRECT_URI")
-
-GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
-GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
-GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI")
-
 EMAIL_REDIRECT_URI = os.environ.get("EMAIL_REDIRECT_URI")

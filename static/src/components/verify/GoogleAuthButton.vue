@@ -1,16 +1,19 @@
 <script setup>
 import GoogleIcon from "../icons/GoogleIcon.vue";
 import BaseAuthButton from "./BaseAuthButton.vue";
+import {AuthorizationFlowPKCE, ImplicitFlow} from "../../helpers/auth";
 
-let clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
-
-const AUTHORIZE_URL = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=${clientId}&scope=openid+email&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fverify%2Fgoogle%2Fcallback`
-
+const auth = new ImplicitFlow(
+    GOOGLE_CLIENT_ID,
+    "https://accounts.google.com/o/oauth2/v2/auth",
+    "/verify/google/callback"
+)
 </script>
 
 <template>
-  <BaseAuthButton :authorize-url=AUTHORIZE_URL>
+  <BaseAuthButton :auth-flow=auth>
     <GoogleIcon/>
     Continue with Google
   </BaseAuthButton>

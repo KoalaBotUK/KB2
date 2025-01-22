@@ -1,39 +1,33 @@
 <script setup>
 
-import {onMounted, ref, watch, watchEffect} from "vue";
-import axios from "axios";
-import {getUser} from "../../stores/auth";
+import {onMounted, ref} from "vue";
 import {linkEmail} from "../../helpers/verify";
+import {OauthFlow} from "../../helpers/auth";
 
 const props = defineProps({
   organization: String,
-  code: String
+  authFlow: OauthFlow
 })
 
 const errorRef = ref()
 
 function redirectHome() { window.location.href = 'http://localhost:3000/verify' }
 
-function linkThenRedirect(overwrite){
-  console.log("Trying to link with code: ", props.code)
-  if (!props.code){
-    // Waiting for token to be provided
-    return
-  }
+async function linkThenRedirect(overwrite){
+  await props.authFlow.callback()
 
-  linkEmail(props.organization, props.code, overwrite)
-      .then(redirectHome)
-      .catch(
-          (err) => {
-            console.log(err)
-            errorRef.value = err.response.data
-          }
-      )
+  try {
+    await linkEmail(props.organization, props.authFlow.token.access_token, overwrite)
+    redirectHome()
+  } catch (err) {
+    console.log(err)
+    errorRef.value = err.response.data
+  }
 }
 
 
-watchEffect(async () => {
-  linkThenRedirect(false)
+onMounted(async () => {
+  await linkThenRedirect(false)
 })
 
 </script>

@@ -1,10 +1,10 @@
 <script setup>
 import BaseVerifyCallback from "./BaseVerifyCallback.vue";
-import {toRef} from "vue";
+import {ImplicitFlow} from "../../helpers/auth";
 
-const codeRef = toRef((new URLSearchParams(window.location.search)).get('code'))
+const authFlow = ImplicitFlow.load()
 </script>
 
 <template>
-  <BaseVerifyCallback organization="google" :code="codeRef" />
+  <BaseVerifyCallback organization="google" :auth-flow="authFlow"/>
 </template>

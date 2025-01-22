@@ -5,11 +5,20 @@ import {ref} from "vue";
 import BaseAuthButton from "../verify/BaseAuthButton.vue";
 import {getUser, setUser} from "../../stores/auth";
 import {onClickOutside} from "@vueuse/core";
+import {AuthorizationFlowPKCE, ImplicitFlow} from "../../helpers/auth";
 
 const emit = defineEmits(['logout'])
 
-let clientId = import.meta.env.VITE_DISCORD_CLIENT_ID;
-const AUTHORIZE_URL = `https://discord.com/oauth2/authorize?response_type=code&client_id=${clientId}&scope=identify%20email&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fverify%2Fdiscord%2Fcallback`;
+const DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID;
+
+const authFlow = new AuthorizationFlowPKCE(
+    DISCORD_CLIENT_ID,
+  "https://discord.com/api/oauth2/authorize",
+  "",
+  "/auth/discord/callback",
+    "https://discord.com/api/v10/oauth2/token"
+)
+
 const userRef = ref(getUser())
 const modalActiveRef = ref(false)
 const modalBox = ref(null)
@@ -28,7 +37,7 @@ function logout(event) {
 </script>
 
 <template>
-  <BaseAuthButton class="max-w-60 place-items-center self-center" v-if="!userRef" :authorize-url="AUTHORIZE_URL">
+  <BaseAuthButton class="max-w-60 place-items-center self-center" v-if="!userRef" :auth-flow="authFlow">
     <DiscordIcon/>
     Sign in with Discord
   </BaseAuthButton>

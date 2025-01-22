@@ -1,9 +1,8 @@
 import axios from "axios";
 
 const DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID;
-const DISCORD_CLIENT_SECRET = import.meta.env.VITE_DISCORD_CLIENT_SECRET;
 
-class OauthToken {
+export class OauthToken {
   accessToken
   tokenType
   expiresIn
@@ -12,6 +11,9 @@ class OauthToken {
   date
 
   get isValid() {
+    if (this.date === undefined) {
+      return true
+    }
     return this.date + this.expiresIn * 1000 > Date.now()
   }
 }
@@ -25,32 +27,11 @@ export class DiscordUser {
   email
   token
 
-  static async fromAuthorizationCode(code) {
+  static async fromToken(token) {
     const user = new DiscordUser()
-    await user.fetchToken(code)
+    user.token = token
     await user.fetchUser()
     return user
-  }
-
-  async fetchToken(code) {
-    this.token = new OauthToken()
-    this.token.date = Date.now()
-    let r = await axios.post('https://discord.com/api/oauth2/token', {
-        grant_type: 'authorization_code',
-        code: code,
-        redirect_uri: 'http://localhost:3000/verify/discord/callback',
-        scope: 'identify email'
-      },
-      {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        auth: { username: DISCORD_CLIENT_ID, password: DISCORD_CLIENT_SECRET }}
-
-    )
-    this.token.accessToken = r.data['access_token']
-    this.token.tokenType = r.data['token_type']
-    this.token.expiresIn = r.data['expires_in']
-    this.token.refreshToken = r.data['refresh_token']
-    this.token.scope = r.data['scope']
   }
 
   async fetchUser() {

@@ -1,10 +1,10 @@
 <script setup>
 import BaseVerifyCallback from "./BaseVerifyCallback.vue";
-import {toRef} from "vue";
+import {AuthorizationFlowPKCE} from "../../helpers/auth";
 
-const codeRef = toRef((new URLSearchParams(window.location.search)).get('code'))
+const authFlow = AuthorizationFlowPKCE.load()
 </script>
 
 <template>
-  <BaseVerifyCallback organization="microsoft" :code="codeRef" />
+  <BaseVerifyCallback organization="microsoft" :auth-flow="authFlow" />
 </template>

@@ -38,6 +38,8 @@ class Oauth2Scopes(StrEnum):
     RPC_VOICE_WRITE = "rpc.voice.write"
     VOICE = "voice"
     WEBHOOK_INCOMING = "webhook.incoming"
+    OPENID = "openid"
+
 
 class AuthorizationInformation(ObjDict):
     application: Application

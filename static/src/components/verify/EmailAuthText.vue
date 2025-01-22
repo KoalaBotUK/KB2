@@ -4,7 +4,8 @@ import axios from "axios";
 import {getUser} from "../../stores/auth";
 import {ref} from "vue";
 
-const VITE_KB_API_URL = import.meta.env.VITE_KB_API_URL;
+const KB_API_URL = import.meta.env.VITE_KB_API_URL
+
 let emailInput = defineModel();
 let disableTextField = ref(false);
 
@@ -17,7 +18,7 @@ function sendEmail() {
 
   disableTextField.value = true
   const user = getUser();
-  axios.post(`${VITE_KB_API_URL}/verify/email/send`,{
+  axios.post(`${KB_API_URL}/verify/email/send`,{
     email: emailInput.value
   },
   {
@@ -27,7 +28,7 @@ function sendEmail() {
   }
   ).then(
       (res) => {
-        window.location.href = `${VITE_KB_API_URL}/verify/email/wait`
+        window.location.href = `${window.location.protocol}//${window.location.host}/verify/email/wait`
       }
   )
 }

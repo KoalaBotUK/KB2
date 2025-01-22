@@ -1,7 +1,9 @@
 <script setup>
 
+import {OauthFlow} from "../../helpers/auth";
+
 const props = defineProps({
-  authorizeUrl: String,
+  authFlow: OauthFlow,
   disabled: Boolean,
   onClick: Function
 })
@@ -10,8 +12,8 @@ const props = defineProps({
 
 <template>
   <div class="w-72" :class="disabled ? 'tooltip tooltip-bottom' : ''" data-tip="coming soon">
-    <a class="btn w-full hover:btn-primary" :class="disabled ? 'btn-disabled' : ''" :href="authorizeUrl">
+    <button class="btn w-full hover:btn-primary" :class="disabled ? 'btn-disabled' : ''" @click="props.authFlow.authorize()">
       <slot></slot>
-    </a>
+    </button>
   </div>
 </template>

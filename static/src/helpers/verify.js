@@ -7,7 +7,7 @@ const user = getUser()
 export async function linkEmail(organization, code, overwrite=false) {
   await axios.post(`${VITE_KB_API_URL}/verify/email/link`, {
       'organization': organization,
-      'code': code,
+      'token': code,
       'overwrite': overwrite
     },
     {

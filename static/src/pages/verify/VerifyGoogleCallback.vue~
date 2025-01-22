@@ -1,0 +1,7 @@
+<script setup>
+import BaseVerifyCallback from "./BaseVerifyCallback.vue";
+</script>
+
+<template>
+  <BaseVerifyCallback organization="google" />
+</template>

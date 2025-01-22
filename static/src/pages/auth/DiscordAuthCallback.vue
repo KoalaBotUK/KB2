@@ -2,12 +2,15 @@
 
 import {onMounted} from "vue";
 import {DiscordUser, setUser} from "../../stores/auth";
+import {AuthorizationFlowPKCE} from "../../helpers/auth";
 
 onMounted(
     async () => {
-      let urlParams = new URLSearchParams(window.location.search);
-      let code = urlParams.get('code');
-      let newUser = await DiscordUser.fromAuthorizationCode(code)
+      let authFlow = AuthorizationFlowPKCE.load()
+
+      await authFlow.callback()
+
+      let newUser = await DiscordUser.fromToken(authFlow.token)
       setUser(newUser)
 
       if (window.location.pathname === '/verify/discord/callback') {
