@@ -162,6 +162,11 @@ jobs:
 
       - name: Build npm
         run: npm run build
+        env:
+          VITE_KB_API_URL: ${{ vars.VITE_KB_API_URL }}
+          VITE_DISCORD_CLIENT_ID: ${{ vars.VITE_DISCORD_CLIENT_ID }}
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
+          VITE_MICROSOFT_CLIENT_ID: ${{ vars.VITE_MICROSOFT_CLIENT_ID }}
 
       - name: Setup AWS CLI
         uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
@@ -171,9 +176,5 @@ jobs:
           aws-region: eu-west-2
 
       - name: Deploy Modified Files
-        run: |
-          ls
-          # Constants
-          S3_BUCKET=dev.koalabot.uk
+        run: aws s3 sync --delete ./dist s3://${{vars.AWS_S3_BUCKET}}
 
-          aws s3 sync ./dist s3://$S3_BUCKET
