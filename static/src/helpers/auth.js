@@ -37,14 +37,16 @@ export class AuthorizationFlowPKCE extends OauthFlow {
   tokenUrl
   codeChallenge
   codeVerifier
+  scope
 
-  constructor(clientId, authorizeUrl, authorizeAdditionalParams, redirectPath, tokenUrl) {
+  constructor(clientId, authorizeUrl, authorizeAdditionalParams, redirectPath, tokenUrl, scope) {
     super()
     this.clientId = clientId
     this.authorizeUrl = authorizeUrl
     this.authorizeAdditionalParams = authorizeAdditionalParams
     this.redirectPath = redirectPath
     this.tokenUrl = tokenUrl
+    this.scope = scope
   }
 
   async generateCodeChallenge() {
@@ -63,7 +65,7 @@ export class AuthorizationFlowPKCE extends OauthFlow {
   async authorize() {
     await this.generateCodeChallenge()
     this.save()
-    window.location.href = `${this.authorizeUrl}?response_type=code&client_id=${this.clientId}&code_challenge=${this.codeChallenge}&code_challenge_method=S256&scope=openid+email&redirect_uri=${encodeURIComponent(formatInternalRedirect(this.redirectPath))}${this.authorizeAdditionalParams}`;
+    window.location.href = `${this.authorizeUrl}?response_type=code&client_id=${this.clientId}&code_challenge=${this.codeChallenge}&code_challenge_method=S256&scope=${this.scope.replace(' ', '+')}&redirect_uri=${encodeURIComponent(formatInternalRedirect(this.redirectPath))}${this.authorizeAdditionalParams}`;
   }
 
   async callback() {
@@ -73,7 +75,7 @@ export class AuthorizationFlowPKCE extends OauthFlow {
           grant_type: 'authorization_code',
           code: urlParams.get('code'),
           redirect_uri: formatInternalRedirect(this.redirectPath),
-          scope: 'openid email',
+          scope: this.scope,
           code_verifier: this.codeVerifier,
           client_id: this.clientId
         },
