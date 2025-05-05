@@ -28,10 +28,6 @@ def sync_bot_handler(event, context):
     client.sync_commands(guild_ids=[g.id for g in client.guilds])
     return {"statusCode": 200}
 
-def temp_bot_handler(event, context):  # Not needed if using server
-    logger.info(f"\nevent: {event}\ncontext: {context}")
-    return HttpOk(json.loads(InteractionResponse(type=InteractionCallbackType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE).model_dump_json()), headers={"Content-Type": "application/json"}).as_serverless_response()
-
 
 api_handler = Mangum(app, api_gateway_base_path=env.API_GATEWAY_BASE_PATH)
 
