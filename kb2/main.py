@@ -1,7 +1,12 @@
+import json
+
 from mangum import Mangum
 
 import dislord
 import kb2.env as env
+from dislord.discord.interactions.receiving_and_responding.interaction_response import InteractionResponse, \
+    InteractionCallbackType
+from dislord.model.api import HttpOk
 from kb2.api import app
 from kb2.client import client
 from kb2.log import logger
@@ -22,6 +27,10 @@ def sync_bot_handler(event, context):
     client.sync_commands()
     client.sync_commands(guild_ids=[g.id for g in client.guilds])
     return {"statusCode": 200}
+
+def temp_bot_handler(event, context):  # Not needed if using server
+    logger.info(f"\nevent: {event}\ncontext: {context}")
+    return HttpOk(json.loads(InteractionResponse(type=InteractionCallbackType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE).model_dump_json()), headers={"Content-Type": "application/json"}).as_serverless_response()
 
 
 api_handler = Mangum(app, api_gateway_base_path=env.API_GATEWAY_BASE_PATH)
