@@ -1,9 +1,9 @@
 <script setup>
 
 import {onMounted, ref} from "vue";
-import {linkEmail} from "../../helpers/verify";
-import {OauthFlow} from "../../helpers/auth";
-import {internalRedirect} from "../../helpers/redirect";
+import {linkEmail} from "../../helpers/verify.js";
+import {OauthFlow} from "../../helpers/auth.js";
+import {internalRedirect} from "../../helpers/redirect.js";
 
 const props = defineProps({
   organization: String,

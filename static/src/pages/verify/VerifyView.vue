@@ -8,7 +8,7 @@ import MicrosoftAuthButton from "../../components/verify/MicrosoftAuthButton.vue
 import GoogleAuthButton from "../../components/verify/GoogleAuthButton.vue";
 import axios from "axios";
 import EmailAuthText from "../../components/verify/EmailAuthText.vue";
-import {getUser} from "../../stores/auth";
+import {getUser} from "../../stores/auth.js";
 import LinkedAccountsTable from "../../components/verify/LinkedAccountsTable.vue";
 import LinkAccountButton from "../../components/verify/LinkAccountButton.vue";
 
@@ -34,7 +34,7 @@ function unloadUser() {
         <h1 class="card-title text-xl font-bold self-center">KoalaBot Verify</h1>
         <div class="h-2.5"></div>
         <div class="flex flex-col w-full">
-          <DiscordAuthButton @logout="unloadUser"/>
+          <DiscordAuthButton :long-text="true" @logout="unloadUser"/>
         </div>
         <div class="divider"></div>
         <div class="flex flex-col w-full">

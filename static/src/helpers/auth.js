@@ -1,6 +1,6 @@
 import axios from "axios";
-import {OauthToken} from "../stores/auth";
-import {formatInternalRedirect} from "./redirect";
+import {OauthToken} from "../stores/auth.js";
+import {formatInternalRedirect} from "./redirect.js";
 
 const KB_API_URL = import.meta.env.VITE_KB_API_URL;
 

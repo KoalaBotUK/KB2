@@ -1,6 +1,6 @@
 <script setup>
 import BaseVerifyCallback from "./BaseVerifyCallback.vue";
-import {ImplicitFlow} from "../../helpers/auth";
+import {ImplicitFlow} from "../../helpers/auth.js";
 
 const authFlow = ImplicitFlow.load()
 </script>

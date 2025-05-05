@@ -10,7 +10,7 @@ import KoalaMonoIcon from "../components/icons/KoalaMonoIcon.vue";
     <main class="mb-auto h-full bg-base-200">
       <VerifyView/>
     </main>
-    <footer class="footer bg-neutral text-neutral-content items-center p-4">
+    <footer class="footer sm:footer-horizontal bg-neutral text-neutral-content items-center p-4">
       <aside class="grid-flow-col items-center">
         <a href="https://koalabot.uk" class="btn gap-2 btn-ghost text-xs">
           <KoalaMonoIcon class="w-auto h-10 fill-neutral-content"/>

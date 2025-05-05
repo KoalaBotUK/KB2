@@ -1,9 +1,9 @@
 <script setup>
 
 import {onMounted} from "vue";
-import {DiscordUser, setUser} from "../../stores/auth";
-import {AuthorizationFlowPKCE} from "../../helpers/auth";
-import {internalRedirect} from "../../helpers/redirect";
+import {DiscordUser, setUser} from "../../stores/auth.js";
+import {AuthorizationFlowPKCE} from "../../helpers/auth.js";
+import {internalRedirect} from "../../helpers/redirect.js";
 
 onMounted(
     async () => {

@@ -1,6 +1,6 @@
 <script setup>
 import BaseVerifyCallback from "./BaseVerifyCallback.vue";
-import {AuthorizationFlowPKCE} from "../../helpers/auth";
+import {AuthorizationFlowPKCE} from "../../helpers/auth.js";
 
 const authFlow = AuthorizationFlowPKCE.load()
 </script>

@@ -7,17 +7,19 @@ import VerifyMicrosoftCallback from "../pages/verify/VerifyMicrosoftCallback.vue
 import VerifyGoogleCallback from "../pages/verify/VerifyGoogleCallback.vue";
 import VerifyEmailCallback from "../pages/verify/VerifyEmailCallback.vue";
 import VerifyEmailWait from "../pages/verify/VerifyEmailWait.vue";
+import DashBaseView from "../pages/dashboard/DashBaseView.vue";
 
 const routes = {
-  '/': AppView,
-  '/verify': AppView,
-  '/auth/discord/callback': DiscordAuthCallback,
-  '/verify/discord/callback': DiscordAuthCallback,
-  '/verify/microsoft/callback': VerifyMicrosoftCallback,
-  '/verify/google/callback': VerifyGoogleCallback,
-  '/verify/email/callback': VerifyEmailCallback,
-  '/verify/email/wait': VerifyEmailWait,
-  '/404': NotFoundView
+  '^/$': AppView,
+  '^/verify$': AppView,
+  '^/auth/discord/callback$': DiscordAuthCallback,
+  '^/verify/discord/callback$': DiscordAuthCallback,
+  '^/verify/microsoft/callback$': VerifyMicrosoftCallback,
+  '^/verify/google/callback$': VerifyGoogleCallback,
+  '^/verify/email/callback$': VerifyEmailCallback,
+  '^/verify/email/wait$': VerifyEmailWait,
+  '^/dashboard(.*)$': DashBaseView,
+  '^/404$': NotFoundView
 }
 
 const currentPath = ref(window.location.pathname)
@@ -27,7 +29,12 @@ window.addEventListener('hashchange', () => {
 })
 
 const currentView = computed(() => {
-  return routes[currentPath.value || '/404'] || NotFoundView
+  for (const path in routes) {
+    if (new RegExp(path).test(currentPath.value)) {
+      return routes[path]
+    }
+  }
+  return NotFoundView
 })
 </script>
 

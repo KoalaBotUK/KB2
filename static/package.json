@@ -1,8 +1,12 @@
 {
+  "name": "static",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "serve": "vite preview"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
@@ -10,19 +14,17 @@
     "@fortawesome/free-regular-svg-icons": "^6.7.2",
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
     "@fortawesome/vue-fontawesome": "^3.0.8",
-    "@vueuse/core": "^12.4.0",
-    "axios": "^1.7.9",
+    "@tailwindcss/vite": "^4.0.15",
+    "@vueuse/core": "^13.0.0",
+    "axios": "^1.8.4",
     "cors": "^2.8.5",
+    "daisyui": "^5.0.9",
+    "tailwindcss": "^4.0.15",
     "theme-change": "^2.5.0",
-    "vue": "^3"
+    "vue": "^3.5.13"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^2",
-    "@vue/compiler-sfc": "^3",
-    "autoprefixer": "^10",
-    "daisyui": "^3",
-    "postcss": "^8",
-    "tailwindcss": "^3",
-    "vite": "^2"
+    "@vitejs/plugin-vue": "^5.2.1",
+    "vite": "^6.2.0"
   }
 }

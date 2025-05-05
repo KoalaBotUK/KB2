@@ -7,6 +7,10 @@ import {getUser, setUser} from "../../stores/auth";
 import {onClickOutside} from "@vueuse/core";
 import {AuthorizationFlowPKCE, ImplicitFlow} from "../../helpers/auth";
 
+let props = defineProps({
+  longText: Boolean
+})
+
 const emit = defineEmits(['logout'])
 
 const DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID;
@@ -40,15 +44,15 @@ function logout(event) {
 <template>
   <BaseAuthButton class="max-w-60 place-items-center self-center" v-if="!userRef" :auth-flow="authFlow">
     <DiscordIcon/>
-    Sign in with Discord
+    Sign in {{ longText ? 'with Discord' : '' }}
   </BaseAuthButton>
-  <button class="btn w-60 place-items-center self-center" v-if="userRef" @click="modalActiveRef = true">
+  <button class="btn place-items-center self-center" :class="!longText ? 'w-60' : ''" v-if="userRef" @click="modalActiveRef = true">
     <div class="avatar w-7 h-auto self-center">
       <div class="ring-primary rounded-full ring">
         <img :src="userRef.avatarUrl" alt="discord avatar" />
       </div>
     </div>
-    Logged in as {{ userRef.globalName }}
+    {{ longtext ? 'Logged in as ' : ''}}{{ userRef.globalName }}
   </button>
 
   <Teleport to="#modal">

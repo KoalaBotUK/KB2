@@ -1,5 +1,5 @@
 import axios from "axios";
-import {getUser} from "../stores/auth";
+import {getUser} from "../stores/auth.js";
 
 const VITE_KB_API_URL = import.meta.env.VITE_KB_API_URL
 const user = getUser()
