@@ -19,3 +19,8 @@ terraform {
 }
 
 provider "aws" {}
+
+module "s3" {
+  source = "./modules/data/s3"
+  deployment_env = var.deployment_env
+}
