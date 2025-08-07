@@ -23,8 +23,12 @@ jobs:
       - name: Install dependencies
         run: pip install cargo-lambda
       - name: Working Directory
-        run: cd api
+        run: |
+          cd api
+          lsg
       - name: Build
-        run: cargo lambda build --release
+        run: |
+          pwd
+          cargo lambda build --release
       - name: Deploy
         run: cargo lambda deploy kb2-lambda-function-dev
