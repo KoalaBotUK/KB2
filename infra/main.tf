@@ -24,3 +24,16 @@ module "s3" {
   source = "./modules/data/s3"
   deployment_env = var.deployment_env
 }
+
+module "lambda" {
+  source         = "./modules/compute/lambda"
+  deployment_env = var.deployment_env
+}
+
+module "api" {
+  source = "./modules/api/api-gateway"
+  deployment_env = var.deployment_env
+  root_domain_name = var.root_domain_name
+  lambda_function_invoke_arn = module.lambda.lambda_function_invoke_arn
+  lambda_function_name = module.lambda.lambda_function_name
+}
