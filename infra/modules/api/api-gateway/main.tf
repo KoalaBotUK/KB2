@@ -74,10 +74,10 @@ resource "aws_api_gateway_deployment" "default" {
     #       It will stabilize to only change when resources change afterwards.
     redeployment = sha1(jsonencode([
       aws_api_gateway_resource.default.id,
-      [for val in aws_api_gateway_resource.lambda_proxy : val.id],
-      [for val in aws_api_gateway_method.lambda_proxy : val.id],
-      [for val in aws_api_gateway_method_response.lambda_proxy_response_200 : val.id],
-      [for val in aws_api_gateway_integration.lambda_proxy : val.id],
+      aws_api_gateway_resource.lambda_proxy,
+      aws_api_gateway_method.lambda_proxy,
+      aws_api_gateway_method_response.lambda_proxy_response_200,
+      aws_api_gateway_integration.lambda_proxy,
     ]))
   }
 
