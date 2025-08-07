@@ -26,6 +26,7 @@ resource "aws_api_gateway_method_response" "lambda_proxy_response_200" {
 
   response_models = {
     "application/json" = "Empty"
+    "text/html" = "Empty"
   }
 }
 
@@ -45,7 +46,7 @@ resource "aws_lambda_permission" "apigw_lambda" {
   function_name = var.lambda_function_name
   principal     = "apigateway.amazonaws.com"
 
-  source_arn = "arn:aws:execute-api:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:${aws_api_gateway_rest_api.api.id}/*/ANY/*"
+  source_arn = "arn:aws:execute-api:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:${aws_api_gateway_rest_api.api.id}/*/*/*"
 }
 
 resource "aws_api_gateway_deployment" "default" {

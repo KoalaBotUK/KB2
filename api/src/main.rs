@@ -1,27 +1,38 @@
-
-use lambda_http::{run, service_fn, tracing, Body, Error, Request, Response};
-
-/// This is the main body for the function.
-/// Write your code inside it.
-/// There are some code examples in the Runtime repository:
-/// - <https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/examples>
-async fn function_handler(_event: Request) -> Result<Response<Body>, Error> {
-    // Extract some useful information from the request
-
-    // Return something that implements IntoResponse.
-    // It will be serialized to the right response event automatically by the runtime
-    let resp = Response::builder()
-        .status(200)
-        .header("content-type", "text/html")
-        .body("Hello AWS Lambda HTTP request".into())
-        .map_err(Box::new)?;
-    Ok(resp)
-}
+use lambda_http::{
+    http::Method, service_fn, tower::ServiceBuilder, tracing, Body, Error, IntoResponse, Request, RequestExt, Response,
+};
+use tower_http::cors::{Any, CorsLayer};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     // required to enable CloudWatch error logging by the runtime
     tracing::init_default_subscriber();
 
-    run(service_fn(function_handler)).await
+    // Define a layer to inject CORS headers
+    let cors_layer = CorsLayer::new()
+        .allow_methods(vec![Method::GET, Method::POST])
+        .allow_origin(Any);
+
+    let handler = ServiceBuilder::new()
+        // Add the CORS layer to the service
+        .layer(cors_layer)
+        .service(service_fn(func));
+
+    lambda_http::run(handler).await?;
+    Ok(())
+}
+
+async fn func(event: Request) -> Result<Response<Body>, Error> {
+    Ok(
+        match event
+            .query_string_parameters_ref()
+            .and_then(|params| params.first("first_name"))
+        {
+            Some(first_name) => format!("Hello, {first_name}!").into_response().await,
+            None => Response::builder()
+                .status(400)
+                .body("Empty first name".into())
+                .expect("failed to render response"),
+        },
+    )
 }
