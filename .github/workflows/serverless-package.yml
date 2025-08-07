@@ -25,7 +25,7 @@ jobs:
       - name: Working Directory
         run: |
           cd api
-          lsg
+          ls
       - name: Build
         run: |
           pwd
