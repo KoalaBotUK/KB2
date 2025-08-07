@@ -22,13 +22,11 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
       - name: Install dependencies
         run: pip install cargo-lambda
-      - name: Working Directory
-        run: |
-          cd api
-          ls
       - name: Build
         run: |
-          pwd
+          cd api
           cargo lambda build --release
       - name: Deploy
-        run: cargo lambda deploy kb2-lambda-function-dev
+        run: |
+          cd api
+          cargo lambda deploy kb2-lambda-function-dev
