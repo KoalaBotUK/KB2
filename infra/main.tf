@@ -3,8 +3,8 @@ terraform {
     organization = "JayDwee"
 
     workspaces {
-      project = "auther"
-      tags = ["source:github.com/jaydwee/auther-infrastructure"]
+      project = "kb2"
+      tags = ["source:github.com/jaydwee/kb2-infrastructure"]
     }
   }
 
