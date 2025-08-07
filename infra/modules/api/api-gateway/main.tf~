@@ -11,6 +11,17 @@ resource "aws_api_gateway_resource" "default" {
   path_part   = "{proxy+}"
 }
 
+resource "aws_api_gateway_method" "get_s3_default" {
+  rest_api_id   = aws_api_gateway_rest_api.api.id
+  resource_id   = aws_api_gateway_resource.default.id
+  authorization = "NONE"
+  http_method   = "GET"
+
+  request_parameters = {
+    "method.request.path.proxy" = true
+  }
+}
+
 resource "aws_api_gateway_resource" "api" {
   rest_api_id = aws_api_gateway_rest_api.api.id
   parent_id   = aws_api_gateway_rest_api.api.root_resource_id
@@ -80,6 +91,7 @@ resource "aws_api_gateway_deployment" "default" {
     #       It will stabilize to only change when resources change afterwards.
     redeployment = sha1(jsonencode([
       aws_api_gateway_resource.default.id,
+      aws_api_gateway_method.get_s3_default.id,
       [for val in aws_api_gateway_resource.lambda_proxy : val.id],
       [for val in aws_api_gateway_method.lambda_proxy : val.id],
       [for val in aws_api_gateway_method_response.lambda_proxy_response_200 : val.id],
