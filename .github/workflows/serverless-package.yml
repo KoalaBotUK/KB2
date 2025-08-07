@@ -4,177 +4,27 @@ permissions:
   contents: read
 
 jobs:
-  build-entrypoint:
-    name: Package Entrypoint Zip 📦
+  package-api:
+    name: Package API Zip 📦
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-
-      - name: Install pip requirements
-        run: |
-          mkdir entrypoint
-          pip install -r ./dislord/lambda/entrypoint/lambda-requirements.txt --target ./entrypoint
-          cd entrypoint
-          zip -r ../entrypoint.zip .
-          cd ..
-
-      - name: Add project code
-        run: |
-          zip -r ./entrypoint.zip ./dislord/lambda/entrypoint/
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: sl-entrypoint
-          path: ./entrypoint.zip
-
-
-  upload-entrypoint:
-    name: Upload Entrypoint to S3 🪣
-    runs-on: ubuntu-latest
-    needs: build-entrypoint
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: sl-entrypoint
-
       - name: Setup AWS CLI
         uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-west-2
-
-      - name: Deploy Modified Files
-        run: |
-          ls
-          # Constants
-          S3_BUCKET=kb2
-          S3_KEY=entrypoint.zip
-          aws s3 cp entrypoint.zip s3://$S3_BUCKET/$S3_KEY
-          
-          # Update Lambda function code
-          LAMBDA_FUNCTION_NAME=KB2
-          aws lambda wait function-updated --function-name $LAMBDA_FUNCTION_NAME
-          aws lambda update-function-code --function-name $LAMBDA_FUNCTION_NAME --s3-bucket $S3_BUCKET --s3-key $S3_KEY
-          aws lambda wait function-updated --function-name $LAMBDA_FUNCTION_NAME
-
-  build-layer:
-    name: Package Layer Zip 📦
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.11"
-
-
-    - name: Install pip requirements
-      run: |
-        mkdir layer
-        pip install -r lambda-requirements.txt --target ./layer
-        cd layer
-        zip -r ../layer.zip .
-        cd ..
-
-    - name: Add project code
-      run: |
-        mv ./dislord/lambda/extensions .
-        mv extensions/dislord_ext.py .
-        zip -r ./layer.zip ./extensions
-        zip -r ./layer.zip ./dislord_ext.py
-        zip -r ./layer.zip ./dislord
-        zip -r ./layer.zip ./kb2
-
-    - uses: actions/upload-artifact@v4
-      with:
-        name: sl-layer
-        path: ./layer.zip
-
-  upload-layer:
-    name: Upload Layer to S3 🪣
-    runs-on: ubuntu-latest
-    needs: build-layer
-    steps:
-    - name: Download artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: sl-layer
-
-    - name: Setup AWS CLI
-      uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: eu-west-2
-
-    - name: Deploy Modified Files
-      run: |
-        ls
-        # Constants
-        S3_BUCKET=kb2
-        S3_KEY=layer.zip
-        aws s3 cp layer.zip s3://$S3_BUCKET/$S3_KEY
-        
-        # Update Lambda layer
-        LAMBDA_FUNCTION_NAME=KB2        
-        LAMBDA_LAYER_NAME=dislord_ext
-        LAYER_VERSION_ARN=$(aws lambda publish-layer-version --layer-name $LAMBDA_LAYER_NAME --content S3Bucket=$S3_BUCKET,S3Key=$S3_KEY --compatible-runtimes python3.11 --compatible-architectures x86_64 --query LayerVersionArn --output text)
-        echo Layer version ARN: $LAYER_VERSION_ARN
-        aws lambda wait function-updated --function-name $LAMBDA_FUNCTION_NAME
-        aws lambda update-function-configuration --function-name $LAMBDA_FUNCTION_NAME --layers $LAYER_VERSION_ARN
-        aws lambda wait function-updated --function-name $LAMBDA_FUNCTION_NAME
-
-        # Update Lambda function code
-        LAMBDA_FUNCTION_NAME=KB2-API
-        aws lambda wait function-updated --function-name $LAMBDA_FUNCTION_NAME
-        aws lambda update-function-code --function-name $LAMBDA_FUNCTION_NAME --s3-bucket $S3_BUCKET --s3-key $S3_KEY
-        aws lambda wait function-updated --function-name $LAMBDA_FUNCTION_NAME
-  
-
-  deploy-static:
-    environment: dev
-    name: Build Static Zip 📦
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./static
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install npm requirements
-        run: npm install
-
-      - name: Build npm
-        run: npm run build
-        env:
-          VITE_KB_API_URL: ${{ vars.VITE_KB_API_URL }}
-          VITE_DISCORD_CLIENT_ID: ${{ vars.VITE_DISCORD_CLIENT_ID }}
-          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
-          VITE_MICROSOFT_CLIENT_ID: ${{ vars.VITE_MICROSOFT_CLIENT_ID }}
-
-      - name: Setup AWS CLI
-        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-west-2
-
-      - name: Deploy Modified Files
-        run: aws s3 sync --delete ./dist s3://${{vars.AWS_S3_BUCKET}}
-
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Install dependencies
+        run: pip install cargo-lambda
+      - name: Working Directory
+        run: cd api
+      - name: Build
+        run: cargo lambda build --release
+      - name: Deploy
+        run: cargo lambda deploy kb2-lambda-function-dev
