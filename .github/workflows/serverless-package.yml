@@ -25,8 +25,8 @@ jobs:
       - name: Build
         run: |
           cd api
-          cargo lambda build --release
-      - name: Deploy
+          cargo lambda build --release --output-format zip
+
+      - name: Upload to Lambda
         run: |
-          cd api
-          cargo lambda deploy kb2-lambda-function-dev
+          aws lambda update-function-code --function-name kb2-lambda-function-dev --zip-file fileb://api/target/lambda/api/bootstrap.zip
