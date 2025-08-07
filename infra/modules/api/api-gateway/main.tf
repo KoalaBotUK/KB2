@@ -34,7 +34,7 @@ resource "aws_api_gateway_method" "lambda_proxy" {
 resource "aws_api_gateway_method_response" "lambda_proxy_response_200" {
   rest_api_id = aws_api_gateway_rest_api.api.id
   resource_id = aws_api_gateway_resource.lambda_proxy.id
-  http_method = "ANY"
+  http_method = aws_api_gateway_method.lambda_proxy.http_method
   status_code = "200"
 
   response_models = {
@@ -46,8 +46,8 @@ resource "aws_api_gateway_integration" "lambda_proxy" {
   depends_on = [aws_api_gateway_method.lambda_proxy]
   rest_api_id             = aws_api_gateway_rest_api.api.id
   resource_id             = aws_api_gateway_resource.lambda_proxy.id
-  http_method             = "ANY"
-  integration_http_method = "ANY"
+  http_method             = aws_api_gateway_method.lambda_proxy.http_method
+  integration_http_method = aws_api_gateway_method.lambda_proxy.http_method
   type                    = "AWS_PROXY"
   uri                     = var.lambda_function_invoke_arn
 }
