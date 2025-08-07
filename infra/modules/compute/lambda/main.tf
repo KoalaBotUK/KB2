@@ -46,7 +46,7 @@ data "aws_iam_policy_document" "cloudwatch_readwrite" {
 }
 
 resource "aws_iam_policy" "cloudwatch_readwrite" {
-  name   = "kb2-${var.deployment_env}-cloudwatch-readwrite-policy"
+  name   = "kb2-cloudwatch-readwrite-policy-${var.deployment_env}"
   policy = data.aws_iam_policy_document.cloudwatch_readwrite.json
 }
 
@@ -67,7 +67,7 @@ data "archive_file" "empty_zip" {
 }
 
 resource "aws_lambda_function" "lambda_function" {
-  function_name = "kb2-${var.deployment_env}-lambda-function"
+  function_name = "kb2-lambda-function-${var.deployment_env}"
   role          = aws_iam_role.lambda_execute_role.arn
   handler       = "main"
   filename = data.archive_file.empty_zip.output_path

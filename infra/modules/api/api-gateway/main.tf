@@ -18,27 +18,22 @@ resource "aws_api_gateway_resource" "api" {
 }
 
 resource "aws_api_gateway_resource" "lambda_proxy" {
-  for_each = {
-    for key, value in [aws_api_gateway_resource.api] : value.path_part => value.id
-  }
   rest_api_id = aws_api_gateway_rest_api.api.id
-  parent_id   = each.value
+  parent_id   = aws_api_gateway_rest_api.api.root_resource_id
   path_part   = "{proxy+}"
 }
 
 
 resource "aws_api_gateway_method" "lambda_proxy" {
-  for_each      = aws_api_gateway_resource.lambda_proxy
   rest_api_id   = aws_api_gateway_rest_api.api.id
-  resource_id   = each.value.id
+  resource_id   = aws_api_gateway_resource.lambda_proxy.id
   authorization = "NONE"
   http_method   = "ANY"
 }
 
 resource "aws_api_gateway_method_response" "lambda_proxy_response_200" {
-  for_each    = aws_api_gateway_resource.lambda_proxy
   rest_api_id = aws_api_gateway_rest_api.api.id
-  resource_id = each.value.id
+  resource_id = aws_api_gateway_resource.lambda_proxy.id
   http_method = "ANY"
   status_code = "200"
 
@@ -49,9 +44,8 @@ resource "aws_api_gateway_method_response" "lambda_proxy_response_200" {
 
 resource "aws_api_gateway_integration" "lambda_proxy" {
   depends_on = [aws_api_gateway_method.lambda_proxy]
-  for_each                = aws_api_gateway_resource.lambda_proxy
   rest_api_id             = aws_api_gateway_rest_api.api.id
-  resource_id             = each.value.id
+  resource_id             = aws_api_gateway_resource.lambda_proxy.id
   http_method             = "ANY"
   integration_http_method = "ANY"
   type                    = "AWS_PROXY"
