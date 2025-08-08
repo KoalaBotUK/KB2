@@ -27,7 +27,7 @@ async fn main() -> Result<(), Error> {
 }
 
 async fn controller(event: Request) -> Result<Response<Body>, Error> {
-    match event.raw_http_path().split('/').next() {
+    match event.uri().path().split('/').nth(1) {
         Some("verify") => verify_controller::controller(event).await,
         _ => Ok(Response::builder()
             .status(404)
