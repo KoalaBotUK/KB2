@@ -3,6 +3,8 @@ data "aws_caller_identity" "current" {}
 
 resource "aws_api_gateway_rest_api" "api" {
   name = "kb2-api-${var.deployment_env}"
+
+  binary_media_types = ["*/*"]
 }
 
 resource "aws_api_gateway_resource" "lambda_proxy" {
@@ -23,11 +25,6 @@ resource "aws_api_gateway_method_response" "lambda_proxy_response_200" {
   resource_id = aws_api_gateway_resource.lambda_proxy.id
   http_method = aws_api_gateway_method.lambda_proxy.http_method
   status_code = "200"
-
-  response_models = {
-    "application/json" = "Empty"
-    "text/html" = "Empty"
-  }
 }
 
 resource "aws_api_gateway_integration" "lambda_proxy" {

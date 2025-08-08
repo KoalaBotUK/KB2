@@ -58,11 +58,11 @@ resource "aws_iam_role_policy_attachment" "execution_role_attach" {
 
 data "archive_file" "empty_zip" {
   type = "zip"
-  output_path = "${path.module}/kb2.zip"
+  output_path = "${path.module}/bootstrap.zip"
 
   source {
     content = "kb2"
-    filename = "kb2.txt"
+    filename = "bootstrap"
   }
 }
 
