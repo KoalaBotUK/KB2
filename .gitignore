@@ -144,3 +144,7 @@ dmypy.json
 
 # dat files
 *.dat
+
+# Editor temporary files
+*~
+.#*

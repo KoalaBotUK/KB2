@@ -1,11 +1,17 @@
-name: Serverless Package & Upload 📦🪣
-on: push
+name: API Lambda Deploy ⁁
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - api/**
+      - .github/workflows/api-deploy.yml
 permissions:
   contents: read
 
 jobs:
-  package-api:
-    name: Package API Zip 📦
+  build-deploy:
+    name: Build & Deploy 📦
     runs-on: ubuntu-latest
 
     steps:

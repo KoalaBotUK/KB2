@@ -1,7 +1,11 @@
 use lambda_http::{
-    http::Method, service_fn, tower::ServiceBuilder, tracing, Body, Error, IntoResponse, Request, RequestExt, Response,
+    http::Method, service_fn, tower::ServiceBuilder, tracing, Body, Error, Request, RequestExt, Response,
 };
 use tower_http::cors::{Any, CorsLayer};
+
+mod verify;
+use crate::verify::controller as verify_controller;
+
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -16,23 +20,18 @@ async fn main() -> Result<(), Error> {
     let handler = ServiceBuilder::new()
         // Add the CORS layer to the service
         .layer(cors_layer)
-        .service(service_fn(func));
+        .service(service_fn(controller));
 
     lambda_http::run(handler).await?;
     Ok(())
 }
 
-async fn func(event: Request) -> Result<Response<Body>, Error> {
-    Ok(
-        match event
-            .query_string_parameters_ref()
-            .and_then(|params| params.first("first_name"))
-        {
-            Some(first_name) => format!("Hello, {first_name}!").into_response().await,
-            None => Response::builder()
-                .status(400)
-                .body("Empty first name".into())
-                .expect("failed to render response"),
-        },
-    )
+async fn controller(event: Request) -> Result<Response<Body>, Error> {
+    match event.raw_http_path().split('/').next() {
+        Some("verify") => verify_controller::controller(event).await,
+        _ => Ok(Response::builder()
+            .status(404)
+            .body("not found".into())
+            .expect("failed to render response")),
+    }
 }
