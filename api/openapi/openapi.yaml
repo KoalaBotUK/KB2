@@ -1,0 +1,348 @@
+openapi: 3.1.0
+info:
+  title: KoalaBot
+  version: 2.0.0-alpha.1
+  description: |-
+    This is the KoalaBot API. This is allowed to be used by anyone who wishes to do so, and is also used by the KoalaBot dashboard.
+  termsOfService: https://drive.google.com/drive/folders/16sw768rXd7c52FWeXrqHt0tTz3FoqN_O?usp=sharing
+  contact:
+    email: drapj002@gmail.com
+  license:
+    name: MIT License
+    url: https://opensource.org/license/mit
+externalDocs:
+  description: koalabot.uk
+  url: https://koalabot.uk
+servers:
+  - url: http://localhost:9000/lambda-url/api/
+    description: Local
+  - url: https://api.dev.koalabot.uk
+    description: Development
+  - url: https://koalabot.uk
+    description: Production
+tags:
+  - name: users
+    description: Basic user information
+  - name: guild
+    description: Basic guild information
+paths:
+  /users:
+    get:
+      tags:
+        - users
+      summary: Finds all users.
+      description: Finds all users.
+      operationId: findUsers
+      parameters:
+        - $ref: '#/components/parameters/PageParameter'
+        - $ref: '#/components/parameters/LimitParameter'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - discord_auth:
+            - identify
+  /users/{user_id}:
+    get:
+      tags:
+        - users
+      summary: Finds user by ID.
+      description: Finds user by ID.
+      operationId: findUserById
+      parameters:
+        - name: user_id
+          in: path
+          schema:
+            $ref: '#/components/schemas/DiscordSnowflake'
+          required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: Guild not found.
+          content: {}
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - discord_auth:
+            - identify
+  /users/{user_id}/emails:
+    post:
+      tags:
+        - users
+      summary: Links an email to a user.
+      description: Links an email to a user.
+      operationId: linkUserEmail
+      parameters:
+        - name: user_id
+          in: path
+          schema:
+            type: integer
+            format: int64
+            example: 308994132968210433
+          required: true
+      requestBody:
+        $ref: '#/components/requestBodies/EmailLink'
+
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Email'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - discord_auth:
+            - identify
+  /guilds:
+    get:
+      tags:
+        - guilds
+      summary: Finds all guilds.
+      description: Finds all guilds.
+      parameters:
+        - $ref: '#/components/parameters/PageParameter'
+        - $ref: '#/components/parameters/LimitParameter'
+      operationId: FindGuilds
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Guild'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - discord_auth:
+            - identify
+            - guilds
+  /guilds/{guild_id}:
+    get:
+      tags:
+        - guilds
+      summary: Finds guild by ID.
+      description: Finds guild by ID.
+      operationId: FindGuildById
+      parameters:
+        - name: guild_id
+          in: path
+          schema:
+            $ref: '#/components/schemas/DiscordSnowflake'
+          required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Guild'
+        '404':
+          description: Guild not found.
+          content: {}
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - discord_auth:
+            - identify
+            - guilds
+    put:
+      tags:
+        - guilds
+      summary: Update guild by ID.
+      description: Update guild by ID.
+      operationId: UpdateGuildById
+      parameters:
+        - name: guild_id
+          in: path
+          schema:
+            $ref: '#/components/schemas/DiscordSnowflake'
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Guild'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Guild'
+        '404':
+          description: Guild not found.
+          content: {}
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - discord_auth:
+            - identify
+            - guilds
+components:
+  parameters:
+    PageParameter:
+      name: page
+      in: query
+      description: The page number to retrieve
+      required: false
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        default: 1
+    LimitParameter:
+      name: limit
+      in: query
+      description: The number of items to return per page
+      required: false
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 100
+        default: 20
+  schemas:
+    DiscordSnowflake:
+      type: integer
+      format: int64
+      example: 80351110224678912
+
+    EmailMethod:
+      type: string
+      example: Microsoft
+      enum:
+        - DISCORD
+        - MICROSOFT
+        - GOOGLE
+        - EMAIL
+
+    Email:
+      type: object
+      properties:
+        address:
+          type: string
+          example: john.doe@example.com
+        method:
+          $ref: '#/components/schemas/EmailMethod'
+        linked_at:
+          type: integer
+          description: Epoch time the account was linked
+          example: 1754799631
+          format: int64
+
+    User:
+      type: object
+      properties:
+        user_id:
+          $ref: '#/components/schemas/DiscordSnowflake'
+        username:
+          type: string
+          example: johndoe
+        global_name:
+          type: string
+          example: John Doe
+        avatar:
+          type: string
+          example: 8342729096ea3675442027381ff50dfe
+        emails:
+          type: array
+          items:
+            $ref: '#/components/schemas/Email'
+
+    VerifyRole:
+      type: object
+      properties:
+        role_id:
+          $ref: '#/components/schemas/DiscordSnowflake'
+        pattern:
+          type: string
+          example: '@example.com$'
+
+    Verify:
+      type: object
+      properties:
+        role_mappings:
+          type: array
+          items:
+            $ref: '#/components/schemas/VerifyRole'
+    Guild:
+      type: object
+      properties:
+        guild_id:
+          $ref: '#/components/schemas/DiscordSnowflake'
+        verify:
+          $ref: '#/components/schemas/Verify'
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      required:
+        - code
+        - message
+  requestBodies:
+    EmailLink:
+      description: Pet object that needs to be added to the store
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              method:
+                $ref: '#/components/schemas/EmailMethod'
+              token:
+                type: string
+                example: mytoken1234
+  securitySchemes:
+    discord_auth:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: https://discord.com/oauth2/authorize?response_type=code
+          scopes:
+            identify: Basic information about a user (without email)
+            email: Allows identify to view to a user's email address
+            guilds: Basic information about all of a user's guilds
