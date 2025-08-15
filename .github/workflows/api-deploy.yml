@@ -27,7 +27,8 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
       - name: Install dependencies
-        run: pip install cargo-lambda
+        run: pip install cargo-lambda && \
+          apt-get install -y pkg-config libssl-dev
       - name: Build
         run: |
           cd api
