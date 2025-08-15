@@ -35,7 +35,7 @@ async fn get_users_id(
         return Err(StatusCode::NOT_FOUND)
     }
 
-    let result = app_state.dynamo.query().table_name("kb2_users_local")
+    let result = app_state.dynamo.query().table_name(format!("kb2_users_{}",std::env::var("DEPLOYMENT_ENV").expect("DEPLOYMENT_ENV must be set"),))
         .key_condition_expression("#uid = :uid")
         .expression_attribute_names("#uid", "user_id")
         .expression_attribute_values(":uid", AttributeValue::S(user_id.to_string()))
@@ -75,7 +75,7 @@ async fn put_users_id(
 
     let resp = app_state.dynamo
         .put_item()
-        .table_name("kb2_users_local")
+        .table_name(format!("kb2_users_{}",std::env::var("DEPLOYMENT_ENV").expect("DEPLOYMENT_ENV must be set"),))
         .set_item(Some(item))
         .send()
         .await;

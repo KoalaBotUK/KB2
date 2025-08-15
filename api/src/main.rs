@@ -65,8 +65,6 @@ async fn main() -> Result<(), Error> {
     // required to enable CloudWatch error logging by the runtime
     tracing::init_default_subscriber();
 
-    unsafe { set_var("AWS_LAMBDA_HTTP_IGNORE_STAGE_IN_PATH", "true"); }
-
     let dynamo = create_dynamodb_client().await;
     let discord_bot = Arc::new(twilight_http::Client::new(
         std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set"),
