@@ -20,6 +20,17 @@ pub fn _as_i32(val: Option<&AttributeValue>, default: i32) -> i32 {
     default
 }
 
+pub fn as_u64(val: Option<&AttributeValue>, default: u64) -> u64 {
+    if let Some(v) = val {
+        if let Ok(n) = v.as_n() {
+            if let Ok(n) = n.parse::<u64>() {
+                return n;
+            }
+        }
+    }
+    default
+}
+
 pub fn as_string_vec(val: Option<&AttributeValue>) -> Vec<String> {
     if let Some(val) = val {
         if let Ok(val) = val.as_l() {

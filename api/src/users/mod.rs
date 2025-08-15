@@ -10,6 +10,7 @@ use http::StatusCode;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
+use lambda_http::tracing::error;
 use twilight_http::Client as DiscordClient;
 use twilight_model::id::marker::UserMarker;
 use twilight_model::id::Id;
@@ -68,10 +69,30 @@ async fn put_users_id(
     let user_id_str = user_id.to_string();
     let mut item = HashMap::new();
     item.insert("user_id".to_string(), AttributeValue::S(user_id_str));
-    item.insert("username".to_string(), AttributeValue::S(user.username.clone()));
-    item.insert("first_name".to_string(), AttributeValue::S(user.first_name.clone()));
-    item.insert("last_name".to_string(), AttributeValue::S(user.last_name.clone()));
-    item.insert("emails".to_string(), AttributeValue::Ss(user.emails.clone()));
+    item.insert(
+        "links".to_string(),
+        AttributeValue::L(
+            user.links
+                .clone()
+                .into_iter()
+                .map(|l| {
+                    let mut map = HashMap::new();
+                    map.insert("link_address".to_string(), AttributeValue::S(l.link_address.clone()));
+                    map.insert("linked_at".to_string(), AttributeValue::N(l.linked_at.clone().to_string()));
+                    AttributeValue::M(map)
+                })
+                .collect(),
+        ),
+    );
+    item.insert(
+        "linked_guild_ids".to_string(),
+        AttributeValue::L(
+            user.linked_guild_ids
+                .into_iter()
+                .map(|id| AttributeValue::S(id))
+                .collect(),
+        ),
+    );
 
     let resp = app_state.dynamo
         .put_item()
@@ -87,7 +108,7 @@ async fn put_users_id(
             State(app_state),
         ).await,
         Err(e) => {
-            println!("Dynamodb write error: {}",e);
+            error!("Dynamodb write error: {}", e.into_service_error());
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         },
     }
