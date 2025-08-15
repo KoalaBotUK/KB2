@@ -46,7 +46,7 @@ async fn health_check() -> (StatusCode, Json<Value>) {
 }
 
 async fn get_bot_redirect() -> Response<Body> {
-    
+
     let redirect_url = "https://discord.com/oauth2/authorize?client_id=1014995724888444998&permissions=0&integration_type=0&scope=bot";
     Response::builder()
         .status(StatusCode::FOUND)
@@ -64,14 +64,14 @@ async fn create_dynamodb_client() -> Client {
 async fn main() -> Result<(), Error> {
     // required to enable CloudWatch error logging by the runtime
     tracing::init_default_subscriber();
-    
+
     unsafe { set_var("AWS_LAMBDA_HTTP_IGNORE_STAGE_IN_PATH", "true"); }
 
     let dynamo = create_dynamodb_client().await;
     let discord_bot = Arc::new(twilight_http::Client::new(
         std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set"),
     ));
-    
+
     let app_state = AppState {
         dynamo,
         discord_bot,

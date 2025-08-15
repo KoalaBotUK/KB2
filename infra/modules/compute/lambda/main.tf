@@ -47,11 +47,11 @@ resource "aws_iam_role_policy_attachment" "execution_role_attach" {
 }
 
 data "archive_file" "empty_zip" {
-  type = "zip"
+  type        = "zip"
   output_path = "${path.module}/bootstrap.zip"
 
   source {
-    content = "kb2"
+    content  = "kb2"
     filename = "bootstrap"
   }
 }
@@ -60,14 +60,17 @@ resource "aws_lambda_function" "lambda_function" {
   function_name = "kb2-lambda-function-${var.deployment_env}"
   role          = aws_iam_role.lambda_execute_role.arn
   handler       = "main"
-  filename = data.archive_file.empty_zip.output_path
+  filename      = data.archive_file.empty_zip.output_path
 
   runtime = "provided.al2023"
 
   environment {
     variables = {
-      API_GATEWAY_BASE_PATH = "/default"
-      DEPLOYMENT_ENV = var.deployment_env
+      AWS_LAMBDA_HTTP_IGNORE_STAGE_IN_PATH = "true"
+      AWS_LAMBDA_LOG_LEVEL                 = "info"
+      API_GATEWAY_BASE_PATH                = "/default"
+      DEPLOYMENT_ENV                       = var.deployment_env
+      DISCORD_BOT_TOKEN                    = var.discord_bot_token
     }
   }
 }

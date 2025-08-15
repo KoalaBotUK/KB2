@@ -28,6 +28,7 @@ provider "aws" {}
 module "lambda" {
   source         = "./modules/compute/lambda"
   deployment_env = var.deployment_env
+  discord_bot_token = var.discord_bot_token
 }
 
 module "api" {
