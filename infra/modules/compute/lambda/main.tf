@@ -19,6 +19,12 @@ resource "aws_iam_role" "lambda_execute_role" {
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
 }
 
+resource "aws_iam_role_policy_attachment" "dynamodb_role_attach" {
+  role       = aws_iam_role.lambda_execute_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess_v2"
+}
+
+
 data "aws_iam_policy_document" "cloudwatch_readwrite" {
   statement {
     effect = "Allow"
