@@ -86,13 +86,13 @@ paths:
       security:
         - discord_auth:
             - identify
-  /users/{user_id}/emails:
+  /users/{user_id}/links:
     post:
       tags:
         - users
       summary: Links an email to a user.
       description: Links an email to a user.
-      operationId: linkUserEmail
+      operationId: userLink
       parameters:
         - name: user_id
           in: path
@@ -102,7 +102,7 @@ paths:
             example: 308994132968210433
           required: true
       requestBody:
-        $ref: '#/components/requestBodies/EmailLink'
+        $ref: '#/components/requestBodies/LinkRequest'
 
       responses:
         '200':
@@ -110,7 +110,45 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Email'
+                $ref: '#/components/schemas/Link'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - discord_auth:
+            - identify
+  /users/{user_id}/links/{link_address}:
+    delete:
+      tags:
+        - users
+      summary: Unlinks an email from a user.
+      description: Unlinks an email from a user.
+      operationId: userUnlink
+      parameters:
+        - name: user_id
+          in: path
+          schema:
+            type: integer
+            format: int64
+            example: 308994132968210433
+          required: true
+        - name: link_address
+          in: path
+          schema:
+            type: string
+            description: URL encoded link address
+            example: jon.doe%40example.com
+          required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Link'
         default:
           description: Unexpected error
           content:
@@ -248,28 +286,27 @@ components:
       format: int64
       example: 80351110224678912
 
-    EmailMethod:
-      type: string
-      example: Microsoft
-      enum:
-        - DISCORD
-        - MICROSOFT
-        - GOOGLE
-        - EMAIL
-
-    Email:
+    Link:
       type: object
       properties:
-        address:
+        link_address:
           type: string
+          description: Email address
           example: john.doe@example.com
-        method:
-          $ref: '#/components/schemas/EmailMethod'
         linked_at:
           type: integer
           description: Epoch time the account was linked
           example: 1754799631
           format: int64
+
+    TokenOrigin:
+      type: string
+      example: MICROSOFT
+      enum:
+        - DISCORD
+        - MICROSOFT
+        - GOOGLE
+        - EMAIL
 
     User:
       type: object
@@ -285,10 +322,14 @@ components:
         avatar:
           type: string
           example: 8342729096ea3675442027381ff50dfe
-        emails:
+        links:
           type: array
           items:
-            $ref: '#/components/schemas/Email'
+            $ref: '#/components/schemas/Link'
+        linked_guild_ids:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiscordSnowflake'
 
     VerifyRole:
       type: object
@@ -299,6 +340,7 @@ components:
           type: string
           example: '@example.com$'
 
+
     Verify:
       type: object
       properties:
@@ -306,6 +348,17 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/VerifyRole'
+        user_links:
+        # Map of user id to array of link addresses
+          type: object
+          description: Map of user id to array of link addresses
+          example:
+            '308994132968210433': [{'link_address': 'john.doe@example.com', 'linked_at': 1754799631}, {'link_address': 'johnny.doe@example.com', 'linked_at': 1754799651}]
+            '308994132968210434': [{'link_address': 'jane.doe@example.com', 'linked_at': 1754799612}]
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/Link'
     Guild:
       type: object
       properties:
@@ -324,15 +377,15 @@ components:
         - code
         - message
   requestBodies:
-    EmailLink:
+    LinkRequest:
       description: Pet object that needs to be added to the store
       content:
         application/json:
           schema:
             type: object
             properties:
-              method:
-                $ref: '#/components/schemas/EmailMethod'
+              origin:
+                $ref: '#/components/schemas/TokenOrigin'
               token:
                 type: string
                 example: mytoken1234

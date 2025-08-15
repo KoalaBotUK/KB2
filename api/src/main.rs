@@ -11,11 +11,24 @@ use lambda_http::{run, tracing, Error};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::env::set_var;
+use std::sync::Arc;
+use aws_config::BehaviorVersion;
+use aws_sdk_dynamodb::Client;
+use axum::body::Body;
+use http::Response;
 use tower_http::cors::CorsLayer;
 
+mod auth;
+mod dynamo;
 mod users;
 mod guilds;
-mod auth;
+
+
+#[derive(Clone)]
+pub struct AppState {
+    dynamo: Client,
+    discord_bot: Arc<twilight_http::Client>,
+}
 
 #[derive(Deserialize, Serialize)]
 struct Params {
@@ -32,19 +45,46 @@ async fn health_check() -> (StatusCode, Json<Value>) {
     }
 }
 
+async fn get_bot_redirect() -> Response<Body> {
+    
+    let redirect_url = "https://discord.com/oauth2/authorize?client_id=1014995724888444998&permissions=0&integration_type=0&scope=bot";
+    Response::builder()
+        .status(StatusCode::FOUND)
+        .header("Location", redirect_url)
+        .body(Body::empty())
+        .unwrap()
+}
+
+async fn create_dynamodb_client() -> Client {
+    let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
+    Client::new(&config)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    unsafe { set_var("AWS_LAMBDA_HTTP_IGNORE_STAGE_IN_PATH", "true"); }
-
     // required to enable CloudWatch error logging by the runtime
     tracing::init_default_subscriber();
+    
+    unsafe { set_var("AWS_LAMBDA_HTTP_IGNORE_STAGE_IN_PATH", "true"); }
+
+    let dynamo = create_dynamodb_client().await;
+    let discord_bot = Arc::new(twilight_http::Client::new(
+        std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set"),
+    ));
+    
+    let app_state = AppState {
+        dynamo,
+        discord_bot,
+    };
 
     let app = Router::new()
         .nest("/users", users::router())
         .nest("/guilds", guilds::router())
         .layer(CorsLayer::permissive())
         .route_layer(middleware::from_fn(auth::auth_middleware))
-        .route("/health", get(health_check));
+        .with_state(app_state)
+        .route("/health", get(health_check))
+        .route("/bot", get(get_bot_redirect));
 
     run(app).await
 }

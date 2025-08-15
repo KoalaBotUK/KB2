@@ -1,0 +1,94 @@
+mod models;
+
+use crate::users::models::User;
+use crate::AppState;
+use aws_sdk_dynamodb::types::AttributeValue;
+use axum::extract::{Path, State};
+use axum::routing::get;
+use axum::{Extension, Json};
+use http::StatusCode;
+use serde_json::{json, Value};
+use std::collections::HashMap;
+use std::sync::Arc;
+use twilight_http::Client as DiscordClient;
+use twilight_model::id::marker::UserMarker;
+use twilight_model::id::Id;
+
+pub fn router() -> axum::Router<AppState> {
+    axum::Router::new()
+        .route("/", get(get_users))
+        .route("/{user_id}", get(get_users_id).put(put_users_id))
+}
+
+async fn get_users(
+) -> Json<Value> {
+    todo!()
+}
+
+async fn get_users_id(
+    Path(user_id): Path<Id<UserMarker>>,
+    Extension(discord_user): Extension<Arc<DiscordClient>>,
+    State(app_state): State<AppState>,
+) -> Result<Json<Value>, StatusCode> {
+    let logged_in_user = discord_user.current_user().await.unwrap().model().await.unwrap();
+    if logged_in_user.id.ne(&user_id) {
+        return Err(StatusCode::NOT_FOUND)
+    }
+
+    let result = app_state.dynamo.query().table_name("kb2_users_local")
+        .key_condition_expression("#uid = :uid")
+        .expression_attribute_names("#uid", "user_id")
+        .expression_attribute_values(":uid", AttributeValue::S(user_id.to_string()))
+        .send()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        .and_then(|resp| {
+            let items = resp.items.unwrap_or_default();
+            if items.is_empty() {
+                return Err(StatusCode::NOT_FOUND);
+            }
+            let user: User = (&items[0]).into();
+            Ok(user)
+        })?;
+
+    Ok(Json(json!(result)))
+}
+
+async fn put_users_id(
+    Path(user_id): Path<Id<UserMarker>>,
+    Extension(discord_user): Extension<Arc<DiscordClient>>,
+    State(app_state): State<AppState>,
+    Json(user): Json<User>
+) -> Result<Json<Value>, StatusCode> {
+    let logged_in_user = discord_user.current_user().await.unwrap().model().await.unwrap();
+    if logged_in_user.id.ne(&user_id) {
+        return Err(StatusCode::NOT_FOUND)
+    }
+    // Write user to DynamoDB
+    let user_id_str = user_id.to_string();
+    let mut item = HashMap::new();
+    item.insert("user_id".to_string(), AttributeValue::S(user_id_str));
+    item.insert("username".to_string(), AttributeValue::S(user.username.clone()));
+    item.insert("first_name".to_string(), AttributeValue::S(user.first_name.clone()));
+    item.insert("last_name".to_string(), AttributeValue::S(user.last_name.clone()));
+    item.insert("emails".to_string(), AttributeValue::Ss(user.emails.clone()));
+
+    let resp = app_state.dynamo
+        .put_item()
+        .table_name("kb2_users_local")
+        .set_item(Some(item))
+        .send()
+        .await;
+
+    match resp {
+        Ok(_) => get_users_id(
+            Path(user_id.into()),
+            Extension(discord_user),
+            State(app_state),
+        ).await,
+        Err(e) => {
+            println!("Dynamodb write error: {}",e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        },
+    }
+}
