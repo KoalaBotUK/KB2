@@ -37,3 +37,8 @@ module "api" {
   lambda_function_invoke_arn = module.lambda.lambda_function_invoke_arn
   lambda_function_name = module.lambda.lambda_function_name
 }
+
+module "dynamodb" {
+  source = "./modules/data/dynamodb"
+  deployment_env = var.deployment_env
+}
