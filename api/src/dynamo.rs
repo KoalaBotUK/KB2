@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use aws_sdk_dynamodb::types::AttributeValue;
 
 pub fn as_string(val: Option<&AttributeValue>, default: &String) -> String {
@@ -47,5 +48,17 @@ pub fn as_string_vec(val: Option<&AttributeValue>) -> Vec<String> {
     //         .iter()
     //         .map(|v| as_string(Some(v), &"".to_string()))
     //         .collect();
+    vec![]
+}
+
+pub fn as_map_vec(val: Option<&AttributeValue>) -> Vec<&HashMap<String, AttributeValue>> {
+    if let Some(val) = val {
+        if let Ok(val) = val.as_l() {
+            return val
+                .iter()
+                .filter_map(|v| v.as_m().ok())
+                .collect();
+        }
+    }
     vec![]
 }

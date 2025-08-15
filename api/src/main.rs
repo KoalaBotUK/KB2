@@ -19,6 +19,7 @@ mod guilds;
 pub struct AppState {
     dynamo: Client,
     discord_bot: Arc<twilight_http::Client>,
+    reqwest: Arc<reqwest::Client>
 }
 
 #[derive(Deserialize, Serialize)]
@@ -64,6 +65,7 @@ async fn main() -> Result<(), Error> {
     let app_state = AppState {
         dynamo,
         discord_bot,
+        reqwest: Arc::new(reqwest::Client::new()),
     };
 
     let app = Router::new()
