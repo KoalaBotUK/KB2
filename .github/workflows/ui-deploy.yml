@@ -1,0 +1,48 @@
+name: UI S3 Deploy 📦🪣
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ui/**
+      - ui-deploy.yml
+permissions:
+  contents: read
+
+jobs:
+  build-deploy:
+    environment: dev
+    name: Build & Deploy 🪣
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ui
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install npm requirements
+        run: npm install
+
+      - name: Build npm
+        run: npm run build
+        env:
+          VITE_KB_API_URL: ${{ vars.VITE_KB_API_URL }}
+          VITE_DISCORD_CLIENT_ID: ${{ vars.VITE_DISCORD_CLIENT_ID }}
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
+          VITE_MICROSOFT_CLIENT_ID: ${{ vars.VITE_MICROSOFT_CLIENT_ID }}
+
+      - name: Setup AWS CLI
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-2
+
+      - name: Deploy Modified Files
+        run: aws s3 sync --delete ./dist s3://${{vars.AWS_S3_BUCKET}}

@@ -78,7 +78,7 @@ resource "aws_api_gateway_stage" "default" {
 resource "aws_api_gateway_base_path_mapping" "default" {
   api_id      = aws_api_gateway_rest_api.default.id
   stage_name  = aws_api_gateway_stage.default.stage_name
-  domain_name = "api.${var.deployment_env}.${var.root_domain_name}" # TODO: Create Domain Name Resource
+  domain_name = "api.${var.ui_hostname}" # TODO: Create Domain Name Resource
 }
 
 resource "aws_api_gateway_usage_plan" "default" {

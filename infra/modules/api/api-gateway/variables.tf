@@ -13,3 +13,8 @@ variable "lambda_function_name" {
 variable "root_domain_name" {
   type    = string
 }
+
+variable "ui_hostname" {
+  type = string
+  description = "The hostname for the UI, e.g., 'koalabot.uk'. This is used to set up the API Gateway custom domain name."
+}

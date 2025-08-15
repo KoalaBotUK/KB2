@@ -11,8 +11,13 @@ permissions:
 
 jobs:
   build-deploy:
+    environment: dev
     name: Build & Deploy 📦
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./api
+
 
     steps:
       - uses: actions/checkout@v4
@@ -29,10 +34,7 @@ jobs:
       - name: Install dependencies
         run: pip install cargo-lambda
       - name: Build
-        run: |
-          cd api
-          cargo lambda build --release --output-format zip
+        run: cargo lambda build --release --output-format zip
 
       - name: Upload to Lambda
-        run: |
-          aws lambda update-function-code --function-name kb2-lambda-function-dev --zip-file fileb://api/target/lambda/api/bootstrap.zip
+        run: aws lambda update-function-code --function-name kb2-lambda-function-dev --zip-file fileb://api/target/lambda/api/bootstrap.zip
