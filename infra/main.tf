@@ -31,12 +31,18 @@ module "lambda" {
   discord_bot_token = var.discord_bot_token
 }
 
+module "s3" {
+  source = "./modules/data/s3"
+  deployment_env = var.deployment_env
+}
+
 module "api" {
   source = "./modules/api/api-gateway"
   deployment_env = var.deployment_env
   root_domain_name = var.root_domain_name
   lambda_function_invoke_arn = module.lambda.lambda_function_invoke_arn
   lambda_function_name = module.lambda.lambda_function_name
+  ui_hostname = module.s3.ui_hostname
 }
 
 module "dynamodb" {
