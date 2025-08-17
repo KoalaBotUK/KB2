@@ -14,7 +14,7 @@ use twilight_model::application::interaction::{Interaction, InteractionType};
 use twilight_model::http::interaction::{InteractionResponse, InteractionResponseType};
 
 static PUB_KEY: Lazy<VerifyingKey> = Lazy::new(|| {
-    VerifyingKey::from_bytes(&<[u8; PUBLIC_KEY_LENGTH] as FromHex>::from_hex("DISCORD_PUBLIC_KEY").unwrap())
+    VerifyingKey::from_bytes(&<[u8; PUBLIC_KEY_LENGTH] as FromHex>::from_hex(std::env::var("DISCORD_PUBLIC_KEY").expect("DISCORD_PUBLIC_KEY must be set")).unwrap())
         .unwrap()
 });
 
