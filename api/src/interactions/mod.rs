@@ -46,7 +46,7 @@ pub async fn pubkey_middleware(request: Request, next: Next) -> Result<Response,
         .get("x-signature-ed25519")
         .and_then(|v| v.to_str().ok())
     {
-        hex_sig.parse().unwrap()
+        hex_sig.parse().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
     } else {
         return Err(StatusCode::BAD_REQUEST);
     };
@@ -158,7 +158,7 @@ async fn register_commands(
     }
     
 
-    let application_id = app_state.discord_bot.current_user_application().await.unwrap().model().await.unwrap().id;
+    let application_id = app_state.discord_bot.current_user_application().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?.model().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?.id;
     let resp = app_state.discord_bot.interaction(application_id)
         .set_global_commands(
             &[
@@ -198,6 +198,6 @@ async fn register_commands(
                 #[allow(deprecated)]
                 dm_permission: None,
             }],
-        ).await.unwrap().model().await.unwrap();
+        ).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?.model().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(json!(resp)))
 }
