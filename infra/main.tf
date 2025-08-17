@@ -29,6 +29,7 @@ module "lambda" {
   source         = "./modules/compute/lambda"
   deployment_env = var.deployment_env
   discord_bot_token = var.discord_bot_token
+  discord_public_key = var.discord_public_key
 }
 
 module "s3" {

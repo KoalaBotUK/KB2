@@ -10,3 +10,7 @@ variable "root_domain_name" {
 variable "discord_bot_token" {
   type = string
 }
+
+variable "discord_public_key" {
+  type = string
+}

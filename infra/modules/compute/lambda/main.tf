@@ -77,6 +77,7 @@ resource "aws_lambda_function" "lambda_function" {
       API_GATEWAY_BASE_PATH                = "/default"
       DEPLOYMENT_ENV                       = var.deployment_env
       DISCORD_BOT_TOKEN                    = var.discord_bot_token
+      DISCORD_PUBLIC_KEY                  = var.discord_public_key
     }
   }
 }

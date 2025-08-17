@@ -13,7 +13,7 @@ mod auth;
 mod dynamo;
 mod users;
 mod guilds;
-
+mod interactions;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -73,6 +73,7 @@ async fn main() -> Result<(), Error> {
         .nest("/guilds", guilds::router())
         .layer(CorsLayer::permissive())
         .route_layer(middleware::from_fn(auth::auth_middleware))
+        .nest("/interactions", interactions::router())
         .with_state(app_state)
         .route("/health", get(health_check))
         .route("/bot", get(get_bot_redirect));

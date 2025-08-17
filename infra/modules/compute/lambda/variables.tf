@@ -5,3 +5,7 @@ variable "deployment_env" {
 variable "discord_bot_token" {
   type = string
 }
+
+variable "discord_public_key" {
+  type = string
+}
