@@ -120,7 +120,15 @@ async fn support() -> Result<Json<Value>, StatusCode> {
         }),})))
 }
 
+fn get_url() -> String {
+    match std::env::var("DEPLOYMENT_ENV").expect("DEPLOYMENT_ENV must be set").as_str() {
+        "prod" => "https://koalabot.uk".to_owned(),
+        env => format!("https://{env}.koalabot.uk").to_owned()
+    }
+}
+
 async fn verify() -> Result<Json<Value>, StatusCode> {
+    let url = get_url();
     Ok(Json(json!(InteractionResponse{
     kind: InteractionResponseType::ChannelMessageWithSource,
         data: Some(InteractionResponseData {
@@ -131,7 +139,7 @@ async fn verify() -> Result<Json<Value>, StatusCode> {
                 emoji: None,
                 label: Some("Koala Verify".to_owned()),
                 style: ButtonStyle::Link,
-                url: Some("https://koalabot.dev/verify".to_owned()),
+                url: Some(format!("{url}/verify").to_owned()),
                 sku_id: None,
             })])),
             flags: Some(MessageFlags::EPHEMERAL),
@@ -143,8 +151,8 @@ async fn register_commands(
     header_map: HeaderMap,
                State(app_state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode>{
-    let auth_token = header_map.get("Authorization")
-        .ok_or(StatusCode::UNAUTHORIZED)?;
+    let auth_token = header_map.get("Authorization").unwrap().to_str().map_err(|_| StatusCode::BAD_REQUEST)?;
+    
     if auth_token != app_state.discord_bot.token().unwrap() {
         return Err(StatusCode::UNAUTHORIZED);
     }
