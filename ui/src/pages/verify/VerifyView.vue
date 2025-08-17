@@ -11,6 +11,7 @@ import EmailAuthText from "../../components/verify/EmailAuthText.vue";
 import {getUser} from "../../stores/auth.js";
 import LinkedAccountsTable from "../../components/verify/LinkedAccountsTable.vue";
 import LinkAccountButton from "../../components/verify/LinkAccountButton.vue";
+import MainWithFooter from "../../components/MainWithFooter.vue";
 
 const linkedAccounts = ref(undefined)
 const userRef = ref(getUser())
@@ -22,6 +23,7 @@ function unloadUser() {
 </script>
 
 <template>
+  <MainWithFooter>
   <div class="flex items-center justify-center h-full">
     <div class="card lg:card-side w-auto bg-base-100 shadow-xl">
       <figure>
@@ -47,7 +49,7 @@ function unloadUser() {
       </div>
     </div>
   </div>
-
+  </MainWithFooter>
 
 
 </template>

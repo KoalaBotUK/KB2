@@ -6,3 +6,5 @@ export function formatInternalRedirect(path) {
 export function internalRedirect(path) {
   window.location.href = formatInternalRedirect(path)
 }
+
+export const redirectTo = (url) => window.location.href = url

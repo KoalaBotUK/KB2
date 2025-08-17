@@ -12,7 +12,7 @@ function onThemeToggle(){
 </script>
 
 <template>
-  <label class="swap swap-rotate" :class="theme === 'dark' ? 'swap-active' : ''" >
+  <label class="swap swap-rotate btn btn-ghost" :class="theme === 'dark' ? 'swap-active' : ''" >
     <!-- this hidden checkbox controls the state -->
     <button class="theme-controller" @click="onThemeToggle()" />
 

@@ -1,6 +1,5 @@
 <script setup>
 import { ref, computed } from 'vue'
-import AppView from '../pages/AppView.vue'
 import NotFoundView from "../pages/NotFoundView.vue";
 import DiscordAuthCallback from "../pages/auth/DiscordAuthCallback.vue";
 import VerifyMicrosoftCallback from "../pages/verify/VerifyMicrosoftCallback.vue";
@@ -8,10 +7,12 @@ import VerifyGoogleCallback from "../pages/verify/VerifyGoogleCallback.vue";
 import VerifyEmailCallback from "../pages/verify/VerifyEmailCallback.vue";
 import VerifyEmailWait from "../pages/verify/VerifyEmailWait.vue";
 import DashBaseView from "../pages/dashboard/DashBaseView.vue";
+import HomeView from "../pages/HomeView.vue";
+import VerifyView from "../pages/verify/VerifyView.vue";
 
 const routes = {
-  '^/$': AppView,
-  '^/verify$': AppView,
+  '^/$': HomeView,
+  '^/verify$': VerifyView,
   '^/auth/discord/callback$': DiscordAuthCallback,
   '^/verify/discord/callback$': DiscordAuthCallback,
   '^/verify/microsoft/callback$': VerifyMicrosoftCallback,

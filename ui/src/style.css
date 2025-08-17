@@ -2,11 +2,14 @@
 @plugin "daisyui" {
   themes: light --default, dark --prefersdark;
 }
+@plugin "@tailwindcss/typography";
+@config "./tailwind.config.js";
 
 :root {
   --google: #EA4335;
   --facebook: #1877F2;
   --discord: #5865F2;
   --github: #000000;
+  font-family: sans-serif;
 }
 
