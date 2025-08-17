@@ -1,8 +1,9 @@
+use http_body_util::BodyExt;
 use axum::extract::Request;
 use axum::http::{HeaderMap, StatusCode};
 use axum::middleware::Next;
 use axum::response::Response;
-use lambda_http::tracing::info;
+use lambda_http::tracing::{error, info};
 use twilight_http::Client;
 
 pub async fn auth_middleware(
@@ -34,14 +35,34 @@ pub async fn log_middleware(
     request: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {
-    // Log the request
-    info!("Received request: {:?}", request);
-    
+    let (parts, body) = request.into_parts();
+    let body = body
+        .collect()
+        .await
+        .map_err(|e| {
+            error!("Internal Server Error: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .to_bytes();
+
+    info!("Received request: {:?} {:?}",parts, body);
+
     // Call the next middleware or handler
-    let response = next.run(request).await;
+    let response = next.run(Request::from_parts(parts,axum::body::Body::from(body))).await;
+
+
+    let (parts, body) = response.into_parts();
+    let body = body
+        .collect()
+        .await
+        .map_err(|e| {
+            error!("Internal Server Error: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .to_bytes();
 
     // Log the response
-    info!("Response: {:?}", response);
+    info!("Response: {:?} {:?}",parts, body);
 
-    Ok(response)
+    Ok(Response::from_parts(parts,axum::body::Body::from(body)))
 }

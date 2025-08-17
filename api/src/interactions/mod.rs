@@ -31,7 +31,7 @@ static PUB_KEY: Lazy<VerifyingKey> = Lazy::new(|| {
 pub fn router() -> axum::Router<AppState> {
     axum::Router::new()
         .route("/", post(post_interactions))
-        .route_layer(middleware::from_fn(pubkey_middleware))
+        // .route_layer(middleware::from_fn(pubkey_middleware))
         .route("/register", post(register_commands))
 }
 
