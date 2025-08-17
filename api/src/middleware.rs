@@ -2,6 +2,7 @@ use axum::extract::Request;
 use axum::http::{HeaderMap, StatusCode};
 use axum::middleware::Next;
 use axum::response::Response;
+use lambda_http::tracing::info;
 use twilight_http::Client;
 
 pub async fn auth_middleware(
@@ -27,4 +28,20 @@ pub async fn auth_middleware(
     } else {
         Err(StatusCode::UNAUTHORIZED)
     }
+}
+
+pub async fn log_middleware(
+    request: Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    // Log the request
+    info!("Received request: {:?}", request);
+    
+    // Call the next middleware or handler
+    let response = next.run(request).await;
+
+    // Log the response
+    info!("Response: {:?}", response);
+
+    Ok(response)
 }

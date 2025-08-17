@@ -1,4 +1,4 @@
-use axum::{http::StatusCode, middleware, routing::get, Json, Router};
+use axum::{http::StatusCode, routing::get, Json, Router};
 use lambda_http::{run, tracing, Error};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -9,7 +9,7 @@ use axum::body::Body;
 use http::Response;
 use tower_http::cors::CorsLayer;
 
-mod auth;
+mod middleware;
 mod dynamo;
 mod users;
 mod guilds;
@@ -72,8 +72,9 @@ async fn main() -> Result<(), Error> {
         .nest("/users", users::router())
         .nest("/guilds", guilds::router())
         .layer(CorsLayer::permissive())
-        .route_layer(middleware::from_fn(auth::auth_middleware))
+        .route_layer(axum::middleware::from_fn(middleware::auth_middleware))
         .nest("/interactions", interactions::router())
+        .route_layer(axum::middleware::from_fn(middleware::log_middleware))
         .with_state(app_state)
         .route("/health", get(health_check))
         .route("/bot", get(get_bot_redirect));
