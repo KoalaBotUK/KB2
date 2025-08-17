@@ -8,6 +8,7 @@ use ed25519_dalek::{PUBLIC_KEY_LENGTH, Verifier, VerifyingKey};
 use hex::FromHex;
 use http::{HeaderMap, StatusCode};
 use http_body_util::BodyExt;
+use lambda_http::tracing::error;
 use once_cell::sync::Lazy;
 use serde_json::{Value, json};
 use twilight_model::application::command::CommandType;
@@ -46,7 +47,10 @@ pub async fn pubkey_middleware(request: Request, next: Next) -> Result<Response,
         .get("x-signature-ed25519")
         .and_then(|v| v.to_str().ok())
     {
-        hex_sig.parse().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        hex_sig.parse().map_err(|e| {
+        error!("Internal Server Error: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?
     } else {
         return Err(StatusCode::BAD_REQUEST);
     };
@@ -55,7 +59,10 @@ pub async fn pubkey_middleware(request: Request, next: Next) -> Result<Response,
     let body = body
         .collect()
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .map_err(|e| {
+        error!("Internal Server Error: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?
         .to_bytes();
 
     if PUB_KEY
@@ -158,7 +165,13 @@ async fn register_commands(
     }
     
 
-    let application_id = app_state.discord_bot.current_user_application().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?.model().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?.id;
+    let application_id = app_state.discord_bot.current_user_application().await.map_err(|e| {
+        error!("Internal Server Error: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?.model().await.map_err(|e| {
+        error!("Internal Server Error: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?.id;
     let resp = app_state.discord_bot.interaction(application_id)
         .set_global_commands(
             &[
@@ -198,6 +211,13 @@ async fn register_commands(
                 #[allow(deprecated)]
                 dm_permission: None,
             }],
-        ).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?.model().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        ).await.map_err(|e| {
+        error!("Internal Server Error: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?.model().await.map_err(|e| {
+        error!("Internal Server Error: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
     Ok(Json(json!(resp)))
 }
+
