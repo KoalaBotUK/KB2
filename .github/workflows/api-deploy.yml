@@ -35,6 +35,9 @@ jobs:
         run: pip install cargo-lambda
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            api
       - name: Build
         run: cargo lambda build --release --output-format zip
 
