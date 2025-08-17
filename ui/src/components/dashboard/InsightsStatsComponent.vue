@@ -17,8 +17,8 @@
           <fa :icon="['far', 'building']" size="xl"/>
         </div>
         <div class="stat-title">Total Guilds</div>
-        <div class="stat-value text-primary">126</div>
-        <div class="stat-desc">2% more than last month</div>
+        <div class="stat-value text-primary">-</div>
+        <div class="stat-desc">-% more than last month</div>
       </div>
 
       <div class="stat">
@@ -26,8 +26,8 @@
           <fa :icon="['far', 'user']" size="xl"/>
         </div>
         <div class="stat-title">Combined Members</div>
-        <div class="stat-value text-secondary">62.4k</div>
-        <div class="stat-desc">21% more than last month</div>
+        <div class="stat-value text-secondary">-</div>
+        <div class="stat-desc">-% more than last month</div>
       </div>
     </div>
   </div>

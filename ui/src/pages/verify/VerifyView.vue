@@ -24,7 +24,7 @@ function unloadUser() {
 
 <template>
   <MainWithFooter>
-  <div class="flex items-center justify-center h-full">
+  <div class="flex justify-center w-full lg:mt-20">
     <div class="card lg:card-side w-auto bg-base-100 shadow-xl">
       <figure>
         <img

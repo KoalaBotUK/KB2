@@ -14,13 +14,13 @@ const activeEvent = ref()
 
 function loadAccounts() {
   //Call with user.token
-  axios.get(`${VITE_KB_API_URL}/verify/email`, {
+  axios.get(`${VITE_KB_API_URL}/users/${userRef.value.id}`, {
     headers: {
       'Authorization': 'Discord ' + userRef.value.token.accessToken
     }
   }).then(
       (res) => {
-        linkedAccounts.value = res.data.filter(x => x.active).reduce((a,v) => {a[v.email] = v; return a} ,{})
+        linkedAccounts.value = res.data.links.filter(v => v.active === true).reduce((a,v) => {a[v.link_address] = v; return a} ,{})
         console.log(linkedAccounts.value)
       }
   )
@@ -33,9 +33,7 @@ function unloadAccounts() {
 function unlinkAccount(event) {
   let toBeRemoved = linkedAccounts.value[event.target.id]
   delete linkedAccounts.value[event.target.id]
-  axios.post(`${VITE_KB_API_URL}/verify/email/unlink`, {
-        email: toBeRemoved.email,
-      },
+  axios.delete(`${VITE_KB_API_URL}/users/${userRef.value.id}/links/${encodeURIComponent(toBeRemoved.link_address)}`,
       {
         headers: {
           'Authorization': 'Discord ' + userRef.value.token.accessToken
@@ -74,9 +72,7 @@ onMounted(() => {
       <tbody>
       <tr v-for="(value, email) in linkedAccounts">
         <td>
-          <MicrosoftIcon v-if="value.organization === 'microsoft'"/>
-          <GoogleIcon v-if="value.organization === 'google'"/>
-          <fa :icon="['fas', 'envelope']" class="w-6 h-auto" v-if="value.organization === 'email'"/>
+          <fa :icon="['fas', 'envelope']" class="w-6 h-auto"/>
         </td>
         <td>{{ email }}</td>
         <td>

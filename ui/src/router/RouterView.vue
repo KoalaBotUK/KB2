@@ -14,7 +14,6 @@ const routes = {
   '^/$': HomeView,
   '^/verify$': VerifyView,
   '^/auth/discord/callback$': DiscordAuthCallback,
-  '^/verify/discord/callback$': DiscordAuthCallback,
   '^/verify/microsoft/callback$': VerifyMicrosoftCallback,
   '^/verify/google/callback$': VerifyGoogleCallback,
   '^/verify/email/callback$': VerifyEmailCallback,
@@ -37,6 +36,7 @@ const currentView = computed(() => {
   }
   return NotFoundView
 })
+
 </script>
 
 <template>

@@ -3,12 +3,13 @@ use aws_sdk_dynamodb::types::AttributeValue;
 use http::StatusCode;
 use lambda_http::tracing::error;
 use serde::{Deserialize, Serialize};
-use crate::dynamo::{as_u64, as_string, as_string_vec, as_map_vec};
+use crate::dynamo::{as_u64, as_string, as_string_vec, as_map_vec, as_bool};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Link {
     pub link_address: String,
     pub linked_at: u64,
+    pub active: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -27,10 +28,43 @@ impl From<&HashMap<String, AttributeValue>> for User {
                 .map(|m| Link {
                     link_address: as_string(m.get("link_address"), &"".to_string()),
                     linked_at: as_u64(m.get("linked_at"), 0),
+                    active: as_bool(m.get("active"), false),
                 })
                 .collect(),
             linked_guild_ids: as_string_vec(item.get("linked_guild_ids")),
         }
+    }
+}
+
+impl Into<HashMap<String, AttributeValue>> for User {
+    fn into(self) -> HashMap<String, AttributeValue> {
+        let mut item = HashMap::new();
+        item.insert("user_id".to_string(), AttributeValue::S(self.user_id));
+        item.insert(
+            "links".to_string(),
+            AttributeValue::L(
+                self.links
+                    .into_iter()
+                    .map(|l| {
+                        let mut map = HashMap::new();
+                        map.insert("link_address".to_string(), AttributeValue::S(l.link_address));
+                        map.insert("linked_at".to_string(), AttributeValue::N(l.linked_at.to_string()));
+                        map.insert("active".to_string(), AttributeValue::Bool(l.active));
+                        AttributeValue::M(map)
+                    })
+                    .collect(),
+            ),
+        );
+        item.insert(
+            "linked_guild_ids".to_string(),
+            AttributeValue::L(
+                self.linked_guild_ids
+                    .into_iter()
+                    .map(|id| AttributeValue::S(id))
+                    .collect(),
+            ),
+        );
+        item
     }
 }
 
@@ -61,36 +95,11 @@ impl User {
     }
 
     pub async fn save(&self, dynamo: &aws_sdk_dynamodb::Client) {
-        let mut item = HashMap::new();
-        item.insert("user_id".to_string(), AttributeValue::S(self.user_id.clone()));
-        item.insert(
-            "links".to_string(),
-            AttributeValue::L(
-                self.links
-                    .iter()
-                    .map(|l| {
-                        let mut map = HashMap::new();
-                        map.insert("link_address".to_string(), AttributeValue::S(l.link_address.clone()));
-                        map.insert("linked_at".to_string(), AttributeValue::N(l.linked_at.to_string()));
-                        AttributeValue::M(map)
-                    })
-                    .collect(),
-            ),
-        );
-        item.insert(
-            "linked_guild_ids".to_string(),
-            AttributeValue::L(
-                self.linked_guild_ids
-                    .iter()
-                    .map(|id| AttributeValue::S(id.clone()))
-                    .collect(),
-            ),
-        );
 
         match dynamo
             .put_item()
             .table_name(format!("kb2_users_{}", std::env::var("DEPLOYMENT_ENV").expect("DEPLOYMENT_ENV must be set")))
-            .set_item(Some(item))
+            .set_item(Some(self.clone().into()))
             .send()
             .await
         {

@@ -2,7 +2,7 @@
 
 import KoalaMonoIcon from "../../components/icons/KoalaMonoIcon.vue";
 import {ref} from "vue";
-import HomeBody from "./body/HomeBody.vue";
+import DashBody from "./body/DashBody.vue";
 import ThemeToggle from "../../components/ThemeToggle.vue";
 import DiscordAuthButton from "../../components/auth/DiscordAuthButton.vue";
 import MainWithFooter from "../../components/MainWithFooter.vue";
@@ -45,7 +45,7 @@ window.addEventListener('hashchange', () => {
         </div>
       </div>
     </header>
-    <HomeBody v-if="currentPath === HOME_PATH"/>
+    <DashBody v-if="currentPath === HOME_PATH"/>
   </div>
   </MainWithFooter>
 

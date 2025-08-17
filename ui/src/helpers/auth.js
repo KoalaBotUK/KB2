@@ -1,6 +1,6 @@
 import axios from "axios";
 import {OauthToken} from "../stores/auth.js";
-import {formatInternalRedirect} from "./redirect.js";
+import {formatInternalRedirect, redirectTo} from "./redirect.js";
 
 const KB_API_URL = import.meta.env.VITE_KB_API_URL;
 
@@ -65,7 +65,7 @@ export class AuthorizationFlowPKCE extends OauthFlow {
   async authorize() {
     await this.generateCodeChallenge()
     this.save()
-    window.location.href = `${this.authorizeUrl}?response_type=code&client_id=${this.clientId}&code_challenge=${this.codeChallenge}&code_challenge_method=S256&scope=${this.scope.replace(' ', '+')}&redirect_uri=${encodeURIComponent(formatInternalRedirect(this.redirectPath))}${this.authorizeAdditionalParams}`;
+    redirectTo(`${this.authorizeUrl}?response_type=code&client_id=${this.clientId}&code_challenge=${this.codeChallenge}&code_challenge_method=S256&scope=${this.scope.replace(' ', '+')}&redirect_uri=${encodeURIComponent(formatInternalRedirect(this.redirectPath))}${this.authorizeAdditionalParams}`);
   }
 
   async callback() {

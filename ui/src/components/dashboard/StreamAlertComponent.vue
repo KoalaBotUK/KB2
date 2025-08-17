@@ -1,5 +1,5 @@
 <script setup>
-
+let skeleton = true
 </script>
 
 <template>
@@ -10,10 +10,10 @@
           <fa :icon="['fas', 'video']"/>
           Stream Alert
         </h1>
-        <button class="btn btn-primary btn-sm justify-end">Add</button>
+        <button class="btn btn-primary btn-sm justify-end" v-if="!skeleton">Add</button>
       </div>
       <div class="divider my-0"></div>
-      <table class="table">
+      <table class="table" v-if="!skeleton">
         <thead>
         <tr>
           <th>Channel</th>
@@ -76,6 +76,7 @@
         </tr>
         </tbody>
       </table>
+      <div class="skeleton h-48 text-center font-bold p-20" v-if="skeleton"> Coming Soon </div>
     </div>
   </div>
 </template>

@@ -8,7 +8,7 @@ import {onClickOutside} from "@vueuse/core";
 import {AuthorizationFlowPKCE, ImplicitFlow} from "../../helpers/auth";
 
 let props = defineProps({
-  longText: Boolean
+  longText: Boolean,
 })
 
 const emit = defineEmits(['logout'])

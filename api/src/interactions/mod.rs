@@ -6,7 +6,7 @@ use axum::routing::post;
 use axum::{Json, middleware};
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, Verifier, VerifyingKey};
 use hex::FromHex;
-use http::{HeaderMap, HeaderValue, StatusCode};
+use http::{HeaderMap, StatusCode};
 use http_body_util::BodyExt;
 use lambda_http::tracing::error;
 use once_cell::sync::Lazy;
@@ -82,12 +82,6 @@ pub async fn user_agent_response_middleware(
 ) -> Result<Response, StatusCode> {
     let mut response = next.run(request).await;
 
-    let user_agent = response
-        .headers()
-        .get("User-Agent")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("Unknown");
-
     if response.headers().get("User-Agent").is_none() {
         let full_version = env!("CARGO_PKG_VERSION");
         response.headers_mut().insert("User-Agent", format!("KoalaBot/{} (+{})",full_version, get_url()).parse().unwrap());
@@ -104,7 +98,8 @@ async fn post_interactions(
             kind: InteractionResponseType::Pong,
             data: None
         }))),
-        InteractionType::ApplicationCommand => handle_command_interaction(_app_state, interaction).await,
+        // InteractionType::ApplicationCommand => handle_command_interaction(_app_state, interaction).await,
+        InteractionType::ApplicationCommand => Err(StatusCode::ACCEPTED),
         InteractionType::MessageComponent => Err(StatusCode::NOT_IMPLEMENTED),
         InteractionType::ApplicationCommandAutocomplete => Err(StatusCode::NOT_IMPLEMENTED),
         InteractionType::ModalSubmit => Err(StatusCode::NOT_IMPLEMENTED),

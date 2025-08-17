@@ -1,8 +1,6 @@
 <script setup>
 
 import VerifyComponent from "../../../components/dashboard/VerifyComponent.vue";
-import KoalaMonoIcon from "../../../components/icons/KoalaMonoIcon.vue";
-import DiscordAuthButton from "../../../components/auth/DiscordAuthButton.vue";
 import InsightsStatsComponent from "../../../components/dashboard/InsightsStatsComponent.vue";
 import StreamAlertComponent from "../../../components/dashboard/StreamAlertComponent.vue";
 import AnnounceComponent from "../../../components/dashboard/AnnounceComponent.vue";

@@ -12,7 +12,7 @@
         </h1>
       </div>
       <div class="divider my-0"></div>
-      <div class="skeleton h-48"></div>
+      <div class="skeleton h-48 text-center font-bold p-20"> Coming Soon </div>
     </div>
   </div>
 </template>

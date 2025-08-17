@@ -62,3 +62,13 @@ pub fn as_map_vec(val: Option<&AttributeValue>) -> Vec<&HashMap<String, Attribut
     }
     vec![]
 }
+
+
+pub fn as_bool(val: Option<&AttributeValue>, default: bool) -> bool {
+    if let Some(v) = val {
+        if let Ok(b) = v.as_bool() {
+            return *b;
+        }
+    }
+    default
+}
