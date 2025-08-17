@@ -52,7 +52,7 @@ import MainWithFooter from "../components/MainWithFooter.vue";
         <h1 class="title text-xl mt-10 font-bold prose-h1">Our Partners</h1>
         <div class="flex flex-row justify-between">
           <a href="https://www.thenuel.com">
-            <img class="max-h-28 max-w-52 m-5" src="../assets/nuel-min.png"/>
+            <img class="max-h-28 max-w-52 m-5" src="../assets/NUEL-min.png"/>
           </a>
           <a href="https://svge.susu.org/">
             <img class="max-h-28 max-w-52 m-5" src="../assets/SVGE_LOGO-min.png"/>
