@@ -1,3 +1,7 @@
+const { VITE_DISCORD_CLIENT_ID } = import.meta.env;
+
+export const INVITE_URL = `https://discord.com/api/oauth2/authorize?client_id=${VITE_DISCORD_CLIENT_ID}&permissions=8&scope=bot%20applications.commands`;
+
 export function formatInternalRedirect(path) {
   return window.location.protocol + '//' + window.location.host + path
 }

@@ -52,8 +52,13 @@ pub fn as_string_vec(val: Option<&AttributeValue>) -> Vec<String> {
 }
 
 pub fn as_map_vec(val: Option<&AttributeValue>) -> Vec<&HashMap<String, AttributeValue>> {
+    const MAX_LIST_SIZE: usize = 1000; // Prevent stack overflow from huge lists
     if let Some(val) = val {
         if let Ok(val) = val.as_l() {
+            if val.len() > MAX_LIST_SIZE {
+                lambda_http::tracing::error!("DynamoDB list too large: {} items", val.len());
+                return vec![];
+            }
             return val
                 .iter()
                 .filter_map(|v| v.as_m().ok())
@@ -71,4 +76,13 @@ pub fn as_bool(val: Option<&AttributeValue>, default: bool) -> bool {
         }
     }
     default
+}
+
+pub fn as_map(val: Option<&AttributeValue>) -> Option<&HashMap<String, AttributeValue>> {
+    if let Some(val) = val {
+        if let Ok(val) = val.as_m() {
+            return Some(val);
+        }
+    }
+    None
 }

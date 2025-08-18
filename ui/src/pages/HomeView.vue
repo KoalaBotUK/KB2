@@ -3,7 +3,7 @@
 import KoalaMonoIcon from "../components/icons/KoalaMonoIcon.vue";
 import ThemeToggle from "../components/ThemeToggle.vue";
 import SwanseaIcon from "../components/icons/SwanseaIcon.vue";
-import {redirectTo} from "../helpers/redirect.js";
+import {INVITE_URL, redirectTo} from "../helpers/redirect.js";
 import MainWithFooter from "../components/MainWithFooter.vue";
 
 </script>
@@ -40,7 +40,7 @@ import MainWithFooter from "../components/MainWithFooter.vue";
               <div class="card-body flex flex-col justify-center h-max">
                 <h2 class="card-title justify-center">For Admins</h2>
                 <div class="card-actions join flex flex-row mx-5 justify-between">
-                  <button class="btn btn-primary join-item w-full" @click="redirectTo('https://discord.com/oauth2/authorize?client_id=1014995724888444998&permissions=0&integration_type=0&scope=bot')">+ Add to Discord</button>
+                  <button class="btn btn-primary join-item w-full" @click="redirectTo(INVITE_URL)">+ Add to Discord</button>
                   <button class="btn btn-secondary join-item w-full" @click="redirectTo('/dashboard')">My Dashboard</button>
                 </div>
               </div>

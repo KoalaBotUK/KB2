@@ -21,7 +21,7 @@ const authFlow = new AuthorizationFlowPKCE(
   "",
   "/auth/discord/callback",
     "https://discord.com/api/v10/oauth2/token",
-    'identify email'
+    'identify email guilds'
 )
 
 const userRef = ref(getUser())
