@@ -3,6 +3,15 @@
 import {ref} from "vue";
 import {getUser} from "../../stores/auth.js";
 
+defineProps(
+  {
+    guild: {
+      type: Object,
+      required: true
+    }
+  }
+)
+
 const userRef = ref(getUser())
 
 function getVerifyRolesFromKB() {
@@ -38,7 +47,7 @@ function getVerifyRolesFromKB() {
         </tr>
         </thead>
         <tbody>
-        <tr v-for="role in getVerifyRolesFromKB()">
+        <tr v-for="role in $props.guild.verify.roles">
           <td>
             {{ role.role_name }}
           </td>

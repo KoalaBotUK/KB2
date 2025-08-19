@@ -108,10 +108,10 @@ impl Guild {
             .send()
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
-            .and_then(|resp| {
+            .map(|resp| {
                 let item = resp.item.unwrap_or_default();
                 let guild: Guild = (&item).into();
-                Ok(guild)
+                guild
             }) {
             Ok(guild) => Some(guild),
             Err(e) => {

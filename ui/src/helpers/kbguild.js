@@ -14,6 +14,14 @@ export async function getGuilds() {
   return resp.data;
 }
 
+export async function getGuildsAsMap() {
+  let guilds = await getGuilds();
+  return Object.values(guilds).reduce((acc, guild) => {
+    acc.set(guild.guild_id, guild);
+    return acc;
+  }, new Map());
+}
+
 export async function getGuild(guild_id) {
   return (await axios.get(`${VITE_KB_API_URL}/guilds/${guild_id}`, {
     headers: {

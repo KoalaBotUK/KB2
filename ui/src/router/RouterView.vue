@@ -18,7 +18,7 @@ const routes = {
   '^/verify/google/callback$': VerifyGoogleCallback,
   '^/verify/email/callback$': VerifyEmailCallback,
   '^/verify/email/wait$': VerifyEmailWait,
-  '^/dashboard(.*)$': DashBaseView,
+  '^/dashboard$': DashBaseView,
   '^/404$': NotFoundView
 }
 
