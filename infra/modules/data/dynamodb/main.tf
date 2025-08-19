@@ -90,7 +90,7 @@ resource "aws_dynamodb_table" "users" {
   }
 }
 
-resource "aws_appautoscaling_target" "guild_read_target" {
+resource "aws_appautoscaling_target" "users_read_target" {
   max_capacity       = 10
   min_capacity       = 1
   resource_id        = "table/${aws_dynamodb_table.users.name}"
@@ -99,11 +99,11 @@ resource "aws_appautoscaling_target" "guild_read_target" {
 }
 
 resource "aws_appautoscaling_policy" "users_read_policy" {
-  name               = "DynamoDBReadCapacityUtilization:${aws_appautoscaling_target.guild_read_target.resource_id}"
+  name               = "DynamoDBReadCapacityUtilization:${aws_appautoscaling_target.users_read_target.resource_id}"
   policy_type        = "TargetTrackingScaling"
-  resource_id        = aws_appautoscaling_target.guild_read_target.resource_id
-  scalable_dimension = aws_appautoscaling_target.guild_read_target.scalable_dimension
-  service_namespace  = aws_appautoscaling_target.guild_read_target.service_namespace
+  resource_id        = aws_appautoscaling_target.users_read_target.resource_id
+  scalable_dimension = aws_appautoscaling_target.users_read_target.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.users_read_target.service_namespace
 
   target_tracking_scaling_policy_configuration {
     predefined_metric_specification {
