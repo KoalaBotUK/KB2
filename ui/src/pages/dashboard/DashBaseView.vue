@@ -27,11 +27,11 @@ let currentGuildId = ref()
 
 onMounted(async () => {
   guildsDsc.value = await getUserAdminGuilds();
-  console.log("Loaded guilds from Discord", guildsDsc.value);
-  await setCurrentGuild(Object.keys(guildsDsc.value)[0]);
 
   // Load remaining guilds
   await sync_guilds_kb();
+  console.log("Loaded guilds", guildsKb.value);
+  await setCurrentGuild(Object.keys(guildsKb.value)[0]);
 })
 
 async function setCurrentGuild(gid) {
@@ -48,24 +48,7 @@ async function setCurrentGuild(gid) {
 }
 
 async function sync_guilds_kb() {
-  let new_guilds = {}
-  for (let gid of Object.keys(guildsDsc.value)) {
-    try {
-      new_guilds = (await getGuilds()).reduce((acc, guild) => {
-        if (guild.id === gid) {
-          acc[gid] = guild;
-        }
-        return acc;
-      }, new_guilds);
-    } catch (e) {
-      if (e.response && e.response.status === 404) {
-        // If the guild cannot be found by koala, needs inviting
-      } else {
-        throw e; // rethrow the error for further handling if needed
-      }
-    }
-  }
-  guildsKb.value = new_guilds
+  guildsKb.value = await getGuilds()
 }
 
 </script>

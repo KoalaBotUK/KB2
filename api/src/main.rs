@@ -1,25 +1,25 @@
-use axum::{http::StatusCode, routing::get, Json, Router};
-use lambda_http::{run, tracing, Error};
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
-use std::sync::Arc;
 use aws_config::BehaviorVersion;
 use aws_sdk_dynamodb::Client;
 use axum::body::Body;
+use axum::{Json, Router, http::StatusCode, routing::get};
 use http::Response;
+use lambda_http::{Error, run, tracing};
+use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
+use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 
-mod middleware;
 mod dynamo;
-mod users;
 mod guilds;
 mod interactions;
+mod middleware;
+mod users;
 
 #[derive(Clone)]
 pub struct AppState {
     dynamo: Client,
     discord_bot: Arc<twilight_http::Client>,
-    reqwest: Arc<reqwest::Client>
+    reqwest: Arc<reqwest::Client>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -28,17 +28,18 @@ struct Params {
     second: Option<String>,
 }
 
-
 async fn health_check() -> (StatusCode, Json<Value>) {
     let health = true;
     match health {
         true => (StatusCode::OK, Json(json!({ "status": "OK" }))),
-        false => (StatusCode::INTERNAL_SERVER_ERROR,Json(json!({ "status": "ERROR" }))),
+        false => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "status": "ERROR" })),
+        ),
     }
 }
 
 async fn get_bot_redirect() -> Response<Body> {
-
     let redirect_url = "https://discord.com/oauth2/authorize?client_id=1014995724888444998&permissions=0&integration_type=0&scope=bot";
     Response::builder()
         .status(StatusCode::FOUND)

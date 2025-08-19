@@ -12,10 +12,14 @@ use lambda_http::tracing::error;
 use once_cell::sync::Lazy;
 use serde_json::{Value, json};
 use twilight_model::application::command::CommandType;
-use twilight_model::application::interaction::{Interaction, InteractionContextType, InteractionData, InteractionType};
-use twilight_model::channel::message::{Component, MessageFlags};
+use twilight_model::application::interaction::{
+    Interaction, InteractionContextType, InteractionData, InteractionType,
+};
 use twilight_model::channel::message::component::{Button, ButtonStyle};
-use twilight_model::http::interaction::{InteractionResponse, InteractionResponseData, InteractionResponseType};
+use twilight_model::channel::message::{Component, MessageFlags};
+use twilight_model::http::interaction::{
+    InteractionResponse, InteractionResponseData, InteractionResponseType,
+};
 use twilight_model::id::Id;
 
 static PUB_KEY: Lazy<VerifyingKey> = Lazy::new(|| {
@@ -23,9 +27,9 @@ static PUB_KEY: Lazy<VerifyingKey> = Lazy::new(|| {
         &<[u8; PUBLIC_KEY_LENGTH] as FromHex>::from_hex(
             std::env::var("DISCORD_PUBLIC_KEY").expect("DISCORD_PUBLIC_KEY must be set"),
         )
-            .unwrap(),
+        .unwrap(),
     )
-        .unwrap()
+    .unwrap()
 });
 
 pub fn router() -> axum::Router<AppState> {
@@ -49,9 +53,9 @@ pub async fn pubkey_middleware(request: Request, next: Next) -> Result<Response,
         .and_then(|v| v.to_str().ok())
     {
         hex_sig.parse().map_err(|e| {
-        error!("Internal Server Error: {:?}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?
+            error!("Internal Server Error: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
     } else {
         return Err(StatusCode::BAD_REQUEST);
     };
@@ -61,9 +65,9 @@ pub async fn pubkey_middleware(request: Request, next: Next) -> Result<Response,
         .collect()
         .await
         .map_err(|e| {
-        error!("Internal Server Error: {:?}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?
+            error!("Internal Server Error: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
         .to_bytes();
 
     if PUB_KEY
@@ -84,10 +88,16 @@ pub async fn user_agent_response_middleware(
 
     if response.headers().get("User-Agent").is_none() {
         let full_version = env!("CARGO_PKG_VERSION");
-        response.headers_mut().insert("User-Agent", format!("KoalaBot/{} (+{})",full_version, get_url()).parse().unwrap());
+        response.headers_mut().insert(
+            "User-Agent",
+            format!("KoalaBot/{} (+{})", full_version, get_url())
+                .parse()
+                .unwrap(),
+        );
     }
 
-    Ok(response)}
+    Ok(response)
+}
 
 async fn post_interactions(
     State(_app_state): State<AppState>,
@@ -98,8 +108,10 @@ async fn post_interactions(
             kind: InteractionResponseType::Pong,
             data: None
         }))),
-        // InteractionType::ApplicationCommand => handle_command_interaction(_app_state, interaction).await,
-        InteractionType::ApplicationCommand => Err(StatusCode::ACCEPTED),
+        InteractionType::ApplicationCommand => {
+            handle_command_interaction(_app_state, interaction).await
+        }
+        // InteractionType::ApplicationCommand => Err(StatusCode::ACCEPTED),
         InteractionType::MessageComponent => Err(StatusCode::NOT_IMPLEMENTED),
         InteractionType::ApplicationCommandAutocomplete => Err(StatusCode::NOT_IMPLEMENTED),
         InteractionType::ModalSubmit => Err(StatusCode::NOT_IMPLEMENTED),
@@ -124,11 +136,11 @@ async fn handle_command_interaction(
 }
 
 async fn support() -> Result<Json<Value>, StatusCode> {
-    Ok(Json(json!(InteractionResponse{
-    kind: InteractionResponseType::ChannelMessageWithSource,
+    Ok(Json(json!(InteractionResponse {
+        kind: InteractionResponseType::ChannelMessageWithSource,
         data: Some(InteractionResponseData {
             content: Some("Join our support server for more help!".into()),
-            components: Some(Vec::from([Component::Button(Button{
+            components: Some(Vec::from([Component::Button(Button {
                 custom_id: None,
                 disabled: false,
                 emoji: None,
@@ -139,23 +151,27 @@ async fn support() -> Result<Json<Value>, StatusCode> {
             })])),
             flags: Some(MessageFlags::EPHEMERAL),
             ..Default::default()
-        }),})))
+        }),
+    })))
 }
 
 fn get_url() -> String {
-    match std::env::var("DEPLOYMENT_ENV").unwrap_or("prod".into()).as_str() {
+    match std::env::var("DEPLOYMENT_ENV")
+        .unwrap_or("prod".into())
+        .as_str()
+    {
         "prod" => "https://koalabot.uk".to_owned(),
-        env => format!("https://{env}.koalabot.uk").to_owned()
+        env => format!("https://{env}.koalabot.uk").to_owned(),
     }
 }
 
 async fn verify() -> Result<Json<Value>, StatusCode> {
     let url = get_url();
-    Ok(Json(json!(InteractionResponse{
-    kind: InteractionResponseType::ChannelMessageWithSource,
+    Ok(Json(json!(InteractionResponse {
+        kind: InteractionResponseType::ChannelMessageWithSource,
         data: Some(InteractionResponseData {
             content: Some("Verify yourself on our site!".into()),
-            components: Some(Vec::from([Component::Button(Button{
+            components: Some(Vec::from([Component::Button(Button {
                 custom_id: None,
                 disabled: false,
                 emoji: None,
@@ -166,30 +182,43 @@ async fn verify() -> Result<Json<Value>, StatusCode> {
             })])),
             flags: Some(MessageFlags::EPHEMERAL),
             ..Default::default()
-        }),})))
+        }),
+    })))
 }
 
 async fn register_commands(
     header_map: HeaderMap,
-               State(app_state): State<AppState>,
-) -> Result<Json<Value>, StatusCode>{
-    let auth_token = header_map.get("Authorization").unwrap().to_str().map_err(|_| StatusCode::BAD_REQUEST)?;
-    
+    State(app_state): State<AppState>,
+) -> Result<Json<Value>, StatusCode> {
+    let auth_token = header_map
+        .get("Authorization")
+        .unwrap()
+        .to_str()
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+
     if auth_token != app_state.discord_bot.token().unwrap() {
         return Err(StatusCode::UNAUTHORIZED);
     }
-    
 
-    let application_id = app_state.discord_bot.current_user_application().await.map_err(|e| {
-        error!("Internal Server Error: {:?}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?.model().await.map_err(|e| {
-        error!("Internal Server Error: {:?}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?.id;
-    let resp = app_state.discord_bot.interaction(application_id)
-        .set_global_commands(
-            &[
+    let application_id = app_state
+        .discord_bot
+        .current_user_application()
+        .await
+        .map_err(|e| {
+            error!("Internal Server Error: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .model()
+        .await
+        .map_err(|e| {
+            error!("Internal Server Error: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .id;
+    let resp = app_state
+        .discord_bot
+        .interaction(application_id)
+        .set_global_commands(&[
             twilight_model::application::command::Command {
                 id: None,
                 integration_types: None,
@@ -201,7 +230,10 @@ async fn register_commands(
                 options: vec![],
                 default_member_permissions: None,
                 version: Id::new(1),
-                contexts: Some(vec![InteractionContextType::Guild, InteractionContextType::BotDm]),
+                contexts: Some(vec![
+                    InteractionContextType::Guild,
+                    InteractionContextType::BotDm,
+                ]),
                 guild_id: None,
                 kind: CommandType::ChatInput,
                 nsfw: None,
@@ -219,20 +251,27 @@ async fn register_commands(
                 options: vec![],
                 default_member_permissions: None,
                 version: Id::new(1),
-                contexts: Some(vec![InteractionContextType::Guild, InteractionContextType::BotDm]),
+                contexts: Some(vec![
+                    InteractionContextType::Guild,
+                    InteractionContextType::BotDm,
+                ]),
                 guild_id: None,
                 kind: CommandType::ChatInput,
                 nsfw: None,
                 #[allow(deprecated)]
                 dm_permission: None,
-            }],
-        ).await.map_err(|e| {
-        error!("Internal Server Error: {:?}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?.model().await.map_err(|e| {
-        error!("Internal Server Error: {:?}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+            },
+        ])
+        .await
+        .map_err(|e| {
+            error!("Internal Server Error: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .model()
+        .await
+        .map_err(|e| {
+            error!("Internal Server Error: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
     Ok(Json(json!(resp)))
 }
-

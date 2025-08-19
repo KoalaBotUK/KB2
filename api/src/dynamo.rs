@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use aws_sdk_dynamodb::types::AttributeValue;
+use std::collections::HashMap;
 
 pub fn as_string(val: Option<&AttributeValue>, default: &String) -> String {
     if let Some(v) = val {
@@ -59,15 +59,11 @@ pub fn as_map_vec(val: Option<&AttributeValue>) -> Vec<&HashMap<String, Attribut
                 lambda_http::tracing::error!("DynamoDB list too large: {} items", val.len());
                 return vec![];
             }
-            return val
-                .iter()
-                .filter_map(|v| v.as_m().ok())
-                .collect();
+            return val.iter().filter_map(|v| v.as_m().ok()).collect();
         }
     }
     vec![]
 }
-
 
 pub fn as_bool(val: Option<&AttributeValue>, default: bool) -> bool {
     if let Some(v) = val {
