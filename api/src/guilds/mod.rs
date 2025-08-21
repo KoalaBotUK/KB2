@@ -6,6 +6,7 @@ use http::StatusCode;
 use lambda_http::tracing::warn;
 use serde_json::{Value, json};
 use std::sync::Arc;
+use tower_http::cors::CorsLayer;
 use twilight_model::id::Id;
 use twilight_model::id::marker::GuildMarker;
 
@@ -18,6 +19,7 @@ pub fn router() -> Router<AppState> {
         .route("/", get(get_guilds))
         .route("/{guild_id}", get(get_guilds_id))
         .nest("/{guild_id}/verify", verify::router())
+        .layer(CorsLayer::permissive())
 }
 
 async fn get_guilds(

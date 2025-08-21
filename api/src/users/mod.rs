@@ -10,6 +10,7 @@ use http::StatusCode;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::sync::Arc;
+use tower_http::cors::CorsLayer;
 use twilight_http::Client as DiscordClient;
 use twilight_model::id::Id;
 use twilight_model::id::marker::UserMarker;
@@ -19,6 +20,7 @@ pub fn router() -> axum::Router<AppState> {
         .route("/", get(get_users))
         .route("/{user_id}", get(get_users_id).put(put_users_id))
         .nest("/{user_id}/links", links::router())
+        .layer(CorsLayer::permissive())
 }
 
 async fn get_users() -> Json<Value> {

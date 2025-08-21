@@ -1,5 +1,5 @@
 use http::StatusCode;
-use lambda_http::tracing::{error, info};
+use lambda_http::tracing::error;
 use twilight_http::Error;
 use twilight_model::guild::Permissions;
 use twilight_model::id::Id;

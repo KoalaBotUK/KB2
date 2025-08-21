@@ -72,13 +72,13 @@ async fn main() -> Result<(), Error> {
     let app = Router::new()
         .nest("/users", users::router())
         .nest("/guilds", guilds::router())
-        .layer(CorsLayer::permissive())
         .route_layer(axum::middleware::from_fn(middleware::auth_middleware))
         .nest("/interactions", interactions::router())
         .route_layer(axum::middleware::from_fn(middleware::log_middleware))
         .with_state(app_state)
         .route("/health", get(health_check))
-        .route("/bot", get(get_bot_redirect));
+        .route("/bot", get(get_bot_redirect))
+        .layer(CorsLayer::permissive());
 
     run(app).await
 }
