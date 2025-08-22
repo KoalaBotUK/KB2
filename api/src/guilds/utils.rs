@@ -1,5 +1,5 @@
 use http::StatusCode;
-use lambda_http::tracing::{error, info};
+use lambda_http::tracing::error;
 use twilight_http::Error;
 use twilight_model::guild::Permissions;
 use twilight_model::id::Id;
@@ -32,18 +32,11 @@ pub async fn intersect_admin_guilds(
 }
 
 async fn is_client_admin_guild(guild_id: Id<GuildMarker>, client: &twilight_http::Client) -> Result<bool, Error> {
-    info!("Checking if client is admin in guild: {}, {}", guild_id, client.token().unwrap());
     let guilds = client.current_user_guilds().after(Id::new(guild_id.get()-1)).limit(1).await?.models().await.unwrap();
-    info!("Fetched guilds: {:?}", guilds);
     let admin_guilds: Vec<CurrentUserGuild> = guilds
         .into_iter()
         .filter(|g| g.permissions & Permissions::ADMINISTRATOR == Permissions::ADMINISTRATOR)
         .collect();
-    info!("Admin guilds: {:?}", admin_guilds);
-    if admin_guilds.is_empty() {
-        info!("No admin guilds found for client in guild: {}", guild_id);
-        return Ok(false);
-    }
     Ok(admin_guilds.len() == 1)
 }
 
