@@ -1,5 +1,4 @@
 import axios from "axios";
-import {OauthToken} from "../stores/auth.js";
 import {formatInternalRedirect, redirectTo} from "./redirect.js";
 
 const KB_API_URL = import.meta.env.VITE_KB_API_URL;
@@ -28,6 +27,22 @@ export class OauthFlow {
 
   async callback() {
     console.error("Not implemented")
+  }
+}
+
+export class OauthToken {
+  accessToken
+  tokenType
+  expiresIn
+  refreshToken
+  scope
+  date
+
+  get isValid() {
+    if (this.date === undefined) {
+      return true
+    }
+    return this.date + this.expiresIn * 1000 > Date.now()
   }
 }
 

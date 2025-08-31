@@ -1,76 +1,133 @@
-use crate::dynamo::{as_bool, as_map_vec, as_string, as_string_vec, as_u64};
+use crate::dynamo::{as_bool, as_map_vec, as_string, as_string_opt, as_u64};
 use aws_sdk_dynamodb::types::AttributeValue;
 use http::StatusCode;
 use lambda_http::tracing::error;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use twilight_model::id::Id;
+use twilight_model::id::marker::{GuildMarker, UserMarker};
+use twilight_model::util::ImageHash;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct Link {
     pub link_address: String,
     pub linked_at: u64,
     pub active: bool,
 }
 
+impl From<&HashMap<String, AttributeValue>> for Link {
+    fn from(item: &HashMap<String, AttributeValue>) -> Self {
+        Link {
+            link_address: as_string(item.get("link_address"), &"".to_string()),
+            linked_at: as_u64(item.get("linked_at"), 0),
+            active: as_bool(item.get("active"), false),
+        }
+    }
+}
+
+impl From<Link> for HashMap<String, AttributeValue> {
+    fn from(link: Link) -> Self {
+        let mut link_map = HashMap::new();
+        link_map.insert("link_address".to_string(), AttributeValue::S(link.link_address));
+        link_map.insert("linked_at".to_string(), AttributeValue::N(link.linked_at.to_string()));
+        link_map.insert("active".to_string(), AttributeValue::Bool(link.active));
+        link_map
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LinkGuild {
+    pub guild_id: Id<GuildMarker>,
+    pub name: String,
+    pub icon: Option<ImageHash>,
+    pub enabled: bool,
+}
+
+
+impl From<&HashMap<String, AttributeValue>> for LinkGuild {
+    fn from(item: &HashMap<String, AttributeValue>) -> Self {
+        LinkGuild {
+            guild_id: Id::new(
+                as_string(item.get("guild_id"), &"0".to_string())
+                    .parse::<u64>()
+                    .unwrap_or(0),
+            ),
+            name: as_string(item.get("name"), &"".to_string()),
+            icon: as_string_opt(item.get("icon")).and_then(|s| ImageHash::parse(s.as_bytes()).ok()),
+            enabled: as_bool(item.get("enabled"), false),
+        }
+    }
+}
+
+impl From<LinkGuild> for HashMap<String, AttributeValue> {
+    fn from(link_guild: LinkGuild) -> Self {
+        let mut lg_map = HashMap::new();
+        lg_map.insert("guild_id".to_string(), AttributeValue::S(link_guild.guild_id.to_string()));
+        lg_map.insert("name".to_string(), AttributeValue::S(link_guild.name));
+        if let Some(icon) = link_guild.icon {
+            lg_map.insert("icon".to_string(), AttributeValue::S(icon.to_string()));
+        }
+        lg_map.insert("enabled".to_string(), AttributeValue::Bool(link_guild.enabled));
+        lg_map
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct User {
-    pub user_id: String,
+    pub user_id: Id<UserMarker>,
+    pub global_name: String,
+    pub avatar: Option<ImageHash>,
     pub links: Vec<Link>,
-    pub linked_guild_ids: Vec<String>,
+    pub link_guilds: Vec<LinkGuild>,
+}
+
+impl Default for User {
+    fn default() -> Self {
+        User {
+            user_id: Id::new(1),
+            global_name: "".to_string(),
+            avatar: None,
+            links: vec![],
+            link_guilds: vec![],
+        }
+    }
 }
 
 impl From<&HashMap<String, AttributeValue>> for User {
     fn from(item: &HashMap<String, AttributeValue>) -> Self {
         User {
-            user_id: as_string(item.get("user_id"), &"".to_string()),
+            user_id: Id::new(
+                as_string(item.get("user_id"), &"0".to_string())
+                    .parse::<u64>()
+                    .unwrap_or(0),
+            ),
+            global_name: as_string(item.get("global_name"), &"".to_string()),
+            avatar: as_string_opt(item.get("avatar")).and_then(|s| ImageHash::parse(s.as_bytes()).ok()),
             links: as_map_vec(item.get("links"))
                 .into_iter()
-                .map(|m| Link {
-                    link_address: as_string(m.get("link_address"), &"".to_string()),
-                    linked_at: as_u64(m.get("linked_at"), 0),
-                    active: as_bool(m.get("active"), false),
-                })
+                .map(|m| m.into())
                 .collect(),
-            linked_guild_ids: as_string_vec(item.get("linked_guild_ids")),
+            link_guilds: as_map_vec(item.get("link_guilds"))
+                .into_iter()
+                .map(|m| m.into())
+                .collect(),
         }
     }
 }
 
 impl From<User> for HashMap<String, AttributeValue> {
-    fn from(user: User) -> HashMap<String, AttributeValue> {
-        let mut item = HashMap::new();
-        item.insert("user_id".to_string(), AttributeValue::S(user.user_id));
-        item.insert(
-            "links".to_string(),
-            AttributeValue::L(
-                user.links
-                    .into_iter()
-                    .map(|l| {
-                        let mut map = HashMap::new();
-                        map.insert(
-                            "link_address".to_string(),
-                            AttributeValue::S(l.link_address),
-                        );
-                        map.insert(
-                            "linked_at".to_string(),
-                            AttributeValue::N(l.linked_at.to_string()),
-                        );
-                        map.insert("active".to_string(), AttributeValue::Bool(l.active));
-                        AttributeValue::M(map)
-                    })
-                    .collect(),
-            ),
-        );
-        item.insert(
-            "linked_guild_ids".to_string(),
-            AttributeValue::L(
-                user.linked_guild_ids
-                    .into_iter()
-                    .map(AttributeValue::S)
-                    .collect(),
-            ),
-        );
-        item
+    fn from(user: User) -> Self {
+        let mut user_map = HashMap::new();
+        user_map.insert("user_id".to_string(), AttributeValue::S(user.user_id.to_string()));
+        user_map.insert("global_name".to_string(), AttributeValue::S(user.global_name));
+        if let Some(avatar) = user.avatar {
+            user_map.insert("avatar".to_string(), AttributeValue::S(avatar.to_string()));
+        }
+        let links: Vec<AttributeValue> = user.links.into_iter().map(|l| AttributeValue::M(l.into())).collect();
+        user_map.insert("links".to_string(), AttributeValue::L(links));
+        let link_guilds: Vec<AttributeValue> = user.link_guilds.into_iter().map(|lg| AttributeValue::M(lg.into())).collect();
+        user_map.insert("link_guilds".to_string(), AttributeValue::L(link_guilds));
+        user_map
     }
 }
 

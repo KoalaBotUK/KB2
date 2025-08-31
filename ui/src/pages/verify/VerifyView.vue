@@ -3,21 +3,26 @@
 import MicrosoftIcon from "../../components/icons/MicrosoftIcon.vue";
 import GoogleIcon from "../../components/icons/GoogleIcon.vue";
 import DiscordAuthButton from "../../components/auth/DiscordAuthButton.vue";
-import {onMounted, ref} from "vue";
+import {onMounted, ref, toRef} from "vue";
 import MicrosoftAuthButton from "../../components/verify/MicrosoftAuthButton.vue";
 import GoogleAuthButton from "../../components/verify/GoogleAuthButton.vue";
 import axios from "axios";
 import EmailAuthText from "../../components/verify/EmailAuthText.vue";
-import {getUser} from "../../stores/auth.js";
+import {User} from "../../stores/user.js";
 import LinkedAccountsTable from "../../components/verify/LinkedAccountsTable.vue";
 import LinkAccountButton from "../../components/verify/LinkAccountButton.vue";
 import MainWithFooter from "../../components/MainWithFooter.vue";
+import LinkedGuildsSelect from "../../components/verify/LinkedGuildsSelect.vue";
 
 const linkedAccounts = ref(undefined)
-const userRef = ref(getUser())
+const user = toRef(null)
+
+onMounted(async () => {
+  user.value = User.loadCache()
+})
 
 function unloadUser() {
-  userRef.value = null
+  user.value = null
 }
 
 </script>
@@ -45,6 +50,14 @@ function unloadUser() {
             <LinkAccountButton/>
           </div>
           <LinkedAccountsTable/>
+        </div>
+
+        <div class="divider"></div>
+        <div class="flex flex-col w-full">
+          <div class="flex flex-row justify-between mb-2.5">
+            <h3 class="text-lg font-bold self-center">Linked Servers</h3>
+          </div>
+          <LinkedGuildsSelect :user="user"/>
         </div>
       </div>
     </div>

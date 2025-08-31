@@ -2,19 +2,19 @@
 
 import GoogleIcon from "../icons/GoogleIcon.vue";
 import MicrosoftIcon from "../icons/MicrosoftIcon.vue";
-import {getUser} from "../../stores/auth";
 import {onMounted, ref, toRef} from "vue";
 import axios from "axios";
 import ConfirmModal from "../ConfirmModal.vue";
+import {User} from "../../stores/user.js";
 
 const VITE_KB_API_URL = import.meta.env.VITE_KB_API_URL
-const userRef = toRef(getUser())
+const userRef = toRef(User.loadCache())
 const linkedAccounts = ref(undefined)
 const activeEvent = ref()
 
 function loadAccounts() {
   //Call with user.token
-  axios.get(`${VITE_KB_API_URL}/users/${userRef.value.id}`, {
+  axios.get(`${VITE_KB_API_URL}/users/${userRef.value.userId}`, {
     headers: {
       'Authorization': 'Discord ' + userRef.value.token.accessToken
     }
@@ -33,7 +33,7 @@ function unloadAccounts() {
 function unlinkAccount(event) {
   let toBeRemoved = linkedAccounts.value[event.target.id]
   delete linkedAccounts.value[event.target.id]
-  axios.delete(`${VITE_KB_API_URL}/users/${userRef.value.id}/links/${encodeURIComponent(toBeRemoved.link_address)}`,
+  axios.delete(`${VITE_KB_API_URL}/users/${userRef.value.userId}/links/${encodeURIComponent(toBeRemoved.link_address)}`,
       {
         headers: {
           'Authorization': 'Discord ' + userRef.value.token.accessToken

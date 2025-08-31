@@ -4,10 +4,10 @@ import MicrosoftAuthButton from "./MicrosoftAuthButton.vue";
 import GoogleAuthButton from "./GoogleAuthButton.vue";
 import EmailAuthText from "./EmailAuthText.vue";
 import {ref} from "vue";
-import {getUser} from "../../stores/auth";
 import {onClickOutside} from "@vueuse/core";
+import {User} from "../../stores/user.js";
 
-const userRef = ref(getUser())
+const userRef = ref(User.loadCache())
 
 const modalActiveRef = ref(false)
 const modalBox = ref(null)

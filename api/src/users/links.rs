@@ -10,6 +10,8 @@ use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use twilight_model::id::Id;
 use twilight_model::id::marker::UserMarker;
+use twilight_model::user::CurrentUser;
+use crate::guilds::models::Guild;
 
 pub fn router() -> axum::Router<AppState> {
     axum::Router::new()
@@ -35,34 +37,18 @@ struct LinkRequest {
 
 async fn post_link(
     Path(user_id): Path<Id<UserMarker>>,
-    Extension(discord_user): Extension<Arc<twilight_http::Client>>,
+    Extension(current_user): Extension<CurrentUser>,
     State(app_state): State<AppState>,
     Json(link_req): Json<LinkRequest>,
 ) -> Result<Json<serde_json::Value>, http::StatusCode> {
-    if user_id
-        != discord_user
-            .current_user()
-            .await
-            .unwrap()
-            .model()
-            .await
-            .unwrap()
-            .id
-    {
-        return Err(http::StatusCode::NOT_FOUND);
+    if current_user.id != user_id {
+        return Err(http::StatusCode::UNAUTHORIZED);
     }
+    
     let email = match link_req.origin {
         LinkOrigin::Discord => {
             // Handle Discord linking logic here
-            discord_user
-                .current_user()
-                .await
-                .map_err(|_| http::StatusCode::UNAUTHORIZED)?
-                .model()
-                .await
-                .map_err(|_| http::StatusCode::UNAUTHORIZED)?
-                .email
-                .unwrap()
+            current_user.email.ok_or(http::StatusCode::UNAUTHORIZED)?
         }
         LinkOrigin::Microsoft => {
             // Handle Microsoft linking logic here
@@ -99,6 +85,19 @@ async fn post_link(
     user_model
         .links
         .retain(|l| l.link_address != new_link.link_address);
+    for link_guild in &user_model.link_guilds {
+        if !link_guild.enabled {
+            continue;
+        }
+        let guild = Guild::from_db(link_guild.guild_id, &app_state.dynamo).await.unwrap();
+        crate::guilds::tasks::assign_roles_guild_user_link(
+            &new_link.link_address,
+            user_id,
+            &guild,
+            &app_state.discord_bot,
+        )
+        .await;
+    }
     user_model.links.push(new_link);
     user_model.save(&app_state.dynamo).await;
     Ok(json_resp)

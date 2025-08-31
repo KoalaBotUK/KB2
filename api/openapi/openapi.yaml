@@ -27,6 +27,31 @@ tags:
     description: Basic guild information
 paths:
   /users:
+    post:
+      tags:
+        - users
+      summary: Finds or creates a user while updating from discord.
+      description: Finds or creates a user while updating from discord.
+      operationId: findOrCreateUser
+      requestBody:
+        $ref: '#/components/requestBodies/UserRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - discord_auth:
+            - identify
+            - guilds
     get:
       tags:
         - users
@@ -76,7 +101,7 @@ paths:
                 $ref: '#/components/schemas/User'
         '404':
           description: Guild not found.
-          content: {}
+          content: { }
         default:
           description: Unexpected error
           content:
@@ -159,6 +184,31 @@ paths:
         - discord_auth:
             - identify
   /guilds:
+    post:
+      tags:
+        - guilds
+      summary: Finds or creates a guild, updating from discord.
+      description: Finds or creates a user while updating from discord.
+      operationId: FindOrCreateGuild
+      requestBody:
+        $ref: '#/components/requestBodies/GuildRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Guild'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - discord_auth:
+            - identify
+            - guilds
     get:
       tags:
         - guilds
@@ -209,7 +259,7 @@ paths:
                 $ref: '#/components/schemas/Guild'
         '404':
           description: Guild not found.
-          content: {}
+          content: { }
         default:
           description: Unexpected error
           content:
@@ -246,7 +296,7 @@ paths:
                 $ref: '#/components/schemas/Guild'
         '404':
           description: Guild not found.
-          content: {}
+          content: { }
         default:
           description: Unexpected error
           content:
@@ -285,7 +335,14 @@ components:
       type: integer
       format: int64
       example: 80351110224678912
-
+    LinkGuild:
+      type: object
+      properties:
+        guild_id:
+          $ref: '#/components/schemas/DiscordSnowflake'
+        enabled:
+          type: boolean
+          example: true
     Link:
       type: object
       properties:
@@ -298,6 +355,9 @@ components:
           description: Epoch time the account was linked
           example: 1754799631
           format: int64
+        enabled:
+          type: boolean
+          example: true
 
     TokenOrigin:
       type: string
@@ -326,10 +386,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Link'
-        linked_guild_ids:
+        link_guilds:
           type: array
           items:
-            $ref: '#/components/schemas/DiscordSnowflake'
+            $ref: '#/components/schemas/LinkGuild'
 
     VerifyRole:
       type: object
@@ -349,12 +409,12 @@ components:
           items:
             $ref: '#/components/schemas/VerifyRole'
         user_links:
-        # Map of user id to array of link addresses
+          # Map of user id to array of link addresses
           type: object
           description: Map of user id to array of link addresses
           example:
-            '308994132968210433': [{'link_address': 'john.doe@example.com', 'linked_at': 1754799631}, {'link_address': 'johnny.doe@example.com', 'linked_at': 1754799651}]
-            '308994132968210434': [{'link_address': 'jane.doe@example.com', 'linked_at': 1754799612}]
+            '308994132968210433': [ { 'link_address': 'john.doe@example.com', 'linked_at': 1754799631 }, { 'link_address': 'johnny.doe@example.com', 'linked_at': 1754799651 } ]
+            '308994132968210434': [ { 'link_address': 'jane.doe@example.com', 'linked_at': 1754799612 } ]
           additionalProperties:
             type: array
             items:
@@ -366,6 +426,22 @@ components:
           $ref: '#/components/schemas/DiscordSnowflake'
         verify:
           $ref: '#/components/schemas/Verify'
+        name:
+          type: string
+          example: Example Guild
+        icon:
+          type: string
+          example: 8342729096ea3675442027381ff50dfe
+        user_links:
+          # Map of user id to array of link addresses
+          type: object
+          description: Map of user id to array of link addresses
+          example:
+            '308994132968210433': [ { 'link_address': 'john.doe@example.com', 'linked_at': 1754799631, enabled: true }]
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/Link'
     Error:
       type: object
       properties:
@@ -377,8 +453,17 @@ components:
         - code
         - message
   requestBodies:
+    UserRequest:
+      description: User object that needs to be added to the store
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              user_id:
+                $ref: '#/components/schemas/DiscordSnowflake'
     LinkRequest:
-      description: Pet object that needs to be added to the store
+      description: Link a new address to a user
       content:
         application/json:
           schema:
@@ -389,6 +474,15 @@ components:
               token:
                 type: string
                 example: mytoken1234
+    GuildRequest:
+      description: Guild object that needs to be added to the store
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              guild_id:
+                $ref: '#/components/schemas/DiscordSnowflake'
   securitySchemes:
     discord_auth:
       type: oauth2

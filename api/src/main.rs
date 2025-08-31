@@ -1,11 +1,11 @@
 use aws_config::BehaviorVersion;
 use aws_sdk_dynamodb::Client;
 use axum::body::Body;
-use axum::{Json, Router, http::StatusCode, routing::get};
+use axum::{http::StatusCode, routing::get, Json, Router};
 use http::Response;
-use lambda_http::{Error, run, tracing};
+use lambda_http::{run, tracing, Error};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 
@@ -14,6 +14,8 @@ mod guilds;
 mod interactions;
 mod middleware;
 mod users;
+mod utils;
+mod discord;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -59,15 +61,19 @@ async fn main() -> Result<(), Error> {
     tracing::init_default_subscriber();
 
     let dynamo = create_dynamodb_client().await;
-    let discord_bot = Arc::new(twilight_http::Client::new(
-        std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set"),
-    ));
+    let discord_bot = Arc::new(
+        twilight_http::Client::builder()
+            .token(std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set"))
+        .build()
+    );
 
     let app_state = AppState {
         dynamo,
         discord_bot,
         reqwest: Arc::new(reqwest::Client::new()),
     };
+    
+    guilds::tasks::update_guilds(&app_state.discord_bot, &app_state.dynamo).await;
 
     let app = Router::new()
         .nest("/users", users::router())

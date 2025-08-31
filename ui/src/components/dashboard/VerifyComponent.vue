@@ -1,26 +1,60 @@
 <script setup>
 
-import {ref} from "vue";
-import {getUser} from "../../stores/auth.js";
+import {ref, defineModel} from "vue";
+import {User} from "../../stores/user.js";
+import {Guild} from "../../stores/guild.js";
 
-defineProps(
+let modelRole = defineModel('modelRole');
+// let modelType = defineModel();
+let modelPattern = defineModel('modelPattern');
+let modalActiveRef = ref(false);
+let selectedType = ref('domain');
+
+let props = defineProps(
   {
     guild: {
-      type: Object,
+      type: Guild,
       required: true
     }
   }
 )
 
-const userRef = ref(getUser())
+const userRef = ref(User.loadCache())
 
-function getVerifyRolesFromKB() {
-  // This function would typically fetch verification roles from an API
-  // For now, we return a static list for demonstration purposes
-  return [
-    { role_id: "1", role_name: 'Student', pattern: '@soton.ac.uk$', members: 12345 },
-    { role_id: "2", role_name: 'Staff', pattern: '^(jack\\.draper)|(john\\.doe)@soton.ac.uk$', members: 2 }
-  ];
+function addVerifyRole() {
+  if (!modelRole || !modelPattern) {
+    alert("Please fill in all fields.");
+    return;
+  }
+  // Here you would typically send the new role to your backend API
+  console.log("Adding role:", modelRole, modelPattern);
+  let roleId = modelRole.value;
+  let pattern = modelPattern.value;
+
+  if (selectedType.value === 'domain') {
+    pattern = `@${pattern}$`
+  }
+  if (!props.guild.verify.roles) {
+    props.guild.verify.roles = []
+  }
+  props.guild.verify.roles.push({ role_id: roleId, pattern: pattern, role_name: null, members: 0 });
+  props.guild.save();
+  // Reset form fields
+  modelRole.value = '';
+  modelPattern.value = '';
+  modalActiveRef.value = false;
+}
+
+function validRole() {
+  return modelRole.value && modelRole.value.match(/^\d{12,13}$/)
+}
+
+function validPattern() {
+  return modelPattern.value && modelPattern.value !== ''
+}
+
+function validAdd() {
+  return validRole() && validPattern()
 }
 
 </script>
@@ -33,7 +67,7 @@ function getVerifyRolesFromKB() {
           <fa :icon="['fas', 'check']"/>
           Verification
         </h1>
-        <button class="btn btn-primary btn-sm justify-end">Add</button>
+        <button class="btn btn-primary btn-sm justify-end" @click="modalActiveRef = true">Add</button>
       </div>
       <div class="divider my-0"></div>
       <table class="table">
@@ -49,7 +83,7 @@ function getVerifyRolesFromKB() {
         <tbody>
         <tr v-for="role in $props.guild.verify.roles">
           <td>
-            {{ role.role_name }}
+            {{ role.role_name ? role.role_name : role.role_id }}
           </td>
           <td>
             <div class="badge badge-outline badge-primary w-8" v-if="role.pattern.match(/^@.+\$$/)">@</div>
@@ -78,4 +112,44 @@ function getVerifyRolesFromKB() {
       </table>
     </div>
   </div>
+
+  <Teleport to="#modal">
+    <div class="modal" :class="modalActiveRef ? 'modal-open' : ''" v-if="userRef" >
+      <div class="modal-box w-96 bg-base-300 flex flex-col" ref="modalBox">
+        <div class="flex flex-row justify-between">
+          <h3 class="text-lg font-bold">Add Verified Role</h3>
+        </div>
+
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">Role ID</legend>
+          <input type="text" class="input" :class="{'input-error': !validRole()}" placeholder="1175757751608168528" v-model="modelRole" />
+        </fieldset>
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">Pattern</legend>
+          <div class="join">
+            <div class="dropdown join-item">
+              <div tabindex="0" role="button" class="btn w-2" :class="selectedType === 'domain' ? 'text-primary' : 'text-secondary'">
+                {{ selectedType === 'domain' ? '@' : '.*' }}
+              </div>
+              <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-1 p-2 shadow-sm">
+                <li><a @click="selectedType = 'domain'" >Domain</a></li>
+                <li><a @click="selectedType = 'regex'" >Regex</a></li>
+              </ul>
+            </div>
+
+            <input type="text" class="input join-item" :class="{'input-error': !validPattern()}"  :placeholder=" selectedType === 'domain' ? 'example.com' : '@example.com$' " v-model="modelPattern" />
+          </div>
+        </fieldset>
+        <div class="flex w-full justify-between my-5">
+          <!-- if there is a button in form, it will close the modal -->
+          <button class="btn w-1/3 btn-neutral" @click="modalActiveRef = false">
+            Cancel
+          </button>
+          <button class="btn w-1/3 btn-primary" :class="{'btn-disabled': !validAdd()}" @click="addVerifyRole">
+            Add
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>

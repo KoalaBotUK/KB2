@@ -1,6 +1,15 @@
 use aws_sdk_dynamodb::types::AttributeValue;
 use std::collections::HashMap;
 
+pub fn as_string_opt(val: Option<&AttributeValue>) -> Option<String> {
+    if let Some(v) = val {
+        if let Ok(s) = v.as_s() {
+            return Some(s.to_owned());
+        }
+    }
+    None
+}
+
 pub fn as_string(val: Option<&AttributeValue>, default: &String) -> String {
     if let Some(v) = val {
         if let Ok(s) = v.as_s() {

@@ -5,6 +5,7 @@ use axum::response::Response;
 use http_body_util::BodyExt;
 use lambda_http::tracing::{error, info};
 use twilight_http::Client;
+use crate::utils::ise;
 
 pub async fn auth_middleware(
     headers: HeaderMap,
@@ -22,11 +23,11 @@ pub async fn auth_middleware(
     let (scheme, credentials) = auth_header.split_once(' ').unwrap();
     println!("credentials: {credentials}");
     if scheme == "Discord" {
-        request
-            .extensions_mut()
-            .insert(std::sync::Arc::new(Client::new(format!(
-                "Bearer {credentials}"
-            ))));
+        let client = Client::new(format!("Bearer {credentials}"));
+        let current_user = client.current_user().await.map_err(ise)?.model().await.map_err(ise)?;
+        let ext_mut = request.extensions_mut();
+        ext_mut.insert(std::sync::Arc::new(client));
+        ext_mut.insert(current_user);
         Ok(next.run(request).await)
     } else {
         Err(StatusCode::UNAUTHORIZED)

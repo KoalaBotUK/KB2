@@ -1,9 +1,9 @@
 <script setup>
 
 import {onMounted} from "vue";
-import {DiscordUser, setUser} from "../../stores/auth.js";
+import {User} from "../../stores/user.js";
 import {AuthorizationFlowPKCE} from "../../helpers/auth.js";
-import {internalRedirect, redirectToLastPath} from "../../helpers/redirect.js";
+import {redirectToLastPath} from "../../helpers/redirect.js";
 
 onMounted(
     async () => {
@@ -11,9 +11,7 @@ onMounted(
 
       await authFlow.callback()
 
-      let newUser = await DiscordUser.fromToken(authFlow.token)
-      setUser(newUser)
-
+      await User.loadMeCache(authFlow.token)
       redirectToLastPath()
     }
 )

@@ -1,9 +1,9 @@
 <script setup>
 
 import DiscordIcon from "../icons/DiscordIcon.vue";
-import {ref} from "vue";
+import {onMounted, ref, toRef} from "vue";
 import BaseAuthButton from "../verify/BaseAuthButton.vue";
-import {getUser, setUser} from "../../stores/auth";
+import {User} from "../../stores/user.js";
 import {onClickOutside} from "@vueuse/core";
 import {AuthorizationFlowPKCE, ImplicitFlow} from "../../helpers/auth";
 
@@ -23,18 +23,21 @@ const authFlow = new AuthorizationFlowPKCE(
     "https://discord.com/api/v10/oauth2/token",
     'identify email guilds'
 )
-
-const userRef = ref(getUser())
+const user = toRef(null)
 const modalActiveRef = ref(false)
 const modalBox = ref(null)
+
+onMounted(async () => {
+  user.value = User.loadCache()
+})
 
 onClickOutside(modalBox, () => {
   modalActiveRef.value = false
 })
 
 function logout(event) {
-  setUser(null)
-  userRef.value = null
+  User.clearCache()
+  user.value = null
   emit('logout', {})
   modalActiveRef.value = false
 }
@@ -42,28 +45,28 @@ function logout(event) {
 </script>
 
 <template>
-  <BaseAuthButton class="max-w-60 place-items-center self-center" v-if="!userRef" :auth-flow="authFlow">
+  <BaseAuthButton class="max-w-60 place-items-center self-center" v-if="!user" :auth-flow="authFlow">
     <DiscordIcon/>
     Sign in {{ longText ? 'with Discord' : '' }}
   </BaseAuthButton>
-  <button class="btn place-items-center self-center" :class="!longText ? 'w-60' : ''" v-if="userRef" @click="modalActiveRef = true">
+  <button class="btn place-items-center self-center" :class="!longText ? 'w-60' : ''" v-if="user" @click="modalActiveRef = true">
     <div class="avatar w-7 h-auto self-center">
       <div class="ring-primary rounded-full ring">
-        <img :src="userRef.avatarUrl" alt="discord avatar" />
+        <img :src="`https://cdn.discordapp.com/avatars/${user.userId}/${user.avatar}.webp`" alt="discord avatar" />
       </div>
     </div>
-    {{ longtext ? 'Logged in as ' : ''}}{{ userRef.globalName }}
+    {{ longtext ? 'Logged in as ' : ''}}{{ user.globalName }}
   </button>
 
   <Teleport to="#modal">
-    <div class="modal" :class="modalActiveRef ? 'modal-open' : ''" v-if="userRef" >
+    <div class="modal" :class="modalActiveRef ? 'modal-open' : ''" v-if="user" >
       <div class="modal-box w-96 bg-base-300 flex flex-col" ref="modalBox">
         <div class="flex flex-row justify-between">
-          <h3 class="text-lg font-bold">Logged in as {{ userRef.globalName }}</h3>
+          <h3 class="text-lg font-bold">Logged in as {{ user.globalName }}</h3>
 
           <div class="avatar w-10 h-auto self-center mb-4">
             <div class="ring-primary rounded-full ring">
-              <img :src="userRef.avatarUrl" alt="discord avatar" />
+              <img :src="`https://cdn.discordapp.com/avatars/${user.userId}/${user.avatar}.webp`" alt="discord avatar" />
             </div>
           </div>
         </div>

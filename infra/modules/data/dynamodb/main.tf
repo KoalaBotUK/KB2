@@ -22,7 +22,7 @@ resource "aws_dynamodb_table" "guilds" {
 
 resource "aws_appautoscaling_target" "guild_read_target" {
   max_capacity       = 10
-  min_capacity       = 1
+  min_capacity       = 2
   resource_id        = "table/${aws_dynamodb_table.guilds.name}"
   scalable_dimension = "dynamodb:table:ReadCapacityUnits"
   service_namespace  = "dynamodb"
@@ -92,7 +92,7 @@ resource "aws_dynamodb_table" "users" {
 
 resource "aws_appautoscaling_target" "users_read_target" {
   max_capacity       = 10
-  min_capacity       = 1
+  min_capacity       = 2
   resource_id        = "table/${aws_dynamodb_table.users.name}"
   scalable_dimension = "dynamodb:table:ReadCapacityUnits"
   service_namespace  = "dynamodb"

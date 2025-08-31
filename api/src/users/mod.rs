@@ -1,24 +1,27 @@
 mod links;
-mod models;
+pub mod models;
 
 use crate::AppState;
-use crate::users::models::User;
+use crate::users::models::{LinkGuild, User};
 use axum::extract::{Path, State};
 use axum::routing::get;
 use axum::{Extension, Json};
 use http::StatusCode;
 use serde::Deserialize;
 use serde_json::{Value, json};
-use std::sync::Arc;
 use tower_http::cors::CorsLayer;
-use twilight_http::Client as DiscordClient;
 use twilight_model::id::Id;
-use twilight_model::id::marker::UserMarker;
+use twilight_model::id::marker::{UserMarker};
+use twilight_model::user::CurrentUser;
+use crate::guilds::models::Guild;
+use crate::guilds::tasks::assign_all_roles_user_guild;
+use crate::utils::member_guilds;
 
 pub fn router() -> axum::Router<AppState> {
     axum::Router::new()
         .route("/", get(get_users))
-        .route("/{user_id}", get(get_users_id).put(put_users_id))
+        .route("/@me", get(get_users_me).put(put_users_me).post(post_users_me))
+        .route("/{user_id}", get(get_users_id).put(put_users_id).post(post_users_id))
         .nest("/{user_id}/links", links::router())
         .layer(CorsLayer::permissive())
 }
@@ -27,21 +30,29 @@ async fn get_users() -> Json<Value> {
     todo!()
 }
 
+async fn get_users_me(
+    Extension(current_user): Extension<CurrentUser>,
+    State(app_state): State<AppState>,
+) -> Result<Json<Value>, StatusCode> {
+    get_users_id(Path(current_user.id), Extension(current_user), State(app_state)).await
+}
+
+async fn put_users_me(
+    Extension(current_user): Extension<CurrentUser>,
+    State(app_state): State<AppState>,
+    Json(user_req): Json<PutUserRequest>,
+) -> Result<Json<Value>, StatusCode> {
+    put_users_id(Path(current_user.id), Extension(current_user), State(app_state), Json(user_req)).await
+}
+
 async fn get_users_id(
     Path(user_id): Path<Id<UserMarker>>,
-    Extension(discord_user): Extension<Arc<DiscordClient>>,
+    Extension(current_user): Extension<CurrentUser>,
     State(app_state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
     // Authorize
-    let logged_in_user = discord_user
-        .current_user()
-        .await
-        .unwrap()
-        .model()
-        .await
-        .unwrap();
-    if logged_in_user.id.ne(&user_id) {
-        return Err(StatusCode::NOT_FOUND);
+    if current_user.id.ne(&user_id) {
+        return Err(StatusCode::UNAUTHORIZED);
     }
 
     // Fetch user from DynamoDB
@@ -53,37 +64,98 @@ async fn get_users_id(
 
 #[derive(Deserialize)]
 struct PutUserRequest {
-    linked_guild_ids: Vec<String>,
+    link_guilds: Vec<LinkGuild>,
 }
 
 async fn put_users_id(
     Path(user_id): Path<Id<UserMarker>>,
-    Extension(discord_user): Extension<Arc<DiscordClient>>,
+    Extension(current_user): Extension<CurrentUser>,
     State(app_state): State<AppState>,
     Json(user_req): Json<PutUserRequest>,
 ) -> Result<Json<Value>, StatusCode> {
-    let logged_in_user = discord_user
-        .current_user()
-        .await
-        .unwrap()
-        .model()
-        .await
-        .unwrap();
-    if logged_in_user.id.ne(&user_id) {
-        return Err(StatusCode::NOT_FOUND);
+    if current_user.id.ne(&user_id) {
+        return Err(StatusCode::UNAUTHORIZED);
     }
     // Write user to DynamoDB
-    let mut new_user = User::from_db(&user_id.to_string(), &app_state.dynamo)
+    let mut user = User::from_db(&user_id.to_string(), &app_state.dynamo)
         .await
         .unwrap_or_else(|| User {
-            user_id: user_id.to_string(),
-            links: vec![],
-            linked_guild_ids: vec![],
+            user_id,
+            ..Default::default()
         });
+    
+    let link_guilds_req_map = user_req.link_guilds.iter().map(|lg| (&lg.guild_id, lg)).collect::<std::collections::HashMap<_, _>>();
 
-    new_user.linked_guild_ids = user_req.linked_guild_ids;
+    let mut changed_guilds = vec![];
 
-    new_user.save(&app_state.dynamo).await;
+    for i in 0..user.link_guilds.len() {
+        let link_guild_req = link_guilds_req_map.get(&user.link_guilds[i].guild_id);
+        if user.link_guilds[i].enabled != link_guild_req.unwrap().enabled {
+            user.link_guilds[i].enabled = link_guild_req.unwrap().enabled;
+            changed_guilds.push(user.link_guilds[i].guild_id);
+        }
+    }
 
-    Ok(Json(json!(new_user)))
+    for guild_id in changed_guilds {
+        let mut guild = Guild::from_db(guild_id, &app_state.dynamo).await.unwrap();
+        guild.user_links.insert(user.user_id, user.links.clone());
+        guild.save(&app_state.dynamo).await;
+        assign_all_roles_user_guild(
+            user_id,
+            &guild,
+            &app_state.discord_bot,
+        ).await;
+    }
+    
+    user.save(&app_state.dynamo).await;
+
+    Ok(Json(json!(user)))
+}
+
+async fn post_users_me(
+    Extension(current_user): Extension<CurrentUser>,
+    State(app_state): State<AppState>,
+) -> Result<Json<Value>, StatusCode> {
+    post_users_id(Path(current_user.id), Extension(current_user), State(app_state)).await
+}
+
+async fn post_users_id(
+    Path(user_id): Path<Id<UserMarker>>,
+    Extension(current_user): Extension<CurrentUser>,
+    State(app_state): State<AppState>,
+) -> Result<Json<Value>, StatusCode> {
+    if current_user.id.ne(&user_id) {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+
+    let mut member_guilds = member_guilds(&current_user, &app_state.discord_bot).await?;
+    let mut user = User::from_db(&user_id.to_string(), &app_state.dynamo).await.unwrap_or_else(|| User {
+        user_id,
+        ..Default::default()
+    });
+    // Set Discord Values
+    user.global_name = current_user.name.clone();
+    user.avatar = current_user.avatar.clone();
+
+    // Set Link Guilds
+    for i in 0..user.link_guilds.len() {
+        if member_guilds.iter().any(|g| g.id == user.link_guilds[i].guild_id) {
+            member_guilds.retain(|g| g.id != user.link_guilds[i].guild_id);
+        } else {
+            let member_guild = member_guilds.iter().find(|g| g.id == user.link_guilds[i].guild_id);
+            if member_guild.is_some() {
+                user.link_guilds[i].name = member_guild.unwrap().name.clone();
+                user.link_guilds[i].icon = member_guild.unwrap().icon;
+            }
+        }
+    }
+    let mut additional_link_guilds = member_guilds.iter().map(|g| LinkGuild {
+        guild_id: g.id,
+        name: g.name.clone(),
+        icon: g.icon,
+        enabled: true,
+    }).collect::<Vec<LinkGuild>>();
+    user.link_guilds.append(additional_link_guilds.as_mut());
+    user.save(&app_state.dynamo).await;
+    Ok(Json(json!(user)))
 }

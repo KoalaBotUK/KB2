@@ -1,7 +1,6 @@
 <script setup>
 import BaseVerifyCallback from "./BaseVerifyCallback.vue";
-import {OauthFlow} from "../../helpers/auth.js";
-import {OauthToken} from "../../stores/auth.js";
+import {OauthFlow, OauthToken} from "../../helpers/auth.js";
 
 const urlParams = new URLSearchParams(window.location.search);
 const token = urlParams.get('token');

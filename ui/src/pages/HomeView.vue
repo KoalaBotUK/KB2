@@ -1,7 +1,5 @@
 <script setup>
 
-import KoalaMonoIcon from "../components/icons/KoalaMonoIcon.vue";
-import ThemeToggle from "../components/ThemeToggle.vue";
 import SwanseaIcon from "../components/icons/SwanseaIcon.vue";
 import {INVITE_URL, redirectTo} from "../helpers/redirect.js";
 import MainWithFooter from "../components/MainWithFooter.vue";
