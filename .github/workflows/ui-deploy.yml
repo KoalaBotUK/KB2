@@ -6,12 +6,14 @@ on:
     paths:
       - ui/**
       - ui-deploy.yml
+    tags:
+      - '*.*.*'
 permissions:
   contents: read
 
 jobs:
   build-deploy:
-    environment: dev
+    environment: ${{ github.ref == 'refs/heads/main' && 'dev' || 'prod' }}
     name: Build & Deploy 🪣
     runs-on: ubuntu-latest
     defaults:
