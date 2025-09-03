@@ -73,7 +73,7 @@ async fn main() -> Result<(), Error> {
         reqwest: Arc::new(reqwest::Client::new()),
     };
     
-    guilds::tasks::update_guilds(&app_state.discord_bot, &app_state.dynamo).await;
+    // guilds::tasks::update_guilds(&app_state.discord_bot, &app_state.dynamo).await;
 
     let app = Router::new()
         .nest("/users", users::router())
