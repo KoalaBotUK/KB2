@@ -44,4 +44,4 @@ jobs:
         run: cargo lambda build --release --output-format zip
 
       - name: Upload to Lambda
-        run: aws lambda update-function-code --function-name kb2-lambda-function-dev --zip-file fileb://target/lambda/api/bootstrap.zip
+        run: aws lambda update-function-code --function-name kb2-lambda-function-${{ github.ref == 'refs/heads/main' && 'dev' || 'prod' }} --zip-file fileb://target/lambda/api/bootstrap.zip
