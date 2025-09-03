@@ -1,5 +1,5 @@
 resource "aws_s3_bucket" "public_ui" {
-  bucket = "${var.deployment_env}.koalabot.uk"
+  bucket = var.deployment_env == "prod" ? "koalabot.uk" : "${var.deployment_env}.koalabot.uk"
 
   tags = {
     Name        = var.deployment_env == "prod" ? "koalabot.uk" : "${var.deployment_env}.koalabot.uk",
