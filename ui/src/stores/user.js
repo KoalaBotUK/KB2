@@ -104,9 +104,7 @@ export class User {
   }
 
   static loadCache() {
-    console.log("Loading user from cache")
     let cacheUser = localStorage.getItem('user');
-    console.log("Loaded user from cache", cacheUser)
     if (localStorage.getItem('user') === null) return null
     let user = Object.assign(new User, JSON.parse(cacheUser))
     user.links = user.links.map(l => Object.assign(new Link, l))

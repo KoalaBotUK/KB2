@@ -6,22 +6,30 @@ import StreamAlertComponent from "../../../components/dashboard/StreamAlertCompo
 import AnnounceComponent from "../../../components/dashboard/AnnounceComponent.vue";
 import ColourRoleComponent from "../../../components/dashboard/ColourRoleComponent.vue";
 import VoteComponent from "../../../components/dashboard/VoteComponent.vue";
+import {Guild} from "../../../stores/guild.js";
 
 defineProps(
   {
     guild: {
-      type: Object,
+      type: Guild,
       required: true
     }
   }
 )
+
+let emits = defineEmits(['update'])
+
+function emitUpdate(event) {
+  emits('update', event)
+}
+
 </script>
 
 <template>
 
   <div class="lg:columns-2 sm:columns-1">
     <InsightsStatsComponent class="m-5 break-inside-avoid-column"/>
-    <VerifyComponent class="m-5 break-inside-avoid-column" :guild="$props.guild"/>
+    <VerifyComponent class="m-5 break-inside-avoid-column" :guild="$props.guild" @update="emitUpdate"/>
     <StreamAlertComponent class="m-5 break-inside-avoid-column"/>
     <AnnounceComponent class="m-5 break-inside-avoid-column"/>
     <ColourRoleComponent class="m-5 break-inside-avoid-column"/>

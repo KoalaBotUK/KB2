@@ -73,15 +73,17 @@ async function setCurrentGuild(gid) {
   }
 }
 
+function saveMemGuilds() {
+  localStorage.setItem('guilds', JSON.stringify(guildsKb.value, replacer))
+}
+
 async function sync_guilds_kb() {
   guildsKb.value = Object.values(await Guild.loadGuilds()).reduce((acc, guild) => {
     acc.set(guild.guildId, guild);
     return acc;
   }, new Map());
-  console.log("Loaded guildsKb", guildsKb.value, JSON.stringify(guildsKb.value, replacer))
-  localStorage.setItem('guilds', JSON.stringify(guildsKb.value, replacer))
+  saveMemGuilds()
   guildsLoaded.value = true;
-
 }
 
 </script>
@@ -131,7 +133,7 @@ async function sync_guilds_kb() {
         </div>
       </div>
     </header>
-    <DashBody v-if="guildsKb.has(currentGuildId)" :guild="guildsKb.get(currentGuildId)"/>
+    <DashBody v-if="guildsKb.has(currentGuildId)" :guild="guildsKb.get(currentGuildId)" @update="saveMemGuilds"/>
     <div class="flex flex-row justify-center">
     <div class="card card-sm m-5 p-10 shadow bg-base-200 flex w-fit" v-if="!guildsKb.has(currentGuildId)">
       <div class="flex flex-row justify-center p-2">

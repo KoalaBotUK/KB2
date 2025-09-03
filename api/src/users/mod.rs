@@ -7,6 +7,7 @@ use axum::extract::{Path, State};
 use axum::routing::get;
 use axum::{Extension, Json};
 use http::StatusCode;
+use lambda_http::tracing::info;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use tower_http::cors::CorsLayer;
@@ -14,7 +15,7 @@ use twilight_model::id::Id;
 use twilight_model::id::marker::{UserMarker};
 use twilight_model::user::CurrentUser;
 use crate::guilds::models::Guild;
-use crate::guilds::tasks::assign_all_roles_user_guild;
+use crate::guilds::tasks::{assign_roles_guild_user_link};
 use crate::utils::member_guilds;
 
 pub fn router() -> axum::Router<AppState> {
@@ -96,15 +97,28 @@ async fn put_users_id(
         }
     }
 
+    info!("Changed guilds: {changed_guilds:?}");
     for guild_id in changed_guilds {
         let mut guild = Guild::from_db(guild_id, &app_state.dynamo).await.unwrap();
-        guild.user_links.insert(user.user_id, user.links.clone());
+        guild.verify.user_links.retain(|u, _| u != &user.user_id);
+        let mut link_enabled = false;
+        if user.link_guilds.iter().find(|lg| lg.guild_id == guild_id).unwrap().enabled {
+            link_enabled = true;
+            guild.verify.user_links.insert(user.user_id, user.links.clone());
+        }
+
+        info!("Saving guild {} {:?}", guild.guild_id.to_string(), guild.verify.user_links.len());
+        for user_link in &user.links {
+            assign_roles_guild_user_link(
+                link_enabled,
+                &user_link.link_address,
+                user_id,
+                &mut guild,
+                &app_state.discord_bot,
+            ).await?;
+
+        }
         guild.save(&app_state.dynamo).await;
-        assign_all_roles_user_guild(
-            user_id,
-            &guild,
-            &app_state.discord_bot,
-        ).await;
     }
     
     user.save(&app_state.dynamo).await;
@@ -134,8 +148,8 @@ async fn post_users_id(
         ..Default::default()
     });
     // Set Discord Values
-    user.global_name = current_user.name.clone();
-    user.avatar = current_user.avatar.clone();
+    user.global_name = current_user.name;
+    user.avatar = current_user.avatar;
 
     // Set Link Guilds
     for i in 0..user.link_guilds.len() {

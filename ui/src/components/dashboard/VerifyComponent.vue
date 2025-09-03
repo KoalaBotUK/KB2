@@ -2,7 +2,7 @@
 
 import {ref, defineModel} from "vue";
 import {User} from "../../stores/user.js";
-import {Guild} from "../../stores/guild.js";
+import {Guild, VerifyRole} from "../../stores/guild.js";
 
 let modelRole = defineModel('modelRole');
 // let modelType = defineModel();
@@ -19,7 +19,18 @@ let props = defineProps(
   }
 )
 
+let emits = defineEmits(
+    [
+        'update'
+    ]
+)
+
 const userRef = ref(User.loadCache())
+
+function updateGuild() {
+  props.guild.save();
+  emits('update');
+}
 
 function addVerifyRole() {
   if (!modelRole || !modelPattern) {
@@ -27,7 +38,6 @@ function addVerifyRole() {
     return;
   }
   // Here you would typically send the new role to your backend API
-  console.log("Adding role:", modelRole, modelPattern);
   let roleId = modelRole.value;
   let pattern = modelPattern.value;
 
@@ -37,16 +47,22 @@ function addVerifyRole() {
   if (!props.guild.verify.roles) {
     props.guild.verify.roles = []
   }
-  props.guild.verify.roles.push({ role_id: roleId, pattern: pattern, role_name: null, members: 0 });
-  props.guild.save();
+  props.guild.verify.roles = props.guild.verify.roles.filter(r => r.roleId !== roleId)
+  props.guild.verify.roles.push(new VerifyRole(roleId, null, pattern, 0));
+  updateGuild();
   // Reset form fields
   modelRole.value = '';
   modelPattern.value = '';
   modalActiveRef.value = false;
 }
 
+function removeVerifyRole(role) {
+  props.guild.verify.roles = props.guild.verify.roles.filter(r => r.roleId !== role.roleId);
+  updateGuild();
+}
+
 function validRole() {
-  return modelRole.value && modelRole.value.match(/^\d{12,13}$/)
+  return modelRole.value && modelRole.value.match(/^\d+$/)
 }
 
 function validPattern() {
@@ -83,7 +99,7 @@ function validAdd() {
         <tbody>
         <tr v-for="role in $props.guild.verify.roles">
           <td>
-            {{ role.role_name ? role.role_name : role.role_id }}
+            {{ role.roleName && role.roleName !== "" ? role.roleName : role.roleId }}
           </td>
           <td>
             <div class="badge badge-outline badge-primary w-8" v-if="role.pattern.match(/^@.+\$$/)">@</div>
@@ -102,8 +118,7 @@ function validAdd() {
               </div>
               <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-1 p-2 shadow-sm">
                 <li><a>Edit</a></li>
-                <li><a>Reverify</a></li>
-                <li class="text-error"><a>Remove</a></li>
+                <li class="text-error" @click="removeVerifyRole(role)"><a>Remove</a></li>
               </ul>
             </div>
           </td>

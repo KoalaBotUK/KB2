@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-use crate::guilds::models::Guild;
-use crate::utils::retry_on_rl;
+use http::StatusCode;
+use crate::guilds::models::{Guild, VerifyRole};
+use crate::utils::{ise, retry_on_rl};
 use lambda_http::tracing::info;
 use regex::Regex;
 use twilight_model::id::Id;
@@ -37,10 +37,9 @@ pub async fn update_guilds(bot: &twilight_http::Client, dynamo: &aws_sdk_dynamod
         if !found {
             let new_guild = Guild {
                 guild_id: d_guild.id,
-                verify: crate::guilds::models::Verify { roles: vec![], user_links: vec![] },
                 name: d_guild.name.clone(),
                 icon: d_guild.icon,
-                user_links: HashMap::new(),
+                ..Default::default()
             };
             new_guild.save(dynamo).await;
         }
@@ -68,57 +67,69 @@ async fn remove_role_user(
         .await;
 }
 
-pub async fn assign_roles_guild_role(
-    guild_id: Id<GuildMarker>,
+pub async fn remove_role_from_guild(
+    guild: &mut Guild,
     role_id: Id<RoleMarker>,
     bot: &twilight_http::Client,
-    dynamo: &aws_sdk_dynamodb::Client,
 ) {
-    let guild = Guild::from_db(guild_id, dynamo).await.unwrap();
-    let user_links = &guild.verify.user_links;
-    let roles = &guild.verify.roles;
-    let role = roles.iter().find(|r| r.role_id == role_id);
-    if role.is_none() {
+    if !guild.verify.roles.iter().any(|r| r.role_id == role_id) {
         return;
     }
-    for user_link in user_links {
-        if Regex::new(&role.unwrap().pattern)
-            .unwrap()
-            .is_match(&user_link.link_address)
-        {
-            assign_role_user(guild_id, user_link.user_id, role.unwrap().role_id, bot).await;
+    for (&user_id, user_links) in &mut guild.verify.user_links {
+        remove_role_user(guild.guild_id, user_id, role_id, bot).await;
+    }
+    guild.verify.roles.retain(|r| r.role_id != role_id);
+}
+
+pub async fn add_role_to_guild(
+    guild: &mut Guild,
+    mut role: VerifyRole,
+    bot: &twilight_http::Client
+){
+    remove_role_from_guild(guild, role.role_id, bot).await;
+    for (&user_id, user_links) in &mut guild.verify.user_links {
+        for user_link in user_links {
+            if Regex::new(&role.pattern)
+                .unwrap()
+                .is_match(&*user_link.link_address)
+            {
+                assign_role_user(guild.guild_id, user_id, role.role_id, bot).await;
+                role.members += 1;
+                break;
+            }
         }
     }
+    guild.verify.roles.push(role);
 }
 
 pub async fn assign_roles_guild_user_link(
+    enabled: bool,
     link_address: &str,
     user_id: Id<UserMarker>,
-    guild: &Guild,
+    guild: &mut Guild,
     bot: &twilight_http::Client,
-) {
-    let roles = &guild.verify.roles;
-    for role in roles {
-        if Regex::new(&role.pattern)
+) -> Result<(), StatusCode> {
+    let roles = &mut guild.verify.roles;
+    for i in 0..roles.len() {
+        let role = roles.get_mut(i).unwrap();
+        let has_dsc_role = retry_on_rl(|| async { bot.guild_member(guild.guild_id, user_id).await}).await.map_err(ise)?.model().await.map_err(ise)?.roles.contains(&role.role_id);
+        if enabled && Regex::new(&role.pattern)
             .unwrap()
             .is_match(link_address)
         {
-            assign_role_user(guild.guild_id, user_id, role.role_id, bot).await;
-        } else {
-            remove_role_user(guild.guild_id, user_id, role.role_id, bot).await;
+            info!("Assigning role {} to user {}", role.role_id, user_id);
+            if !has_dsc_role {
+                assign_role_user(guild.guild_id, user_id, role.role_id, bot).await;
+                role.members += 1;
+            }
+            } else {
+            info!("Removing role {} from user {}", role.role_id, user_id);
+            if has_dsc_role {
+                remove_role_user(guild.guild_id, user_id, role.role_id, bot).await;
+                role.members -= 1;
+            }
         }
     }
+    Ok(())
 }
 
-pub async fn assign_all_roles_user_guild(
-    user_id: Id<UserMarker>,
-    guild: &Guild,
-    bot: &twilight_http::Client,
-) {
-    let user_links = &guild.verify.user_links;
-    for user_link in user_links {
-        if user_link.user_id == user_id {
-            assign_roles_guild_user_link(&user_link.link_address, user_id, guild, bot).await;
-        }
-    }
-}

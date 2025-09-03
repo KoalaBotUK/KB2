@@ -30,6 +30,17 @@ pub fn _as_i32(val: Option<&AttributeValue>, default: i32) -> i32 {
     default
 }
 
+pub fn as_u32(val: Option<&AttributeValue>, default: u32) -> u32 {
+    if let Some(v) = val {
+        if let Ok(n) = v.as_n() {
+            if let Ok(n) = n.parse::<u32>() {
+                return n;
+            }
+        }
+    }
+    default
+}
+
 pub fn as_u64(val: Option<&AttributeValue>, default: u64) -> u64 {
     if let Some(v) = val {
         if let Ok(n) = v.as_n() {
@@ -50,13 +61,6 @@ pub fn as_string_vec(val: Option<&AttributeValue>) -> Vec<String> {
                 .collect();
         }
     }
-    // val
-    //         .map(|v| v.as_l())
-    //         .unwrap_or_else(|| Ok(&Vec::<AttributeValue>::new()))
-    //         .unwrap_or_else(|_| &Vec::<AttributeValue>::new())
-    //         .iter()
-    //         .map(|v| as_string(Some(v), &"".to_string()))
-    //         .collect();
     vec![]
 }
 

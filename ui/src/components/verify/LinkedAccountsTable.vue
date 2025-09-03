@@ -21,7 +21,6 @@ function loadAccounts() {
   }).then(
       (res) => {
         linkedAccounts.value = res.data.links.filter(v => v.active === true).reduce((a,v) => {a[v.link_address] = v; return a} ,{})
-        console.log(linkedAccounts.value)
       }
   )
 }

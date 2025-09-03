@@ -86,17 +86,15 @@ async fn post_link(
         .links
         .retain(|l| l.link_address != new_link.link_address);
     for link_guild in &user_model.link_guilds {
-        if !link_guild.enabled {
-            continue;
-        }
-        let guild = Guild::from_db(link_guild.guild_id, &app_state.dynamo).await.unwrap();
+        let mut guild = Guild::from_db(link_guild.guild_id, &app_state.dynamo).await.unwrap();
         crate::guilds::tasks::assign_roles_guild_user_link(
+            link_guild.enabled,
             &new_link.link_address,
             user_id,
-            &guild,
+            &mut guild,
             &app_state.discord_bot,
         )
-        .await;
+        .await?;
     }
     user_model.links.push(new_link);
     user_model.save(&app_state.dynamo).await;

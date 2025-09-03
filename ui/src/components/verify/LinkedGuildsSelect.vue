@@ -8,16 +8,12 @@ let props = defineProps({
 })
 let loadingGuilds = ref([])
 async function toggle_guild(guildId) {
-  console.log(guildId)
   loadingGuilds.value.push(guildId)
-  console.log(loadingGuilds.value)
-  console.log(loadingGuilds.value.includes(guildId))
 
   let link_guild = props.user.linkGuilds.filter(guild => guild.guildId === guildId)[0]
   link_guild.enabled = !link_guild.enabled
   await props.user.save();
   loadingGuilds.value = loadingGuilds.value.filter(guild => guild !== guildId)
-  console.log(loadingGuilds.value)
 }
 
 </script>

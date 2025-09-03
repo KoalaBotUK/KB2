@@ -1,20 +1,28 @@
-use crate::dynamo::{as_map, as_map_vec, as_string, as_string_opt};
+use crate::dynamo::{as_u32, as_map, as_map_vec, as_string, as_string_opt};
 use aws_sdk_dynamodb::types::{AttributeValue, KeysAndAttributes};
 use http::StatusCode;
 use lambda_http::tracing::error;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::hash::Hash;
 use twilight_model::id::Id;
 use twilight_model::id::marker::{GuildMarker, RoleMarker, UserMarker};
 use twilight_model::util::ImageHash;
 use crate::users::models::Link;
 
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct VerifyRole {
     pub role_id: Id<RoleMarker>,
     pub role_name: Option<String>,
     pub pattern: String,
     pub members: u32,
+}
+
+impl Hash for VerifyRole {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.role_id.hash(state);
+        self.pattern.hash(state);
+    }
 }
 
 impl From<&HashMap<String, AttributeValue>> for VerifyRole {
@@ -27,9 +35,7 @@ impl From<&HashMap<String, AttributeValue>> for VerifyRole {
             ),
             role_name: as_string_opt(item.get("role_name")),
             pattern: as_string(item.get("pattern"), &"".to_string()),
-            members: as_string(item.get("members"), &"0".to_string())
-                .parse::<u32>()
-                .unwrap_or(0),
+            members: as_u32(item.get("members"), 0),
         }
     }
 }
@@ -78,20 +84,20 @@ impl From<UserLink> for HashMap<String, AttributeValue> {
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct Verify {
     pub roles: Vec<VerifyRole>,
-    pub user_links: Vec<UserLink>
+    pub user_links: HashMap<Id<UserMarker>, Vec<Link>>,
 }
 
 impl From<&HashMap<String, AttributeValue>> for Verify {
     fn from(item: &HashMap<String, AttributeValue>) -> Self {
-        let roles = as_map_vec(item.get("roles"))
+        Verify {
+        roles: as_map_vec(item.get("roles"))
             .into_iter()
             .map(|m| m.into())
-            .collect();
-        let user_links = as_map_vec(item.get("user_links"))
-            .into_iter()
-            .map(|m| m.into())
-            .collect();
-        Verify { roles, user_links }
+            .collect(),
+        user_links: as_map(item.get("user_links")).unwrap_or(&HashMap::new()).iter().map(
+            |(k,v)| (Id::new(k.parse::<u64>().unwrap_or(0)), as_map_vec(Some(v)).iter().map(|&l| l.into()).collect()))
+            .collect()
+        }
     }
 }
 
@@ -100,8 +106,11 @@ impl From<Verify> for HashMap<String, AttributeValue> {
         let mut verify_map = HashMap::new();
         let roles: Vec<AttributeValue> = verify.roles.into_iter().map(|r| AttributeValue::M(r.into())).collect();
         verify_map.insert("roles".to_string(), AttributeValue::L(roles));
-        let user_links: Vec<AttributeValue> = verify.user_links.into_iter().map(|ul| AttributeValue::M(ul.into())).collect();
-        verify_map.insert("user_links".to_string(), AttributeValue::L(user_links));
+
+        verify_map.insert("user_links".to_string(), AttributeValue::M(verify.user_links.iter().map(
+            |(k,v)| (k.to_string(), AttributeValue::L(v.iter().map(|l| AttributeValue::M(l.clone().into())).collect()))
+        ).collect()));
+
         verify_map
     }
 }
@@ -112,17 +121,15 @@ pub struct Guild {
     pub verify: Verify,
     pub name: String,
     pub icon: Option<ImageHash>,
-    pub user_links: HashMap<Id<UserMarker>, Vec<Link>>,
 }
 
 impl Default for Guild {
     fn default() -> Self {
         Guild {
             guild_id: Id::new(1),
-            verify: Verify { roles: vec![], user_links: vec![] },
+            verify: Verify { roles: vec![], user_links: HashMap::new() },
             name: "".to_string(),
             icon: None,
-            user_links: HashMap::new(),
         }
     }
 }
@@ -137,9 +144,6 @@ impl From<&HashMap<String, AttributeValue>> for Guild {
             verify: as_map(item.get("verify")).unwrap().into(),
             name: as_string(item.get("name"), &"".to_string()),
             icon: as_string_opt(item.get("icon")).and_then(|s| ImageHash::parse(s.as_bytes()).ok()),
-            user_links: as_map(item.get("user_links")).unwrap_or(&HashMap::new()).iter().map(
-                |(k,v)| (Id::new(k.parse::<u64>().unwrap_or(0)), as_map_vec(Some(v)).iter().map(|&l| l.into()).collect()))
-                .collect(),
         }
     }
 }

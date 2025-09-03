@@ -103,7 +103,6 @@ export class AuthorizationFlowPKCE extends OauthFlow {
       this.token.expiresIn = res.data['expires_in']
       this.token.refreshToken = res.data['refresh_token']
       this.token.scope = res.data['scope']
-      console.log(this.token)
     } catch (err) {
       console.error("Error when getting token", err)
       this.token = "ERROR"
