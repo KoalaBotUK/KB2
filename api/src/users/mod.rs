@@ -1,6 +1,7 @@
 mod links;
 pub mod models;
 
+use std::sync::Arc;
 use crate::AppState;
 use crate::users::models::{LinkGuild, User};
 use axum::extract::{Path, State};
@@ -128,25 +129,28 @@ async fn put_users_id(
 
 async fn post_users_me(
     Extension(current_user): Extension<CurrentUser>,
+    Extension(discord_user): Extension<Arc<twilight_http::Client>>,
     State(app_state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
-    post_users_id(Path(current_user.id), Extension(current_user), State(app_state)).await
+    post_users_id(Path(current_user.id), Extension(current_user), Extension(discord_user), State(app_state)).await
 }
 
 async fn post_users_id(
     Path(user_id): Path<Id<UserMarker>>,
     Extension(current_user): Extension<CurrentUser>,
+    Extension(discord_user): Extension<Arc<twilight_http::Client>>,
     State(app_state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
     if current_user.id.ne(&user_id) {
         return Err(StatusCode::UNAUTHORIZED);
     }
 
-    let mut member_guilds = member_guilds(&current_user, &app_state.discord_bot).await?;
+    let mut member_guilds = member_guilds(&discord_user, &app_state.discord_bot).await?;
     let mut user = User::from_db(&user_id.to_string(), &app_state.dynamo).await.unwrap_or_else(|| User {
         user_id,
         ..Default::default()
     });
+    
     // Set Discord Values
     user.global_name = current_user.name;
     user.avatar = current_user.avatar;

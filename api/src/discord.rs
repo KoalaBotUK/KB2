@@ -31,16 +31,11 @@ where
                 }
 
                 match e.kind() {
-                    ErrorType::Response { error, ..} => {
-                        match error {
-                            ApiError::Ratelimited(ratelimited)  => {
-                                attempts += 1;
-                                sleep(Duration::from_secs_f64(ratelimited.retry_after)).await;
-                                continue;
-                            }
-                            _ => return Err(e)
+                    ErrorType::Response { error: ApiError::Ratelimited(ratelimited), ..} => {
+                            attempts += 1;
+                            sleep(Duration::from_secs_f64(ratelimited.retry_after)).await;
+                            continue;
                         }
-                    }
                     _ => return Err(e)
                 }
             }

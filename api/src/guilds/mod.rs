@@ -13,7 +13,7 @@ use twilight_http::Client;
 use twilight_model::guild::Permissions;
 use twilight_model::id::Id;
 use twilight_model::id::marker::GuildMarker;
-use twilight_model::user::CurrentUser;
+use twilight_model::user::{CurrentUser, CurrentUserGuild};
 use crate::discord::{get_guild, get_guild_member};
 use crate::guilds::tasks::{add_role_to_guild, remove_role_from_guild};
 use crate::utils::{admin_guilds, is_client_admin_guild};
@@ -55,13 +55,23 @@ async fn _verify_admin(
 }
 
 async fn post_guilds(
-    Extension(current_user): Extension<CurrentUser>,
+    Extension(discord_user): Extension<Arc<Client>>,
     State(app_state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
     info!("post_guilds");
-    let admin_guilds = admin_guilds(&current_user, &app_state.discord_bot).await?;
+    let admin_guilds = admin_guilds(&discord_user, &app_state.discord_bot).await?;
     let mut guilds = Guild::vec_from_db(admin_guilds.iter().map(|g| g.id).collect(), &app_state.dynamo).await;
-    let missing_guilds: Vec<&twilight_model::guild::Guild> =  admin_guilds.iter().filter(|a| !guilds.iter().any(|g| g.guild_id == a.id)).collect();
+    for guild in &mut guilds {
+        for g in &admin_guilds {
+            if g.id == guild.guild_id && (g.name != guild.name || g.icon != guild.icon) {
+                guild.name = g.name.clone();
+                guild.icon = g.icon.clone();
+                guild.save(&app_state.dynamo).await;
+            }
+        }
+    }
+    
+    let missing_guilds: Vec<&CurrentUserGuild> =  admin_guilds.iter().filter(|a| !guilds.iter().any(|g| g.guild_id == a.id)).collect();
     for admin_guild in missing_guilds {
         guilds.push(Guild {
             guild_id: admin_guild.id,
@@ -69,19 +79,14 @@ async fn post_guilds(
         })
     }
 
-    for guild in &mut guilds {
-        let guild_dsc = get_guild(guild.guild_id, &app_state.discord_bot).await?;
-        guild.name = guild_dsc.name;
-        guild.icon = guild_dsc.icon;
-        guild.save(&app_state.dynamo).await;
-    }
+    
 
     Ok(Json(json!(guilds)))
 }
 
 
 async fn get_guilds(
-    Extension(discord_user): Extension<Arc<twilight_http::Client>>,
+    Extension(discord_user): Extension<Arc<Client>>,
     State(app_state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
     let guilds = Guild::vec_from_db(
