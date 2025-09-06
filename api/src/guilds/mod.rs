@@ -14,8 +14,9 @@ use twilight_model::guild::Permissions;
 use twilight_model::id::Id;
 use twilight_model::id::marker::GuildMarker;
 use twilight_model::user::CurrentUser;
+use crate::discord::{get_guild, get_guild_member};
 use crate::guilds::tasks::{add_role_to_guild, remove_role_from_guild};
-use crate::utils::{admin_guilds, is_client_admin_guild, ise};
+use crate::utils::{admin_guilds, is_client_admin_guild};
 
 pub mod models;
 pub mod verify;
@@ -35,13 +36,13 @@ struct GuildRequest {
     guild_id: Id<GuildMarker>,
 }
 
-async fn verify_admin(
+async fn _verify_admin(
     guild_id: Id<GuildMarker>,
     current_user: &CurrentUser,
     discord_bot: &Client,
 ) -> Result<(), StatusCode> {
-    let member = discord_bot.guild_member(guild_id, current_user.id).await.map_err(ise)?.model().await.map_err(ise)?;
-    let guild = discord_bot.guild(guild_id).await.map_err(ise)?.model().await.map_err(ise)?;
+    let member = get_guild_member(guild_id, current_user.id, discord_bot).await?;
+    let guild = get_guild(guild_id, discord_bot).await?;
     if guild.owner_id == current_user.id {
         return Ok(());
     }
@@ -58,7 +59,7 @@ async fn post_guilds(
     State(app_state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
     info!("post_guilds");
-    let admin_guilds = admin_guilds(&current_user, &app_state.discord_bot).await.map_err(ise)?;
+    let admin_guilds = admin_guilds(&current_user, &app_state.discord_bot).await?;
     let mut guilds = Guild::vec_from_db(admin_guilds.iter().map(|g| g.id).collect(), &app_state.dynamo).await;
     let missing_guilds: Vec<&twilight_model::guild::Guild> =  admin_guilds.iter().filter(|a| !guilds.iter().any(|g| g.guild_id == a.id)).collect();
     for admin_guild in missing_guilds {
@@ -69,7 +70,7 @@ async fn post_guilds(
     }
 
     for guild in &mut guilds {
-        let guild_dsc = app_state.discord_bot.guild(guild.guild_id).await.map_err(ise)?.model().await.map_err(ise)?;
+        let guild_dsc = get_guild(guild.guild_id, &app_state.discord_bot).await?;
         guild.name = guild_dsc.name;
         guild.icon = guild_dsc.icon;
         guild.save(&app_state.dynamo).await;
@@ -87,7 +88,7 @@ async fn get_guilds(
         utils::intersect_admin_guilds(
             &discord_user,
             &app_state.discord_bot,
-        ).await
+        ).await?
             .iter()
             .map(|g| g.id)
             .collect(),
@@ -103,12 +104,12 @@ async fn post_guilds_id(
     Extension(current_user): Extension<CurrentUser>,
     State(app_state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
-    is_client_admin_guild(guild_id, &current_user, &app_state.discord_bot).await.map_err(ise)?;
+    is_client_admin_guild(guild_id, &current_user, &app_state.discord_bot).await?;
     let mut guild = Guild::from_db(guild_id, &app_state.dynamo).await.unwrap_or(Guild {
         guild_id,
         ..Default::default()
     });
-    let guild_dsc = app_state.discord_bot.guild(guild.guild_id).await.map_err(ise)?.model().await.map_err(ise)?;
+    let guild_dsc = get_guild(guild.guild_id, &app_state.discord_bot).await?;
     guild.name = guild_dsc.name;
     guild.icon = guild_dsc.icon;
     guild.save(&app_state.dynamo).await;
@@ -119,10 +120,10 @@ async fn post_guilds_id(
 
 async fn get_guilds_id(
     Path(guild_id): Path<Id<GuildMarker>>,
-    Extension(discord_user): Extension<Arc<twilight_http::Client>>,
+    Extension(discord_user): Extension<Arc<Client>>,
     State(app_state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
-    if !utils::is_intersect_admin_guild(guild_id, &discord_user, &app_state.discord_bot).await.map_err(crate::utils::ise)? {
+    if !utils::is_intersect_admin_guild(guild_id, &discord_user, &app_state.discord_bot).await? {
         warn!("User is not an admin in guild {}", guild_id);
         return Err(StatusCode::NOT_FOUND);
     }
@@ -132,7 +133,6 @@ async fn get_guilds_id(
     Ok(Json(json!(match guild {
         Some(g) => g,
         None => {
-            let guild = app_state.discord_bot.guild(guild_id).await.unwrap().model().await.unwrap();
             let new_guild = Guild {
                 guild_id,
                 ..Default::default()
@@ -165,11 +165,11 @@ async fn put_guilds_id(
     let remove_roles: HashSet<VerifyRole> = old_set.difference(&new_set).cloned().collect();
 
     for role in add_roles {
-        add_role_to_guild(&mut old_guild, role, &app_state.discord_bot).await;
+        add_role_to_guild(&mut old_guild, role, &app_state.discord_bot).await?;
     }
 
     for role in remove_roles {
-        remove_role_from_guild(&mut old_guild, role.role_id, &app_state.discord_bot).await;
+        remove_role_from_guild(&mut old_guild, role.role_id, &app_state.discord_bot).await?;
     }
 
     old_guild.save(&app_state.dynamo).await;

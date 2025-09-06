@@ -1,160 +1,100 @@
-// use std::collections::HashMap;
-// use http::StatusCode;
-// use twilight_http::Client;
-// use twilight_model::guild::Guild;
-// use twilight_model::id::Id;
-// use twilight_model::id::marker::GuildMarker;
-//
-//
-// struct TimedValue<V> {
-//     value: Option<V>,
-//     fetched_at: u64,
-// }
-//
-// struct GuildCache <'a> {
-//     cache: HashMap<Id<GuildMarker>, TimedValue<Guild>>,
-//     client: &'a Client
-// }
-//
-// trait CacheFetch {
-//     async fn fetch(&self, key: Id<GuildMarker>) -> Result<Option<Guild>, StatusCode>;
-// }
-//
-// impl CacheFetch for GuildCache<'_> {
-//     async fn fetch(&self, key: Id<GuildMarker>) -> Result<Option<Guild>, StatusCode>{
-//         Ok(Some(self.client.guild(key).await.unwrap().model().await.unwrap()))
-//     }
-// }
-// // }
-// //
-// // struct DscCache<'a, K, V, F, Fut>
-// // where
-// //     K: std::hash::Hash + Eq + Clone,
-// //     F: Fn(&Client, K) -> Fut,
-// //     Fut: Future<Output = Result<Option<V>, StatusCode>> + ?Sized,
-// // {
-// //     cache: HashMap<K, TimedValue<V>>,
-// //     client: &'a Client,
-// //     fetcher: F,
-// // }
-// //
-// // impl<'a, K, V, F, Fut> DscCache<'a, K, V, F, Fut>
-// // where
-// //     K: std::hash::Hash + Eq + Clone,
-// //     F: Fn(&Client, K) -> Fut,
-// //     Fut: Future<Output = Result<Option<V>, StatusCode>>,
-// // {
-// //     pub fn new(client: &'a Client, fetcher: F) -> Self {
-// //         Self {
-// //             cache: HashMap::new(),
-// //             client,
-// //             fetcher
-// //         }
-// //     }
-// //
-// //     pub async fn get_or_fetch(&mut self, key: K) -> Result<&Option<V>, StatusCode> {
-// //         if let Some(timed_value) = self.cache.get(&key) {
-// //             if timed_value.fetched_at + 300 > SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() {
-// //                 // Cache is valid for 5 minutes
-// //                 return Ok(&timed_value.value);
-// //             } else {
-// //                 // Cache is stale, we should fetch a new value
-// //                 self.cache.remove(&key);
-// //             }
-// //         }
-// //         let value = (self.fetcher)(self.client, key.clone()).await?;
-// //         let timed_value = TimedValue {
-// //             value,
-// //             fetched_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
-// //         };
-// //         self.cache.insert(key.clone(), timed_value);
-// //         Ok(&self.cache.get(&key).unwrap().value)
-// //     }
-// // }
-// //
-// //
-// // struct DscCacheGroup<'a> {
-// //     guild: DscCache<'a, Id<GuildMarker>, Guild, dyn Fn(&Client, Id<GuildMarker>) -> dyn Future<Output=Result<Option<Guild>, StatusCode>>, dyn Future<Output = Result<Option<Guild>, StatusCode>>>
-// // }
-// //
-// //
-// // async fn fetch_guild(client: &Client, guild_id: Id<GuildMarker>) -> Result<Option<Guild>, StatusCode> {
-// //     match client.guild(guild_id).await {
-// //         Ok(response) => {
-// //             Ok(Some(response.model().await.map_err(ise)?))
-// //         },
-// //         Err(e) => {
-// //             match e.kind() {
-// //                 twilight_http::error::ErrorType::Response{body, error,status} => {
-// //                     match status {
-// //                         &twilight_http::response::StatusCode::NOT_FOUND => Ok(None),
-// //                         _ => Err(ise(e))
-// //                     }
-// //                 },
-// //                 _ => Err(ise(e))
-// //             }
-// //         }
-// //
-// //     }
-// // }
-// //
-// // impl<'a> DscCacheGroup<'a> {
-// //     pub fn new(client: &'a Client) -> Self {
-// //         Self {
-// //             guild: DscCache::new(client, |client, guild_id| {
-// //                 Box::pin(async move {
-// //                     match client.guild(guild_id).await {
-// //                         Ok(response) => {
-// //                             Ok(Some(response.model().await.map_err(ise)?))
-// //                         },
-// //                         Err(e) => {
-// //                             match e.kind() {
-// //                                 twilight_http::error::ErrorType::Response { body, error, status } => {
-// //                                     match status {
-// //                                         &twilight_http::response::StatusCode::NOT_FOUND => Ok(None),
-// //                                         _ => Err(ise(e))
-// //                                     }
-// //                                 },
-// //                                 _ => Err(ise(e))
-// //                             }
-// //                         }
-// //                     }
-// //                 })
-// //             }),
-// //         }
-// //     }
-// // }
-//
-// //
-// // struct KbDscClient {
-// //     client: twilight_http::Client,
-// //     cache: DscCacheGroup,
-// // }
-// //
-// // impl KbDscClient {
-// //     pub fn new(token: String) -> Self {
-// //         Self {
-// //             client: twilight_http::Client::new(token),
-// //             cache: DscCacheGroup::new(),
-// //         }
-// //     }
-// //
-// //     pub async fn fetch_guild(&mut self, guild_id: Id<GuildMarker>) -> Result<&Option<Guild>, StatusCode> {
-// //         if self.cache.guild.contains_key(&guild_id) {
-// //             return Ok(self.cache.guild.get(&guild_id).unwrap());
-// //         }
-// //
-// //         match self.client.guild(guild_id).await {
-// //             Ok(response) => {
-// //                 match response.model().await {
-// //                     Ok(guild) => {
-// //                         self.cache.guild.insert(guild_id, Some(guild));
-// //                         Ok(self.cache.guild.get(&guild_id).unwrap())
-// //                     }
-// //                     Err(e) => Err(ise(e))
-// //                 }
-// //             }
-// //             Err(e) => Err(ise(e))
-// //         }
-// //     }
-// // }
+use std::time::Duration;
+use cached::proc_macro::cached;
+use http::StatusCode;
+use lambda_http::tracing::{error, info};
+use tokio::time::sleep;
+use twilight_http::{Client, Error, Response};
+use twilight_http::api_error::ApiError;
+use twilight_http::error::ErrorType;
+use twilight_model::guild::{Guild, Member, Role};
+use twilight_model::id::Id;
+use twilight_model::id::marker::{GuildMarker, RoleMarker, UserMarker};
+use twilight_model::user::{CurrentUser, CurrentUserGuild};
+
+pub fn ise<T: std::fmt::Debug>(e: T) -> StatusCode {
+    error!("Internal Server Error: {:?}", e);
+    StatusCode::INTERNAL_SERVER_ERROR
+}
+
+pub async fn retry_on_rl<T, Fut, R>(mut fut: T) -> Result<Response<R>, Error>
+where
+    T: FnMut() -> Fut,
+    Fut: Future<Output = Result<Response<R>, Error>>,
+{
+    let mut attempts = 0;
+    loop {
+        match fut().await {
+            Ok(resp) => return Ok(resp),
+            Err(e) => {
+                if attempts > 3 {
+                    return Err(e);
+                }
+
+                match e.kind() {
+                    ErrorType::Response { error, ..} => {
+                        match error {
+                            ApiError::Ratelimited(ratelimited)  => {
+                                attempts += 1;
+                                sleep(Duration::from_secs_f64(ratelimited.retry_after)).await;
+                                continue;
+                            }
+                            _ => return Err(e)
+                        }
+                    }
+                    _ => return Err(e)
+                }
+            }
+        }
+    }
+}
+
+pub fn as_http_err(e: Error) -> StatusCode {
+    match e.kind() {
+        ErrorType::Response{ status, .. } => StatusCode::from_u16(status.get()).map_err(ise).unwrap(),
+        _ => StatusCode::INTERNAL_SERVER_ERROR
+    }
+}
+
+#[cached(time = 60, key = "String", convert = r##"{ format!("{:?}", client.token().unwrap()) }"##)]
+pub async fn get_current_user_guilds(client: &Client) -> Result<Vec<CurrentUserGuild>,StatusCode> {
+    retry_on_rl(|| async { client.current_user_guilds().await}).await.map_err(as_http_err)?.models().await.map_err(ise)
+}
+
+#[cached(time = 60, key = "String", convert = r##"{ format!("{guild_id}{:?}", client.token().unwrap()) }"##)]
+pub async fn get_current_user_guild(guild_id: Id<GuildMarker>, client: &Client) -> Result<CurrentUserGuild,StatusCode> {
+    Ok(retry_on_rl(|| async { client.current_user_guilds().after(Id::new(guild_id.get()-1)).limit(1).await}).await.map_err(as_http_err)?.models().await.map_err(ise)?.pop().unwrap())
+}
+
+#[cached(time = 60, key = "String", convert = r##"{ format!("{guild_id}{user_id}{role_id}{:?}", client.token().unwrap()) }"##)]
+pub async fn add_guild_member_role(guild_id: Id<GuildMarker>, user_id: Id<UserMarker>, role_id: Id<RoleMarker>, client: &Client) -> Result<(),StatusCode> {
+    retry_on_rl(|| async { client.add_guild_member_role(guild_id, user_id, role_id).await}).await.map_err(as_http_err)?;
+    Ok(())
+}
+
+#[cached(time = 60, key = "String", convert = r##"{ format!("{guild_id}{user_id}{role_id}{:?}", client.token().unwrap()) }"##)]
+pub async fn remove_guild_member_role(guild_id: Id<GuildMarker>, user_id: Id<UserMarker>, role_id: Id<RoleMarker>, client: &Client) -> Result<(),StatusCode> {
+    retry_on_rl(|| async { client.remove_guild_member_role(guild_id, user_id, role_id).await}).await.map_err(as_http_err)?;
+    Ok(())
+}
+
+#[cached(time = 60, key = "String", convert = r##"{ format!("{:?}", client.token().unwrap()) }"##)]
+pub async fn get_current_user(client: &Client) -> Result<CurrentUser,StatusCode> {
+    info!("Getting current user...");
+    retry_on_rl(|| async { client.current_user().await}).await.map_err(as_http_err)?.model().await.map_err(ise)
+}
+
+#[cached(time = 60, key = "String", convert = r##"{ format!("{guild_id}{:?}", client.token().unwrap()) }"##)]
+pub async fn get_guild(guild_id: Id<GuildMarker>, client: &Client) -> Result<Guild,StatusCode> {
+    retry_on_rl(|| async { client.guild(guild_id).await}).await.map_err(as_http_err)?.model().await.map_err(ise)
+}
+
+#[cached(time = 60, key = "String", convert = r##"{ format!("{guild_id}{user_id}{:?}", client.token().unwrap()) }"##)]
+pub async fn get_guild_member(guild_id: Id<GuildMarker>, user_id: Id<UserMarker>, client: &Client) -> Result<Member,StatusCode> {
+    retry_on_rl(|| async { client.guild_member(guild_id, user_id).await}).await.map_err(as_http_err)?.model().await.map_err(ise)
+}
+
+#[cached(time = 60, key = "String", convert = r##"{ format!("{guild_id}{role_id}{:?}", client.token().unwrap()) }"##)]
+pub async fn get_guild_role(guild_id: Id<GuildMarker>, role_id: Id<RoleMarker>, client: &Client) -> Result<Role,StatusCode> {
+    retry_on_rl(|| async { client.role(guild_id, role_id).await}).await.map_err(as_http_err)?.model().await.map_err(ise)
+}
+

@@ -52,7 +52,7 @@ pub fn as_u64(val: Option<&AttributeValue>, default: u64) -> u64 {
     default
 }
 
-pub fn as_string_vec(val: Option<&AttributeValue>) -> Vec<String> {
+pub fn _as_string_vec(val: Option<&AttributeValue>) -> Vec<String> {
     if let Some(val) = val {
         if let Ok(val) = val.as_l() {
             return val
