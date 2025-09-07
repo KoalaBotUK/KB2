@@ -1,3 +1,4 @@
+use std::ops::{Add, Sub};
 use std::sync::Arc;
 use std::time::Duration;
 use axum::{Extension, Json, Router};
@@ -7,15 +8,16 @@ use http::StatusCode;
 use lambda_http::tracing::{error, info};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use tokio::time::sleep;
+use tokio::time::{sleep, Instant};
 use tower_http::cors::CorsLayer;
 use twilight_http::Client;
 use twilight_model::guild::{Guild, Role};
 use twilight_model::id::Id;
 use twilight_model::id::marker::GuildMarker;
+use twilight_model::user::CurrentUserGuild;
 use twilight_model::util::ImageHash;
 use crate::AppState;
-use crate::discord::{get_current_user_guilds_no_cache, get_current_user_guilds_prime_cache, get_guild, get_guild_prime_cache};
+use crate::discord::{get_current_user_guilds_prime_cache, get_guild, get_guild_prime_cache};
 use crate::utils::member_guilds;
 
 pub fn router() -> Router<AppState> {
@@ -28,6 +30,24 @@ pub fn setup(discord_bot: Arc<Client>) {
     info!("Spawning meta cache refresh task");
     tokio::spawn(refresh_meta_cache(discord_bot));
 }
+
+
+#[derive(Debug, Serialize, Deserialize)]
+struct PartialGuildMeta {
+    id: Id<GuildMarker>,
+    name: String,
+    icon: Option<ImageHash>,
+}
+impl From<CurrentUserGuild> for PartialGuildMeta {
+    fn from(guild: CurrentUserGuild) -> Self {
+        PartialGuildMeta {
+            id: guild.id,
+            name: guild.name,
+            icon: guild.icon,
+        }
+    }
+}
+
 
 #[derive(Debug, Serialize, Deserialize)]
 struct GuildMeta {
@@ -52,19 +72,17 @@ async fn get_guilds_meta(
     Extension(discord_user): Extension<Arc<Client>>,
     State(app_state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
-    let member_guilds = member_guilds(&discord_user, &app_state.discord_bot).await?;
+    Ok(Json(json!(
+        member_guilds(&discord_user, &app_state.discord_bot).await?
+        .into_iter().map(PartialGuildMeta::from).collect::<Vec<PartialGuildMeta>>()
+    )))
 
-    let mut meta = vec![];
-    for member_guild in &member_guilds {
-        meta.push(GuildMeta::from(get_guild(member_guild.id, &app_state.discord_bot).await?))
-    }
-
-    Ok(Json(json!(meta)))
 }
 
 async fn refresh_meta_cache(discord_bot: Arc<Client>) {
     loop {
         info!("Refreshing meta cache");
+        let time = Instant::now();
         match get_current_user_guilds_prime_cache(&*discord_bot).await {
             Ok(guilds) => {
                 info!("Refreshing meta cache: {}", guilds.len());
@@ -76,6 +94,7 @@ async fn refresh_meta_cache(discord_bot: Arc<Client>) {
                 error!("refresh_meta_cache error: {:#?}", e);
             }
         }
-        sleep(Duration::from_secs(50)).await;
+        info!("{:?} {:?} Waiting {} seconds",time, Instant::now(), (time.sub(Instant::now()).add(Duration::from_secs(50))).as_secs());
+        sleep((time.sub(Instant::now())).add(Duration::from_secs(50))).await;
     }
 }

@@ -1,7 +1,7 @@
 use std::time::Duration;
 use cached::proc_macro::cached;
 use http::StatusCode;
-use lambda_http::tracing::{error, info};
+use lambda_http::tracing::{error, info, warn};
 use tokio::time::sleep;
 use twilight_http::{Client, Error, Response};
 use twilight_http::api_error::ApiError;
@@ -33,6 +33,7 @@ where
                 match e.kind() {
                     ErrorType::Response { error: ApiError::Ratelimited(ratelimited), ..} => {
                             attempts += 1;
+                            warn!("Rate limited, retrying in {} seconds", ratelimited.retry_after);
                             sleep(Duration::from_secs_f64(ratelimited.retry_after)).await;
                             continue;
                         }

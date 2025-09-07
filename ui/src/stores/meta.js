@@ -15,21 +15,20 @@ export class RoleMeta {
   }
 }
 
-export class GuildMeta {
-  constructor(id, name, icon, roles) {
+export class PartialGuildMeta {
+  constructor(id, name, icon) {
     this.id = id;
     this.name = name;
     this.icon = icon;
-    this.roles = roles;
   }
 
   static fromJson(json) {
-    return new GuildMeta(json['id'], json['name'], json['icon'], json['roles'].map(RoleMeta.fromJson));
+    return new PartialGuildMeta(json['id'], json['name'], json['icon']);
   }
 
   static async fetchAll(token) {
     let r = await axios.get(`${VITE_KB_API_URL}/meta/guilds`,
       { headers: { 'Authorization': 'Discord ' + token } });
-    return r.data.map(GuildMeta.fromJson);
+    return r.data.map(PartialGuildMeta.fromJson);
   }
 }

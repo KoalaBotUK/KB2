@@ -1,13 +1,7 @@
 <script setup>
 
-import MicrosoftIcon from "../../components/icons/MicrosoftIcon.vue";
-import GoogleIcon from "../../components/icons/GoogleIcon.vue";
 import DiscordAuthButton from "../../components/auth/DiscordAuthButton.vue";
 import {onMounted, ref, toRef} from "vue";
-import MicrosoftAuthButton from "../../components/verify/MicrosoftAuthButton.vue";
-import GoogleAuthButton from "../../components/verify/GoogleAuthButton.vue";
-import axios from "axios";
-import EmailAuthText from "../../components/verify/EmailAuthText.vue";
 import {User} from "../../stores/user.js";
 import LinkedAccountsTable from "../../components/verify/LinkedAccountsTable.vue";
 import LinkAccountButton from "../../components/verify/LinkAccountButton.vue";
