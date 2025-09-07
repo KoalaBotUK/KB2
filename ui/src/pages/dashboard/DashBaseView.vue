@@ -7,6 +7,9 @@ import DiscordAuthButton from "../../components/auth/DiscordAuthButton.vue";
 import MainWithFooter from "../../components/MainWithFooter.vue";
 import {Guild} from "../../stores/guild.js";
 import {INVITE_URL} from "../../helpers/redirect.js";
+import {getCurrentUserGuildMetadata, isGuildAdmin, toAdminCurrentUserGuilds} from "../../helpers/discord.js";
+import {User} from "../../stores/user.js";
+import {fetchGuildMetaMap, filterByAdmin} from "../../helpers/meta.js";
 
 const currentPath = ref(window.location.pathname)
 
@@ -36,8 +39,16 @@ function reviver(key, value) {
   return value;
 }
 
+let user = ref(User.loadCache());
+let guildMetaMap = ref(new Map());
+
 let guildsKb = ref(new Map());
 let currentGuildId = ref(null);
+
+async function loadMetadata() {
+  guildMetaMap.value = filterByAdmin(await fetchGuildMetaMap(user.value.token.accessToken),
+      await getCurrentUserGuildMetadata(user.value.token.accessToken));
+}
 
 function loadMemGuilds() {
   let memGuilds = JSON.parse(localStorage.getItem('guilds'), reviver);
@@ -49,14 +60,15 @@ function loadMemGuilds() {
   if (guildsKb.value.size > 0) {
     guildsLoaded.value = true;
   }
-  currentGuildId.value = JSON.parse(localStorage.getItem('currentGuildId')) || null;
+  currentGuildId.value = JSON.parse(localStorage.getItem('currentGuildId')|| null) ;
 }
 
 onMounted(async () => {
+  await loadMetadata();
   loadMemGuilds();
   // Load remaining guilds
+  // await getAdminDscGuilds();
   await sync_guilds_kb();
-  guildsLoaded.value = true;
 })
 
 async function setCurrentGuild(gid) {
@@ -101,10 +113,10 @@ async function sync_guilds_kb() {
             <div tabindex="0" role="button" class="card-title btn btn-sm btn-ghost" v-if="currentGuildId">
               <div class="avatar">
                 <div class="w-6 rounded-xl">
-                  <img :src="`https://cdn.discordapp.com/icons/${currentGuildId}/${guildsKb.get(currentGuildId).icon}.webp`" v-if="guildsKb.get(currentGuildId).icon"/>
+                  <img :src="`https://cdn.discordapp.com/icons/${currentGuildId}/${guildMetaMap.get(currentGuildId).icon}.webp`" v-if="guildMetaMap.get(currentGuildId) && guildMetaMap.get(currentGuildId).icon"/>
                 </div>
               </div>
-              {{ guildsKb.get(currentGuildId).name }}
+              {{ guildMetaMap.get(currentGuildId).name }}
             </div>
             <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-1 p-2 shadow-sm">
               <li v-if="!guildsLoaded">
@@ -112,9 +124,11 @@ async function sync_guilds_kb() {
                   <span>Loading...</span>
                 </a>
               </li>
-              <li v-for="[gid, guild] in guildsKb"><a :class="(gid === currentGuildId && 'menu-active')" @click="setCurrentGuild(gid)">
-                <div class="w-6 rounded-xl"><img :src="`https://cdn.discordapp.com/icons/${gid}/${guildsKb.get(gid).icon}.webp`" v-if="guildsKb.has(gid) && guildsKb.get(gid).icon"/>
-                </div> {{ guildsKb.get(gid).name }}</a></li>
+              <li v-for="[gid, guild] in guildMetaMap">
+                <a :class="(gid === currentGuildId && 'menu-active')" @click="setCurrentGuild(guild.id)">
+                <div class="w-6 rounded-xl"><img :src="`https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.webp`" v-if="guild.icon"/>
+                </div> {{ guild.name }}</a>
+              </li>
               <li class="bg-primary text-primary-content">
                 <a class="justify-between" :href="INVITE_URL">
                   <span>+ Add Server</span>

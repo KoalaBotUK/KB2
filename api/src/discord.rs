@@ -72,9 +72,8 @@ pub async fn remove_guild_member_role(guild_id: Id<GuildMarker>, user_id: Id<Use
     Ok(())
 }
 
-#[cached(time = 60, key = "String", convert = r##"{ format!("{:?}", client.token().unwrap()) }"##)]
+#[cached(time = 3600, key = "String", convert = r##"{ format!("{:?}", client.token().unwrap()) }"##)]
 pub async fn get_current_user(client: &Client) -> Result<CurrentUser,StatusCode> {
-    info!("Getting current user...");
     retry_on_rl(|| async { client.current_user().await}).await.map_err(as_http_err)?.model().await.map_err(ise)
 }
 

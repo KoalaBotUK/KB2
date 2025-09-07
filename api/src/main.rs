@@ -16,6 +16,7 @@ mod middleware;
 mod users;
 mod utils;
 mod discord;
+mod meta;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -66,7 +67,7 @@ async fn main() -> Result<(), Error> {
             .token(std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set"))
         .build()
     );
-
+    
     let app_state = AppState {
         dynamo,
         discord_bot,
@@ -74,10 +75,11 @@ async fn main() -> Result<(), Error> {
     };
     
     // guilds::tasks::update_guilds(&app_state.discord_bot, &app_state.dynamo).await;
-
+    setup(app_state.discord_bot.clone());
     let app = Router::new()
         .nest("/users", users::router())
         .nest("/guilds", guilds::router())
+        .nest("/meta", meta::router())
         .route_layer(axum::middleware::from_fn(middleware::auth_middleware))
         .nest("/interactions", interactions::router())
         .route_layer(axum::middleware::from_fn(middleware::log_middleware))
@@ -87,4 +89,9 @@ async fn main() -> Result<(), Error> {
         .layer(CorsLayer::permissive());
 
     run(app).await
+}
+
+
+fn setup(discord_bot: Arc<twilight_http::Client>) {
+    meta::setup(discord_bot);
 }
