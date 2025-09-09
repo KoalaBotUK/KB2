@@ -10,13 +10,14 @@ use http::{HeaderMap, StatusCode};
 use http_body_util::BodyExt;
 use lambda_http::tracing::error;
 use once_cell::sync::Lazy;
+use reqwest::redirect::Action;
 use serde_json::{Value, json};
 use tower_http::cors::CorsLayer;
 use twilight_model::application::command::CommandType;
 use twilight_model::application::interaction::{
     Interaction, InteractionContextType, InteractionData, InteractionType,
 };
-use twilight_model::channel::message::component::{Button, ButtonStyle};
+use twilight_model::channel::message::component::{ActionRow, Button, ButtonStyle};
 use twilight_model::channel::message::{Component, MessageFlags};
 use twilight_model::http::interaction::{
     InteractionResponse, InteractionResponseData, InteractionResponseType,
@@ -142,15 +143,17 @@ async fn support() -> Result<Json<Value>, StatusCode> {
         kind: InteractionResponseType::ChannelMessageWithSource,
         data: Some(InteractionResponseData {
             content: Some("Join our support server for more help!".into()),
-            components: Some(Vec::from([Component::Button(Button {
-                custom_id: None,
-                disabled: false,
-                emoji: None,
-                label: Some("Koala Support".to_owned()),
-                style: ButtonStyle::Link,
-                url: Some("https://discord.gg/5etEjVd".to_owned()),
-                sku_id: None,
-            })])),
+            components: Some(vec![Component::ActionRow(ActionRow {
+                components: vec![Component::Button(Button {
+                    custom_id: None,
+                    disabled: false,
+                    emoji: None,
+                    label: Some("Koala Support".to_owned()),
+                    style: ButtonStyle::Link,
+                    url: Some("https://discord.gg/5etEjVd".to_owned()),
+                    sku_id: None,
+                })],
+            })]),
             flags: Some(MessageFlags::EPHEMERAL),
             ..Default::default()
         }),
@@ -173,15 +176,17 @@ async fn verify() -> Result<Json<Value>, StatusCode> {
         kind: InteractionResponseType::ChannelMessageWithSource,
         data: Some(InteractionResponseData {
             content: Some("Verify yourself on our site!".into()),
-            components: Some(Vec::from([Component::Button(Button {
-                custom_id: None,
-                disabled: false,
-                emoji: None,
-                label: Some("Koala Verify".to_owned()),
-                style: ButtonStyle::Link,
-                url: Some(format!("{url}/verify").to_owned()),
-                sku_id: None,
-            })])),
+            components: Some(vec![Component::ActionRow(ActionRow {
+                components: vec![Component::Button(Button {
+                    custom_id: None,
+                    disabled: false,
+                    emoji: None,
+                    label: Some("Koala Verify".to_owned()),
+                    style: ButtonStyle::Link,
+                    url: Some(format!("{url}/verify").to_owned()),
+                    sku_id: None,
+                })],
+            })]),
             flags: Some(MessageFlags::EPHEMERAL),
             ..Default::default()
         }),
