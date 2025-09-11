@@ -7,11 +7,16 @@ import AnnounceComponent from "../../../components/dashboard/AnnounceComponent.v
 import ColourRoleComponent from "../../../components/dashboard/ColourRoleComponent.vue";
 import VoteComponent from "../../../components/dashboard/VoteComponent.vue";
 import {Guild} from "../../../stores/guild.js";
+import {GuildMeta} from "../../../stores/meta.js";
 
 defineProps(
   {
     guild: {
       type: Guild,
+      required: true
+    },
+    guildMeta: {
+      type: GuildMeta,
       required: true
     }
   }
@@ -29,7 +34,7 @@ function emitUpdate(event) {
 
   <div class="lg:columns-2 sm:columns-1">
     <InsightsStatsComponent class="m-5 break-inside-avoid-column"/>
-    <VerifyComponent class="m-5 break-inside-avoid-column" :guild="$props.guild" @update="emitUpdate"/>
+    <VerifyComponent class="m-5 break-inside-avoid-column" :guild="$props.guild" :guild-meta="$props.guildMeta" @update="emitUpdate"/>
     <StreamAlertComponent class="m-5 break-inside-avoid-column"/>
     <AnnounceComponent class="m-5 break-inside-avoid-column"/>
     <ColourRoleComponent class="m-5 break-inside-avoid-column"/>

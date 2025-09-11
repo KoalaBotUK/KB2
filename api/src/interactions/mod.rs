@@ -10,7 +10,6 @@ use http::{HeaderMap, StatusCode};
 use http_body_util::BodyExt;
 use lambda_http::tracing::error;
 use once_cell::sync::Lazy;
-use reqwest::redirect::Action;
 use serde_json::{Value, json};
 use tower_http::cors::CorsLayer;
 use twilight_model::application::command::CommandType;

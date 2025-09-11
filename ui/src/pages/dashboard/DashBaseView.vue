@@ -10,6 +10,7 @@ import {INVITE_URL} from "../../helpers/redirect.js";
 import {getCurrentUserGuildMetadata, isGuildAdmin, toAdminCurrentUserGuilds} from "../../helpers/discord.js";
 import {User} from "../../stores/user.js";
 import {fetchGuildMetaMap, filterByAdmin} from "../../helpers/meta.js";
+import {GuildMeta, PartialGuildMeta} from "../../stores/meta.js";
 
 const currentPath = ref(window.location.pathname)
 
@@ -46,8 +47,11 @@ let guildsKb = ref(new Map());
 let currentGuildId = ref(null);
 
 async function loadMetadata() {
-  guildMetaMap.value = filterByAdmin(await fetchGuildMetaMap(user.value.token.accessToken),
-      await getCurrentUserGuildMetadata(user.value.token.accessToken));
+  guildMetaMap.value = filterByAdmin(await fetchGuildMetaMap(user.value.token.accessToken));
+}
+
+async function enrichMeta(gid) {
+  guildMetaMap.value.set(gid, await GuildMeta.fetch(gid, user.value.token.accessToken));
 }
 
 function loadMemGuilds() {
@@ -64,8 +68,9 @@ function loadMemGuilds() {
 }
 
 onMounted(async () => {
-  await loadMetadata();
   loadMemGuilds();
+  await loadMetadata();
+  await setCurrentGuild(currentGuildId.value);
   // Load remaining guilds
   // await getAdminDscGuilds();
   await sync_guilds_kb();
@@ -74,6 +79,7 @@ onMounted(async () => {
 async function setCurrentGuild(gid) {
   currentGuildId.value = gid
   localStorage.setItem('currentGuildId', JSON.stringify(gid))
+  await enrichMeta(gid);
   try {
     guildsKb.value.set(gid, await Guild.loadGuild(gid)) // Refresh from db
   } catch (e) {
@@ -147,7 +153,7 @@ async function sync_guilds_kb() {
         </div>
       </div>
     </header>
-    <DashBody v-if="guildsKb.has(currentGuildId)" :guild="guildsKb.get(currentGuildId)" @update="saveMemGuilds"/>
+    <DashBody v-if="guildsKb.has(currentGuildId) && guildMetaMap.has(currentGuildId) && guildMetaMap.get(currentGuildId) instanceof GuildMeta" :guild="guildsKb.get(currentGuildId)" :guildMeta="guildMetaMap.get(currentGuildId)" @update="saveMemGuilds"/>
     <div class="flex flex-row justify-center">
     <div class="card card-sm m-5 p-10 shadow bg-base-200 flex w-fit" v-if="!guildsKb.has(currentGuildId)">
       <div class="flex flex-row justify-center p-2">

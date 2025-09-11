@@ -1,6 +1,6 @@
 use twilight_http::{Client};
 use http::StatusCode;
-use twilight_model::guild::Permissions;
+use twilight_model::guild::{Guild, Permissions};
 use twilight_model::id::Id;
 use twilight_model::id::marker::GuildMarker;
 use twilight_model::user::{CurrentUser, CurrentUserGuild};
@@ -10,13 +10,14 @@ pub async fn member_guilds(
     discord_user: &Client,
     discord_bot: &Client
 ) -> Result<Vec<CurrentUserGuild>, StatusCode> {
-    let bot_guilds = get_current_user_guilds(discord_bot).await?;
+    let mut bot_guilds = get_current_user_guilds(discord_bot).await?;
+    bot_guilds.retain(|g| is_admin(g));
     let user_guilds = get_current_user_guilds(discord_user).await?;
     let mut guilds = vec![];
     for u_guild in &user_guilds {
         for b_guild in &bot_guilds {
             if u_guild.id == b_guild.id {
-                guilds.push(b_guild.clone());
+                guilds.push(u_guild.clone());
                 continue;
             }
         }
@@ -49,4 +50,8 @@ pub async fn admin_guilds(
         }
     }
     Ok(guilds)
+}
+
+pub fn is_admin(guild: &CurrentUserGuild) -> bool {
+    guild.owner || guild.permissions & Permissions::ADMINISTRATOR == Permissions::ADMINISTRATOR
 }

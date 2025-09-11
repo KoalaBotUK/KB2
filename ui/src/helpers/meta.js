@@ -1,4 +1,4 @@
-import {PartialGuildMeta} from "../stores/meta.js";
+import {GuildMeta, PartialGuildMeta} from "../stores/meta.js";
 import {isGuildAdmin} from "./discord.js";
 
 
@@ -9,20 +9,6 @@ export async function fetchGuildMetaMap(token) {
   }, new Map());
 }
 
-export function filterByMember(guildMetaMap, currentUserGuildMetaMap) {
-  let adminGuilds = new Map();
-  for (let guildMeta of guildMetaMap.values()) {
-    adminGuilds.set(guildMeta.id, guildMeta);
-  }
-  return adminGuilds
-}
-
-export function filterByAdmin(guildMetaMap, currentUserGuildMetaMap) {
-  let adminGuilds = new Map();
-  for (let guildMeta of guildMetaMap.values()) {
-    if (isGuildAdmin(currentUserGuildMetaMap.get(guildMeta.id))) {
-      adminGuilds.set(guildMeta.id, guildMeta);
-    }
-  }
-  return adminGuilds
+export function filterByAdmin(guildMetaMap) {
+  return guildMetaMap.values().filter(g => g.isAdmin).reduce((acc, guildMeta) => acc.set(guildMeta.id, guildMeta), new Map());
 }

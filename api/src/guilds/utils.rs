@@ -1,4 +1,5 @@
 use http::StatusCode;
+use lambda_http::tracing::info;
 use twilight_model::guild::Permissions;
 use twilight_model::id::Id;
 use twilight_model::id::marker::GuildMarker;
@@ -31,9 +32,10 @@ async fn is_client_admin_guild(
     client: &twilight_http::Client,
 ) -> Result<bool, StatusCode> {
     let guild = get_current_user_guild(guild_id, client).await?;
-    if guild.permissions & Permissions::ADMINISTRATOR == Permissions::ADMINISTRATOR {
+    if guild.owner || guild.permissions & Permissions::ADMINISTRATOR == Permissions::ADMINISTRATOR {
         return Ok(true);
     }
+    info!("{:#?}", guild);
     Ok(false)
 }
 

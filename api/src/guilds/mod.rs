@@ -20,7 +20,7 @@ use crate::utils::{admin_guilds, is_client_admin_guild};
 
 pub mod models;
 pub mod verify;
-mod utils;
+pub(crate) mod utils;
 pub mod tasks;
 
 pub fn router() -> Router<AppState> {

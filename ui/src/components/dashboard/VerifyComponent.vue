@@ -3,25 +3,30 @@
 import {ref, defineModel} from "vue";
 import {User} from "../../stores/user.js";
 import {Guild, VerifyRole} from "../../stores/guild.js";
+import {GuildMeta} from "../../stores/meta.js";
+import {INVITE_URL} from "../../helpers/redirect.js";
 
-let modelRole = defineModel('modelRole');
-// let modelType = defineModel();
+let roleSelected = ref(null);
 let modelPattern = defineModel('modelPattern');
 let modalActiveRef = ref(false);
 let selectedType = ref('domain');
 
 let props = defineProps(
-  {
-    guild: {
-      type: Guild,
-      required: true
+    {
+      guild: {
+        type: Guild,
+        required: true
+      },
+      guildMeta: {
+        type: GuildMeta,
+        required: true
+      }
     }
-  }
 )
 
 let emits = defineEmits(
     [
-        'update'
+      'update'
     ]
 )
 
@@ -33,12 +38,12 @@ function updateGuild() {
 }
 
 function addVerifyRole() {
-  if (!modelRole || !modelPattern) {
+  if (!roleSelected || !modelPattern) {
     alert("Please fill in all fields.");
     return;
   }
   // Here you would typically send the new role to your backend API
-  let roleId = modelRole.value;
+  let roleId = roleSelected.value;
   let pattern = modelPattern.value;
 
   if (selectedType.value === 'domain') {
@@ -51,7 +56,7 @@ function addVerifyRole() {
   props.guild.verify.roles.push(new VerifyRole(roleId, null, pattern, 0));
   updateGuild();
   // Reset form fields
-  modelRole.value = '';
+  roleSelected.value = null;
   modelPattern.value = '';
   modalActiveRef.value = false;
 }
@@ -62,7 +67,7 @@ function removeVerifyRole(role) {
 }
 
 function validRole() {
-  return modelRole.value && modelRole.value.match(/^\d+$/)
+  return roleSelected.value
 }
 
 function validPattern() {
@@ -99,14 +104,21 @@ function validAdd() {
         <tbody>
         <tr v-for="role in $props.guild.verify.roles">
           <td>
-            {{ role.roleName && role.roleName !== "" ? role.roleName : role.roleId }}
+            <div class="badge badge-neutral badge-outline text-base-content" :style="{'border-color': '#AAAAAA', '--badge-bg': 'var(--color-base)'}">
+            <div class="indicator">
+              <span
+                  class="indicator-item indicator-middle indicator-start badge badge-xs" :style="{'--badge-color': '#'+(guildMeta.roles.filter(r => r.id === role.roleId)[0].color).toString(16)}">
+              </span>
+              <div class="ml-3 place-items-center">{{ guildMeta.roles.filter(r => r.id === role.roleId)[0].name }}</div>
+            </div>
+            </div>
           </td>
           <td>
             <div class="badge badge-outline badge-primary w-8" v-if="role.pattern.match(/^@.+\$$/)">@</div>
-            <div class="badge badge-outline badge-secondary w-8" v-else >.*</div>
+            <div class="badge badge-outline badge-secondary w-8" v-else>.*</div>
           </td>
           <td>
-            {{ role.pattern.match(/^@.+\$$/) ? role.pattern.substring(1,role.pattern.length-1) : role.pattern }}
+            {{ role.pattern.match(/^@.+\$$/) ? role.pattern.substring(1, role.pattern.length - 1) : role.pattern }}
           </td>
           <td>
             {{ role.members }}
@@ -126,33 +138,62 @@ function validAdd() {
         </tbody>
       </table>
     </div>
-  </div>
 
   <Teleport to="#modal">
-    <div class="modal" :class="modalActiveRef ? 'modal-open' : ''" v-if="userRef" >
+    <div class="modal" :class="modalActiveRef ? 'modal-open' : ''" v-if="userRef">
       <div class="modal-box w-96 bg-base-300 flex flex-col" ref="modalBox">
         <div class="flex flex-row justify-between">
           <h3 class="text-lg font-bold">Add Verified Role</h3>
         </div>
 
         <fieldset class="fieldset">
-          <legend class="fieldset-legend">Role ID</legend>
-          <input type="text" class="input" :class="{'input-error': !validRole()}" placeholder="1175757751608168528" v-model="modelRole" />
+          <legend class="fieldset-legend">Role</legend>
+        <div class="dropdown">
+          <div tabindex="0" role="button" class="btn btn-sm btn-primary btn-soft" v-if="!roleSelected">
+            Select Role
+          </div>
+          <div tabindex="0" role="button" class="btn btn-ghost bg-base-100 rounded-box z-1 p-2 shadow-sm" v-if="roleSelected">
+            <div class="badge badge-neutral badge-outline text-base-content" :style="{'border-color': '#AAAAAA', '--badge-bg': 'var(--color-base)'}">
+              <div class="indicator">
+              <span
+                  class="indicator-item indicator-middle indicator-start badge badge-xs" :style="{'--badge-color': '#'+$props.guildMeta.roles.filter(r => r.id === roleSelected)[0].color.toString(16)}">
+              </span>
+                <div class="ml-3 place-items-center">{{ $props.guildMeta.roles.filter(r => r.id === roleSelected)[0].name }}</div>
+              </div>
+            </div>
+          </div>
+          <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-1 p-2 shadow-sm">
+            <li v-for="role in $props.guildMeta.roles">
+              <a :class="(role.id === roleSelected && 'menu-active')" onclick="document.activeElement.blur()" @click="roleSelected = role.id" v-if="role.name !== '@everyone'">
+              <div class="badge badge-neutral badge-outline text-base-content" :style="{'border-color': '#AAAAAA', '--badge-bg': 'var(--color-base)'}">
+                <div class="indicator">
+              <span
+                  class="indicator-item indicator-middle indicator-start badge badge-xs" :style="{'--badge-color': '#'+(role.color).toString(16)}">
+              </span>
+                  <div class="ml-3 place-items-center">{{ role.name }}</div>
+                </div>
+              </div>
+              </a>
+            </li>
+          </ul>
+        </div>
         </fieldset>
         <fieldset class="fieldset">
           <legend class="fieldset-legend">Pattern</legend>
           <div class="join">
             <div class="dropdown join-item">
-              <div tabindex="0" role="button" class="btn w-2" :class="selectedType === 'domain' ? 'text-primary' : 'text-secondary'">
+              <div tabindex="0" role="button" class="btn w-2"
+                   :class="selectedType === 'domain' ? 'text-primary' : 'text-secondary'">
                 {{ selectedType === 'domain' ? '@' : '.*' }}
               </div>
               <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-1 p-2 shadow-sm">
-                <li><a @click="selectedType = 'domain'" >Domain</a></li>
-                <li><a @click="selectedType = 'regex'" >Regex</a></li>
+                <li><a @click="selectedType = 'domain'">Domain</a></li>
+                <li><a @click="selectedType = 'regex'">Regex</a></li>
               </ul>
             </div>
 
-            <input type="text" class="input join-item" :class="{'input-error': !validPattern()}"  :placeholder=" selectedType === 'domain' ? 'example.com' : '@example.com$' " v-model="modelPattern" />
+            <input type="text" class="input join-item" :class="{'input-error': !validPattern()}"
+                   :placeholder=" selectedType === 'domain' ? 'example.com' : '@example.com$' " v-model="modelPattern"/>
           </div>
         </fieldset>
         <div class="flex w-full justify-between my-5">
@@ -167,4 +208,6 @@ function validAdd() {
       </div>
     </div>
   </Teleport>
+  </div>
+
 </template>

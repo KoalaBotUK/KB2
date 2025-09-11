@@ -1,7 +1,7 @@
 use std::time::Duration;
 use cached::proc_macro::cached;
 use http::StatusCode;
-use lambda_http::tracing::{error, info, warn};
+use lambda_http::tracing::{error, warn};
 use tokio::time::sleep;
 use twilight_http::{Client, Error, Response};
 use twilight_http::api_error::ApiError;
@@ -51,12 +51,12 @@ pub fn as_http_err(e: Error) -> StatusCode {
     }
 }
 
-#[cached(time = 60, key = "String", convert = r##"{ format!("{:?}", client.token().unwrap()) }"##)]
+#[cached(time = 180, key = "String", convert = r##"{ format!("{:?}", client.token().unwrap()) }"##)]
 pub async fn get_current_user_guilds(client: &Client) -> Result<Vec<CurrentUserGuild>,StatusCode> {
     retry_on_rl(|| async { client.current_user_guilds().await}).await.map_err(as_http_err)?.models().await.map_err(ise)
 }
 
-#[cached(time = 60, key = "String", convert = r##"{ format!("{guild_id}{:?}", client.token().unwrap()) }"##)]
+#[cached(time = 180, key = "String", convert = r##"{ format!("{guild_id}{:?}", client.token().unwrap()) }"##)]
 pub async fn get_current_user_guild(guild_id: Id<GuildMarker>, client: &Client) -> Result<CurrentUserGuild,StatusCode> {
     Ok(retry_on_rl(|| async { client.current_user_guilds().after(Id::new(guild_id.get()-1)).limit(1).await}).await.map_err(as_http_err)?.models().await.map_err(ise)?.pop().unwrap())
 }
