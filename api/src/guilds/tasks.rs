@@ -1,10 +1,11 @@
 use http::StatusCode;
-use crate::guilds::models::{Guild, VerifyRole};
+use crate::guilds::models::Guild;
 use lambda_http::tracing::info;
 use regex::Regex;
 use twilight_model::id::Id;
 use twilight_model::id::marker::{GuildMarker, RoleMarker, UserMarker};
 use crate::discord::{add_guild_member_role, get_current_user_guilds, get_guild_member, remove_guild_member_role};
+use crate::guilds::verify::models::VerifyRole;
 
 pub async fn _update_guilds(bot: &twilight_http::Client, dynamo: &aws_sdk_dynamodb::Client) -> Result<(), StatusCode> {
     info!("Updating guilds...");

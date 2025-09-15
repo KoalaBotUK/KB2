@@ -1,5 +1,5 @@
 use aws_sdk_dynamodb::types::AttributeValue;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub fn as_string_opt(val: Option<&AttributeValue>) -> Option<String> {
     if let Some(v) = val {
@@ -94,4 +94,16 @@ pub fn as_map(val: Option<&AttributeValue>) -> Option<&HashMap<String, Attribute
         }
     }
     None
+}
+
+pub fn as_u64_set(val: Option<&AttributeValue>) -> HashSet<u64> {
+    if let Some(val) = val {
+        if let Ok(val) = val.as_l() {
+            return val
+                .iter()
+                .map(|v| as_u64(Some(v), 0))
+                .collect();
+        }
+    }
+    HashSet::new()
 }

@@ -6,9 +6,11 @@ use tokio::time::sleep;
 use twilight_http::{Client, Error, Response};
 use twilight_http::api_error::ApiError;
 use twilight_http::error::ErrorType;
+use twilight_model::channel::Message;
+use twilight_model::channel::message::Component;
 use twilight_model::guild::{Guild, Member, Role};
 use twilight_model::id::Id;
-use twilight_model::id::marker::{GuildMarker, RoleMarker, UserMarker};
+use twilight_model::id::marker::{ChannelMarker, GuildMarker, MessageMarker, RoleMarker, UserMarker};
 use twilight_model::user::{CurrentUser, CurrentUserGuild};
 
 pub fn ise<T: std::fmt::Debug>(e: T) -> StatusCode {
@@ -46,8 +48,14 @@ where
 
 pub fn as_http_err(e: Error) -> StatusCode {
     match e.kind() {
-        ErrorType::Response{ status, .. } => StatusCode::from_u16(status.get()).map_err(ise).unwrap(),
-        _ => StatusCode::INTERNAL_SERVER_ERROR
+        ErrorType::Response{ status, error, .. } => {
+            error!("Discord Api Error: {} {:?}", status, error);
+            StatusCode::from_u16(status.get()).map_err(ise).unwrap()
+        },
+        _ => {
+            error!("Internal Server Error: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
     }
 }
 
@@ -93,3 +101,36 @@ pub async fn get_guild_role(guild_id: Id<GuildMarker>, role_id: Id<RoleMarker>, 
     retry_on_rl(|| async { client.role(guild_id, role_id).await}).await.map_err(as_http_err)?.model().await.map_err(ise)
 }
 
+pub async fn create_message(channel_id: Id<ChannelMarker>, 
+                            content: Option<&str>, 
+                            components: Option<&[Component]>,
+                            client: &Client) -> Result<Message,StatusCode> {
+    retry_on_rl(|| async {
+        let mut msg_builder = client.create_message(channel_id);
+        if let Some(content) = content {
+            msg_builder = msg_builder.content(content);
+        }
+        if let Some(components) = components {
+            msg_builder = msg_builder.components(components);
+        }
+        msg_builder.await
+    
+    }).await.map_err(as_http_err)?.model().await.map_err(ise)
+}
+
+pub async fn update_message(channel_id: Id<ChannelMarker>,
+                            message_id: Id<MessageMarker>,
+                          content: Option<Option<&str>>,
+                          components: Option<Option<&[Component]>>,
+                          client: &Client) -> Result<Message,StatusCode> {
+                          retry_on_rl(|| async {
+                              let mut msg_builder = client.update_message(channel_id, message_id);
+                              if let Some(content) = content {
+                                  msg_builder = msg_builder.content(content);
+                              }
+                              if let Some(components) = components {
+                                  msg_builder = msg_builder.components(components);
+                              }
+                              msg_builder.await
+                          }).await.map_err(as_http_err)?.model().await.map_err(ise)
+      }

@@ -11,14 +11,14 @@ use serde_json::{json, Value};
 use tokio::time::{sleep, Instant};
 use tower_http::cors::CorsLayer;
 use twilight_http::Client;
-use twilight_model::guild::{Guild, Permissions, Role};
+use twilight_model::guild::{Permissions, Role};
 use twilight_model::id::Id;
 use twilight_model::id::marker::GuildMarker;
 use twilight_model::user::CurrentUserGuild;
 use twilight_model::util::ImageHash;
 use crate::AppState;
 use crate::discord::{get_current_user_guild, get_current_user_guilds_prime_cache, get_guild, get_guild_prime_cache};
-use crate::utils::{is_client_admin_guild, member_guilds};
+use crate::utils::member_guilds;
 
 pub fn router() -> Router<AppState> {
     Router::new()

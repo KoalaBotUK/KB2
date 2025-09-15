@@ -1,5 +1,4 @@
 use aws_config::BehaviorVersion;
-use aws_sdk_dynamodb::Client;
 use axum::body::Body;
 use axum::{http::StatusCode, routing::get, Json, Router};
 use http::Response;
@@ -20,7 +19,8 @@ mod meta;
 
 #[derive(Clone)]
 pub struct AppState {
-    dynamo: Client,
+    dynamo: aws_sdk_dynamodb::Client,
+    scheduler: aws_sdk_scheduler::Client,
     discord_bot: Arc<twilight_http::Client>,
     reqwest: Arc<reqwest::Client>,
 }
@@ -51,25 +51,21 @@ async fn get_bot_redirect() -> Response<Body> {
         .unwrap()
 }
 
-async fn create_dynamodb_client() -> Client {
-    let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
-    Client::new(&config)
-}
-
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     // required to enable CloudWatch error logging by the runtime
     tracing::init_default_subscriber();
 
-    let dynamo = create_dynamodb_client().await;
+    let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
     let discord_bot = Arc::new(
         twilight_http::Client::builder()
             .token(std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set"))
         .build()
     );
-    
+
     let app_state = AppState {
-        dynamo,
+        dynamo: aws_sdk_dynamodb::Client::new(&config),
+        scheduler: aws_sdk_scheduler::Client::new(&config),
         discord_bot,
         reqwest: Arc::new(reqwest::Client::new()),
     };

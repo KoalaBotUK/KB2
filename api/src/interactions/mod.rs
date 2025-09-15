@@ -7,6 +7,7 @@ use axum::{Json, middleware};
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, Verifier, VerifyingKey};
 use hex::FromHex;
 use http::{HeaderMap, StatusCode};
+use http::header::AUTHORIZATION;
 use http_body_util::BodyExt;
 use lambda_http::tracing::error;
 use once_cell::sync::Lazy;
@@ -43,14 +44,28 @@ pub fn router() -> axum::Router<AppState> {
 }
 
 pub async fn pubkey_middleware(request: Request, next: Next) -> Result<Response, StatusCode> {
-    let timestamp = if let Some(ts) = request.headers().get("x-signature-timestamp") {
+    let (parts, body) = request.into_parts();
+    let body = body
+        .collect()
+        .await
+        .map_err(|e| {
+            error!("Internal Server Error: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .to_bytes();
+    let headers = parts.headers.clone();
+    let new_request = Request::from_parts(parts, axum::body::Body::from(body.clone()));
+    if headers.get(AUTHORIZATION) == Some(&format!("Bot {}", std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set")).as_str().parse().unwrap()) {
+        return Ok(next.run(new_request).await);
+    }
+
+    let timestamp = if let Some(ts) = headers.get("x-signature-timestamp") {
         ts.to_owned()
     } else {
         return Err(StatusCode::BAD_REQUEST);
     };
     // Extract the signature to check against.
-    let signature = if let Some(hex_sig) = request
-        .headers()
+    let signature = if let Some(hex_sig) = headers
         .get("x-signature-ed25519")
         .and_then(|v| v.to_str().ok())
     {
@@ -62,23 +77,12 @@ pub async fn pubkey_middleware(request: Request, next: Next) -> Result<Response,
         return Err(StatusCode::BAD_REQUEST);
     };
 
-    let (parts, body) = request.into_parts();
-    let body = body
-        .collect()
-        .await
-        .map_err(|e| {
-            error!("Internal Server Error: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?
-        .to_bytes();
-
     if PUB_KEY
         .verify([timestamp.as_bytes(), &body].concat().as_ref(), &signature)
         .is_err()
     {
         return Err(StatusCode::UNAUTHORIZED);
     }
-    let new_request = Request::from_parts(parts, axum::body::Body::from(body));
     Ok(next.run(new_request).await)
 }
 
@@ -102,7 +106,7 @@ pub async fn user_agent_response_middleware(
 }
 
 async fn post_interactions(
-    State(_app_state): State<AppState>,
+    State(app_state): State<AppState>,
     Json(interaction): Json<Interaction>,
 ) -> Result<Json<Value>, StatusCode> {
     match interaction.kind {
@@ -110,11 +114,8 @@ async fn post_interactions(
             kind: InteractionResponseType::Pong,
             data: None
         }))),
-        InteractionType::ApplicationCommand => {
-            handle_command_interaction(_app_state, interaction).await
-        }
-        // InteractionType::ApplicationCommand => Err(StatusCode::ACCEPTED),
-        InteractionType::MessageComponent => Err(StatusCode::NOT_IMPLEMENTED),
+        InteractionType::ApplicationCommand => handle_command_interaction(app_state, interaction).await,
+        InteractionType::MessageComponent => handle_component_interaction(app_state, interaction).await,
         InteractionType::ApplicationCommandAutocomplete => Err(StatusCode::NOT_IMPLEMENTED),
         InteractionType::ModalSubmit => Err(StatusCode::NOT_IMPLEMENTED),
         _ => Err(StatusCode::BAD_REQUEST),
@@ -133,6 +134,21 @@ async fn handle_command_interaction(
     match data.name.as_ref() {
         "support" => support().await,
         "verify" => verify().await,
+        _ => Err(StatusCode::BAD_REQUEST),
+    }
+}
+
+async fn handle_component_interaction(
+    app_state: AppState,
+    interaction: Interaction,
+) -> Result<Json<Value>, StatusCode> {
+    let data = match &interaction.data {
+        Some(InteractionData::MessageComponent(data)) => Ok(data),
+        _ => Err(StatusCode::BAD_REQUEST),
+    }?;
+
+    match &data.custom_id[..2] {
+        "vt" => crate::guilds::votes::interactions::handle_component_interaction(app_state, interaction).await,
         _ => Err(StatusCode::BAD_REQUEST),
     }
 }

@@ -1,6 +1,6 @@
 use std::collections::{HashSet};
 use crate::AppState;
-use crate::guilds::models::{Guild, VerifyRole};
+use crate::guilds::models::Guild;
 use axum::extract::State;
 use axum::{Extension, Json, Router, extract::Path, routing::get};
 use http::StatusCode;
@@ -16,18 +16,21 @@ use twilight_model::id::marker::GuildMarker;
 use twilight_model::user::{CurrentUser, CurrentUserGuild};
 use crate::discord::{get_guild, get_guild_member};
 use crate::guilds::tasks::{add_role_to_guild, remove_role_from_guild};
+use crate::guilds::verify::models::VerifyRole;
 use crate::utils::{admin_guilds, is_client_admin_guild};
 
 pub mod models;
 pub mod verify;
 pub(crate) mod utils;
 pub mod tasks;
+pub(crate) mod votes;
 
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(get_guilds).post(post_guilds))
         .route("/{guild_id}", get(get_guilds_id).put(put_guilds_id).post(post_guilds_id))
-        .nest("/{guild_id}/verify", verify::router())
+        .nest("/{guild_id}/verify", verify::controllers::router())
+        .nest("/{guild_id}/votes", votes::controllers::router())
         .layer(CorsLayer::permissive())
 }
 

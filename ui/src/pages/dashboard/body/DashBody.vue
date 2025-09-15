@@ -8,6 +8,7 @@ import ColourRoleComponent from "../../../components/dashboard/ColourRoleCompone
 import VoteComponent from "../../../components/dashboard/VoteComponent.vue";
 import {Guild} from "../../../stores/guild.js";
 import {GuildMeta} from "../../../stores/meta.js";
+import SystemComponent from "../../../components/dashboard/SystemComponent.vue";
 
 defineProps(
   {
@@ -33,12 +34,13 @@ function emitUpdate(event) {
 <template>
 
   <div class="lg:columns-2 sm:columns-1">
-    <InsightsStatsComponent class="m-5 break-inside-avoid-column"/>
+    <SystemComponent class="m-5 break-inside-avoid-column"/>
+<!--    <InsightsStatsComponent class="m-5 break-inside-avoid-column"/>-->
     <VerifyComponent class="m-5 break-inside-avoid-column" :guild="$props.guild" :guild-meta="$props.guildMeta" @update="emitUpdate"/>
-    <StreamAlertComponent class="m-5 break-inside-avoid-column"/>
-    <AnnounceComponent class="m-5 break-inside-avoid-column"/>
-    <ColourRoleComponent class="m-5 break-inside-avoid-column"/>
-    <VoteComponent class="m-5 break-inside-avoid-column"/>
+<!--    <StreamAlertComponent class="m-5 break-inside-avoid-column"/>-->
+<!--    <AnnounceComponent class="m-5 break-inside-avoid-column"/>-->
+<!--    <ColourRoleComponent class="m-5 break-inside-avoid-column"/>-->
+<!--    <VoteComponent class="m-5 break-inside-avoid-column"/>-->
   </div>
 
 </template>

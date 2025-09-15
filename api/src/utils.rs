@@ -1,10 +1,10 @@
-use twilight_http::{Client};
-use http::StatusCode;
-use twilight_model::guild::{Guild, Permissions};
-use twilight_model::id::Id;
-use twilight_model::id::marker::GuildMarker;
-use twilight_model::user::{CurrentUser, CurrentUserGuild};
 use crate::discord::{get_current_user_guilds, get_guild, get_guild_member};
+use http::StatusCode;
+use twilight_http::Client;
+use twilight_model::guild::Permissions;
+use twilight_model::id::marker::GuildMarker;
+use twilight_model::id::Id;
+use twilight_model::user::{CurrentUser, CurrentUserGuild};
 
 pub async fn member_guilds(
     discord_user: &Client,
