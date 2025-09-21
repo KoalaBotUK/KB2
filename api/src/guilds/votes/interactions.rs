@@ -1,6 +1,7 @@
 use std::default::Default;
 use axum::Json;
 use http::StatusCode;
+use lambda_http::tracing::info;
 use serde_json::{json, Value};
 use twilight_model::application::interaction::{Interaction, InteractionData};
 use twilight_model::channel::message::MessageFlags;
@@ -30,9 +31,17 @@ pub(crate) async fn handle_component_interaction(
     let user_id = user.unwrap().id;
 
     let mut guild = Guild::from_db(guild_id.unwrap(), &app_state.dynamo).await.unwrap();
-    let VoteVote { options, role_list, role_list_type, .. }= guild.vote.votes.iter_mut().find(|v| v.message_id == message_id).unwrap();
-    
+    info!("guild retreived");
+
+    let VoteVote { options, role_list, role_list_type, .. } = match guild.vote.votes.iter_mut().find(|v| v.message_id == message_id) {
+        Some(v) => v,
+        None => return Err(StatusCode::NOT_FOUND),
+    };
+    info!("debug 1");
+
     let role_in_role_list = roles.iter().any(|r| role_list.contains(r));
+    info!("debug 2");
+
     let allowed = match role_list_type {
         RoleListType::BLACKLIST => {
             !role_in_role_list
@@ -41,19 +50,21 @@ pub(crate) async fn handle_component_interaction(
             role_in_role_list
         }
     };
+    info!("debug 3");
     if !allowed {
         return Ok(Json(json!(
             InteractionResponse {
                 kind: InteractionResponseType::ChannelMessageWithSource,
                 data: Some(InteractionResponseData {
-                    content: Some(format!("You do not have permission to vote due to the {role_list_type}").to_string()),
+                    content: Some(format!("You do not have permission to vote due to the {}", role_list_type.to_string().to_lowercase()).to_string()),
                     flags: Some(MessageFlags::EPHEMERAL),
                     ..Default::default()
                 }),
             }
         )));
     }
-    
+    info!("debug 4");
+
     let VoteOption { users, label, .. } = options.iter_mut().find(|o| o.custom_id() == data.custom_id).unwrap();
     let exists = users.iter().any(|&u| u == user_id);
     if exists {
@@ -69,6 +80,7 @@ pub(crate) async fn handle_component_interaction(
     } else {
         format!("You have voted for {:?}.", label).to_string()
     });
+    info!("guild about to be saved");
     guild.save(&app_state.dynamo).await;
     
     Ok(Json(json!(

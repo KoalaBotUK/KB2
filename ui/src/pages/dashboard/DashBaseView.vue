@@ -79,9 +79,16 @@ onMounted(async () => {
 async function setCurrentGuild(gid) {
   currentGuildId.value = gid
   localStorage.setItem('currentGuildId', JSON.stringify(gid))
+  await syncCurrentGuild()
+}
+
+async function syncCurrentGuild() {
+  let gid = currentGuildId.value
+
   await enrichMeta(gid);
   try {
     guildsKb.value.set(gid, await Guild.loadGuild(gid)) // Refresh from db
+    saveMemGuilds()
   } catch (e) {
     if (e.response && e.response.status === 404) {
       // Allowed, means Koala not in server
@@ -153,7 +160,7 @@ async function sync_guilds_kb() {
         </div>
       </div>
     </header>
-    <DashBody v-if="guildsKb.has(currentGuildId) && guildMetaMap.has(currentGuildId) && guildMetaMap.get(currentGuildId) instanceof GuildMeta" :guild="guildsKb.get(currentGuildId)" :guildMeta="guildMetaMap.get(currentGuildId)" @update="saveMemGuilds"/>
+    <DashBody v-if="guildsKb.has(currentGuildId) && guildMetaMap.has(currentGuildId) && guildMetaMap.get(currentGuildId) instanceof GuildMeta" :user="user" :guild="guildsKb.get(currentGuildId)" :guildMeta="guildMetaMap.get(currentGuildId)" @update="syncCurrentGuild"/>
     <div class="flex flex-row justify-center">
     <div class="card card-sm m-5 p-10 shadow bg-base-200 flex w-fit" v-if="!guildsKb.has(currentGuildId)">
       <div class="flex flex-row justify-center p-2">

@@ -5,6 +5,7 @@ import {User} from "../../stores/user.js";
 import {Guild, VerifyRole} from "../../stores/guild.js";
 import {GuildMeta} from "../../stores/meta.js";
 import {INVITE_URL} from "../../helpers/redirect.js";
+import RoleTag from "../discord/RoleTag.vue";
 
 let roleSelected = ref(null);
 let modelPattern = defineModel('modelPattern');
@@ -104,14 +105,7 @@ function validAdd() {
         <tbody>
         <tr v-for="role in $props.guild.verify.roles">
           <td>
-            <div class="badge badge-neutral badge-outline text-base-content" :style="{'border-color': '#AAAAAA', '--badge-bg': 'var(--color-base)'}">
-            <div class="indicator">
-              <span
-                  class="indicator-item indicator-middle indicator-start badge badge-xs" :style="{'--badge-color': '#'+(guildMeta.roles.filter(r => r.id === role.roleId)[0].color).toString(16)}">
-              </span>
-              <div class="ml-3 place-items-center">{{ guildMeta.roles.filter(r => r.id === role.roleId)[0].name }}</div>
-            </div>
-            </div>
+            <RoleTag :label="guildMeta.roles.filter(r => r.id === role.roleId)[0].name" :color="guildMeta.roles.filter(r => r.id === role.roleId)[0].color.toString(16)"></RoleTag>
           </td>
           <td>
             <div class="badge badge-outline badge-primary w-8" v-if="role.pattern.match(/^@.+\$$/)">@</div>
@@ -153,26 +147,12 @@ function validAdd() {
             Select Role
           </div>
           <div tabindex="0" role="button" class="btn btn-ghost bg-base-100 rounded-box z-1 p-2 shadow-sm" v-if="roleSelected">
-            <div class="badge badge-neutral badge-outline text-base-content" :style="{'border-color': '#AAAAAA', '--badge-bg': 'var(--color-base)'}">
-              <div class="indicator">
-              <span
-                  class="indicator-item indicator-middle indicator-start badge badge-xs" :style="{'--badge-color': '#'+$props.guildMeta.roles.filter(r => r.id === roleSelected)[0].color.toString(16)}">
-              </span>
-                <div class="ml-3 place-items-center">{{ $props.guildMeta.roles.filter(r => r.id === roleSelected)[0].name }}</div>
-              </div>
-            </div>
+            <RoleTag :label="guildMeta.roles.filter(r => r.id === roleSelected)[0].name" :color="guildMeta.roles.filter(r => r.id === roleSelected)[0].color.toString(16)"></RoleTag>
           </div>
           <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-1 p-2 shadow-sm">
             <li v-for="role in $props.guildMeta.roles">
               <a :class="(role.id === roleSelected && 'menu-active')" onclick="document.activeElement.blur()" @click="roleSelected = role.id" v-if="role.name !== '@everyone'">
-              <div class="badge badge-neutral badge-outline text-base-content" :style="{'border-color': '#AAAAAA', '--badge-bg': 'var(--color-base)'}">
-                <div class="indicator">
-              <span
-                  class="indicator-item indicator-middle indicator-start badge badge-xs" :style="{'--badge-color': '#'+(role.color).toString(16)}">
-              </span>
-                  <div class="ml-3 place-items-center">{{ role.name }}</div>
-                </div>
-              </div>
+                <RoleTag :label="role.name" :color="role.color.toString(16)"></RoleTag>
               </a>
             </li>
           </ul>

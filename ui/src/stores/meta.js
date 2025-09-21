@@ -16,6 +16,18 @@ export class RoleMeta {
   }
 }
 
+export class ChannelMeta {
+  constructor(id, name, type) {
+    this.id = id;
+    this.name = name;
+    this.type = type
+  }
+
+  static fromJson(json) {
+    return new ChannelMeta(json['id'], json['name'], json['type']);
+  }
+}
+
 export class PartialGuildMeta {
   constructor(id, name, icon, isAdmin) {
     this.id = id;
@@ -37,13 +49,14 @@ export class PartialGuildMeta {
 
 
 export class GuildMeta extends PartialGuildMeta {
-  constructor(id, name, icon, isAdmin, roles) {
+  constructor(id, name, icon, isAdmin, roles, channels) {
     super(id, name, icon, isAdmin);
     this.roles = roles;
+    this.channels = channels;
   }
 
   static fromJson(json) {
-    return new GuildMeta(json['id'], json['name'], json['icon'], json['is_admin'], json['roles'].map(RoleMeta.fromJson));
+    return new GuildMeta(json['id'], json['name'], json['icon'], json['is_admin'], json['roles'].map(RoleMeta.fromJson), json['channels'].map(ChannelMeta.fromJson));
   }
 
   static async fetch(id, token) {

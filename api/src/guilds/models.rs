@@ -1,12 +1,13 @@
 use crate::dynamo::{as_map, as_string, as_string_opt};
 use aws_sdk_dynamodb::types::{AttributeValue, KeysAndAttributes};
 use http::StatusCode;
-use lambda_http::tracing::error;
+use lambda_http::tracing::{error, info};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use twilight_model::id::Id;
 use twilight_model::id::marker::GuildMarker;
 use twilight_model::util::ImageHash;
+use crate::discord::ise;
 use crate::guilds::verify::models::Verify;
 use crate::guilds::votes::models::Vote;
 
@@ -39,7 +40,7 @@ impl From<&HashMap<String, AttributeValue>> for Guild {
                 .map(Id::new)
                 .unwrap(),
             verify: as_map(item.get("verify")).unwrap().into(),
-            vote: as_map(item.get("vote")).unwrap_or(&HashMap::new()).into(),
+            vote: as_string_opt(item.get("vote")).map(|v| serde_json::from_str(&*v).unwrap()).unwrap_or_default(),
             name: as_string(item.get("name"), &"".to_string()),
             icon: as_string_opt(item.get("icon")).and_then(|s| ImageHash::parse(s.as_bytes()).ok()),
         }
@@ -51,7 +52,7 @@ impl From<Guild> for HashMap<String, AttributeValue> {
         let mut item = HashMap::new();
         item.insert("guild_id".to_string(), AttributeValue::S(guild.guild_id.to_string()));
         item.insert("verify".to_string(), AttributeValue::M(guild.verify.into()));
-        item.insert("vote".to_string(), AttributeValue::M(guild.vote.into()));
+        item.insert("vote".to_string(), AttributeValue::S(serde_json::to_string(&guild.vote).unwrap()));
         item.insert("name".to_string(), AttributeValue::S(guild.name));
         if let Some(icon) = guild.icon {
             item.insert("icon".to_string(), AttributeValue::S(icon.to_string()));
@@ -85,10 +86,12 @@ impl Guild {
             .set_key(Some(key_attributes))
             .send()
             .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+            .map_err(ise)
             .map(|resp| {
                 let item = resp.item.unwrap_or_default();
+                info!("before map to guild");
                 let guild: Guild = (&item).into();
+                info!("after map to guild");
                 guild
             }) {
             Ok(guild) => Some(guild),
@@ -145,6 +148,7 @@ impl Guild {
     }
 
     pub async fn save(&self, dynamo: &aws_sdk_dynamodb::Client) {
+        info!("Before savbe guild to DynamoDB");
         match dynamo
             .put_item()
             .table_name(format!(
@@ -155,7 +159,10 @@ impl Guild {
             .send()
             .await
         {
-            Ok(_) => (),
+            Ok(_) => {
+                info!("Saved guild to DynamoDB");
+                ()
+            },
             Err(e) => {
                 error!("DynamoDB write error: {}", e);
                 panic!("Failed to save guild to DynamoDB");

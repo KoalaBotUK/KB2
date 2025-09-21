@@ -67,3 +67,8 @@ pub async fn log_middleware(request: Request, next: Next) -> Result<Response, St
 
     Ok(Response::from_parts(parts, axum::body::Body::from(body)))
 }
+
+pub async fn mock_ctx_middleware(mut request: Request, next: Next) -> Result<Response, StatusCode> {
+    request.extensions_mut().insert(lambda_http::Context::default());
+    Ok(next.run(request).await)
+}

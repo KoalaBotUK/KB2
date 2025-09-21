@@ -35,10 +35,18 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
                 let r = client.post("http://localhost:9000/lambda-url/api/interactions").json(&interaction).headers(headers).send().await;
                 match r {
                     Ok(r) => {
-                        let headers = r.headers().clone();
-                        client.post(format!("https://discord.com/api/v10/interactions/{}/{}/callback",interaction.id, interaction.token))
-                            .json(&r.json::<InteractionResponse>().await.unwrap())
-                            .headers(headers).send().await.unwrap();
+                        match r.status() {
+                            reqwest::StatusCode::OK => {
+                                let headers = r.headers().clone();
+                                client.post(format!("https://discord.com/api/v10/interactions/{}/{}/callback",interaction.id, interaction.token))
+                                    .json(&r.json::<InteractionResponse>().await.unwrap())
+                                    .headers(headers).send().await.unwrap();
+                            },
+                            _ => {
+                                tracing::error!(?r, "error sending interaction");
+                                continue;
+                            }
+                        }
                     },
                     Err(e) => {
                         tracing::error!(?e, "error sending interaction");

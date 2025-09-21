@@ -6,6 +6,7 @@ use lambda_http::{run, tracing, Error};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
+use lambda_http::tracing::info;
 use tower_http::cors::CorsLayer;
 
 mod dynamo;
@@ -51,6 +52,12 @@ async fn get_bot_redirect() -> Response<Body> {
         .unwrap()
 }
 
+async fn run_local(app: Router) -> Result<(), Error> {
+    let router = Router::new().nest("/lambda-url/api", app)
+        .route_layer(axum::middleware::from_fn(middleware::mock_ctx_middleware));
+    Ok(axum::serve(tokio::net::TcpListener::bind("0.0.0.0:9000").await.unwrap(), router).await.unwrap())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     // required to enable CloudWatch error logging by the runtime
@@ -84,7 +91,11 @@ async fn main() -> Result<(), Error> {
         .route("/bot", get(get_bot_redirect))
         .layer(CorsLayer::permissive());
 
-    run(app).await
+    if std::env::var("RUN_LOCAL").is_err() {
+        run(app).await
+    } else {
+        run_local(app).await
+    }
 }
 
 

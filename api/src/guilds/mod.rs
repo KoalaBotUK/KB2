@@ -4,7 +4,7 @@ use crate::guilds::models::Guild;
 use axum::extract::State;
 use axum::{Extension, Json, Router, extract::Path, routing::get};
 use http::StatusCode;
-use lambda_http::tracing::{info, warn};
+use lambda_http::tracing::warn;
 use serde_json::{Value, json};
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
@@ -61,7 +61,6 @@ async fn post_guilds(
     Extension(discord_user): Extension<Arc<Client>>,
     State(app_state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
-    info!("post_guilds");
     let admin_guilds = admin_guilds(&discord_user, &app_state.discord_bot).await?;
     let mut guilds = Guild::vec_from_db(admin_guilds.iter().map(|g| g.id).collect(), &app_state.dynamo).await;
     for guild in &mut guilds {

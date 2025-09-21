@@ -11,13 +11,14 @@ use serde_json::{json, Value};
 use tokio::time::{sleep, Instant};
 use tower_http::cors::CorsLayer;
 use twilight_http::Client;
+use twilight_model::channel::Channel;
 use twilight_model::guild::{Permissions, Role};
 use twilight_model::id::Id;
 use twilight_model::id::marker::GuildMarker;
 use twilight_model::user::CurrentUserGuild;
 use twilight_model::util::ImageHash;
 use crate::AppState;
-use crate::discord::{get_current_user_guild, get_current_user_guilds_prime_cache, get_guild, get_guild_prime_cache};
+use crate::discord::{get_current_user_guild, get_current_user_guilds_prime_cache, get_guild, get_guild_channels, get_guild_prime_cache};
 use crate::utils::member_guilds;
 
 pub fn router() -> Router<AppState> {
@@ -59,6 +60,7 @@ struct GuildMeta {
     icon: Option<ImageHash>,
     is_admin: bool,
     roles: Vec<Role>,
+    channels: Vec<Channel>,
 }
 
 async fn get_meta_guilds(
@@ -83,6 +85,7 @@ async fn get_meta_guilds_id(
     
     let u_guild = get_current_user_guild(guild_id, &discord_user).await?;
     let guild = get_guild(guild_id, &app_state.discord_bot).await?;
+    let channels = get_guild_channels(guild_id, &app_state.discord_bot).await?;
     
     Ok(Json(json!(
         GuildMeta{
@@ -91,6 +94,7 @@ async fn get_meta_guilds_id(
             icon: guild.icon,
             is_admin: u_guild.owner || u_guild.permissions & Permissions::ADMINISTRATOR == Permissions::ADMINISTRATOR,
             roles: guild.roles,
+            channels
         }
     )))
 }

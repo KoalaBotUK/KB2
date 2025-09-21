@@ -46,7 +46,7 @@ impl VoteOptionComponent for VoteOption {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub enum RoleListType {
     #[default]
     BLACKLIST,
@@ -55,7 +55,7 @@ pub enum RoleListType {
 
 impl Display for RoleListType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{:?}", self)
     }
 }
 
@@ -69,7 +69,7 @@ pub struct VoteVote {
     pub close_at: Option<DateTime<Utc>>,
     pub open: bool,
     pub role_list: HashSet<Id<RoleMarker>>,
-    pub role_list_type: RoleListType 
+    pub role_list_type: RoleListType
 }
 
 impl From<&HashMap<String, AttributeValue>> for VoteVote {
