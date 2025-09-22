@@ -11,7 +11,7 @@ let props = defineProps({
 </script>
 
 <template>
-  <div class="badge badge-neutral badge-outline text-base-content" :style="{'border-color': '#AAAAAA', '--badge-bg': 'var(--color-base)'}">
+  <div class="badge badge-neutral badge-outline bg-base-100" :style="{'border-color': '#AAAAAA', '--badge-bg': 'var(--color-base)'}">
     <div class="indicator">
       <slot></slot>
       <div class="place-items-center">{{ label }}</div>

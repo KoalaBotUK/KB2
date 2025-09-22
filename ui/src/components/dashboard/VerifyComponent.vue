@@ -6,6 +6,7 @@ import {Guild, VerifyRole} from "../../stores/guild.js";
 import {GuildMeta} from "../../stores/meta.js";
 import {INVITE_URL} from "../../helpers/redirect.js";
 import RoleTag from "../discord/RoleTag.vue";
+import RoleSelect from "../discord/RoleSelect.vue";
 
 let roleSelected = ref(null);
 let modelPattern = defineModel('modelPattern');
@@ -142,21 +143,7 @@ function validAdd() {
 
         <fieldset class="fieldset">
           <legend class="fieldset-legend">Role</legend>
-        <div class="dropdown">
-          <div tabindex="0" role="button" class="btn btn-sm btn-primary btn-soft" v-if="!roleSelected">
-            Select Role
-          </div>
-          <div tabindex="0" role="button" class="btn btn-ghost bg-base-100 rounded-box z-1 p-2 shadow-sm" v-if="roleSelected">
-            <RoleTag :label="guildMeta.roles.filter(r => r.id === roleSelected)[0].name" :color="guildMeta.roles.filter(r => r.id === roleSelected)[0].color.toString(16)"></RoleTag>
-          </div>
-          <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-1 p-2 shadow-sm">
-            <li v-for="role in $props.guildMeta.roles">
-              <a :class="(role.id === roleSelected && 'menu-active')" onclick="document.activeElement.blur()" @click="roleSelected = role.id" v-if="role.name !== '@everyone'">
-                <RoleTag :label="role.name" :color="role.color.toString(16)"></RoleTag>
-              </a>
-            </li>
-          </ul>
-        </div>
+          <RoleSelect :guild-meta="guildMeta" v-model="roleSelected"></RoleSelect>
         </fieldset>
         <fieldset class="fieldset">
           <legend class="fieldset-legend">Pattern</legend>

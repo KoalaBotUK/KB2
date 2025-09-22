@@ -1,22 +1,17 @@
 <script setup>
 
 import DiscordAuthButton from "../../components/auth/DiscordAuthButton.vue";
-import {onMounted, ref, toRef} from "vue";
-import {User} from "../../stores/user.js";
+import {ref} from "vue";
+import {isUserLoggedIn, User} from "../../stores/user.js";
 import LinkedAccountsTable from "../../components/verify/LinkedAccountsTable.vue";
 import LinkAccountButton from "../../components/verify/LinkAccountButton.vue";
 import MainWithFooter from "../../components/MainWithFooter.vue";
 import LinkedGuildsSelect from "../../components/verify/LinkedGuildsSelect.vue";
+import {internalRedirect, reload} from "../../helpers/redirect.js";
 
-const linkedAccounts = ref(undefined)
-const user = toRef(null)
-
-onMounted(async () => {
-  user.value = User.loadCache()
-})
-
-function unloadUser() {
-  user.value = null
+let user = ref(User.loadCache());
+if (!isUserLoggedIn(user.value)){
+  internalRedirect("/login")
 }
 
 </script>
@@ -35,7 +30,7 @@ function unloadUser() {
         <h1 class="card-title text-xl font-bold self-center">KoalaBot Verify</h1>
         <div class="h-2.5"></div>
         <div class="flex flex-col w-full">
-          <DiscordAuthButton :long-text="true" @logout="unloadUser"/>
+          <DiscordAuthButton :long-text="true" :user="user" @logout="reload"/>
         </div>
         <div class="divider"></div>
         <div class="flex flex-col w-full">

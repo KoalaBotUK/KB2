@@ -53,7 +53,8 @@ struct CreateVoteDto {
     channel_id: Id<ChannelMarker>,
     close_at: Option<DateTime<Utc>>,
     role_list: HashSet<Id<RoleMarker>>,
-    role_list_type: RoleListType
+    role_list_type: RoleListType,
+    is_multi_select: bool,
 }
 
 async fn post_votes(
@@ -84,7 +85,8 @@ async fn post_votes(
         close_at: vote_req.close_at,
         open: true,
         role_list: vote_req.role_list,
-        role_list_type: vote_req.role_list_type
+        role_list_type: vote_req.role_list_type,
+        is_multi_select: vote_req.is_multi_select,
     };
     guild.vote.votes.push(new_vote.clone());
     guild.save(&app_state.dynamo).await;
@@ -163,7 +165,8 @@ async fn post_votes_id_close(
     guild.save(&app_state.dynamo).await;
 
     let vote: &VoteVote = guild.vote.votes.iter().find(|v| v.message_id == message_id).unwrap();
-    let _message = update_message(vote.channel_id, vote.message_id, None, Some(Some(group_to_rows(vote.options.iter().map(|o| {
+    let _message = update_message(vote.channel_id, vote.message_id, Some(Some(&format!("# [CLOSED] {}\n{}\n", vote.title, vote.description))), 
+                                  Some(Some(group_to_rows(vote.options.iter().map(|o| {
         let mut c = o.to_component();
         match c {
             Component::Button(ref mut b) => b.disabled = true,

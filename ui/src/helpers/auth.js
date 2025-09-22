@@ -44,6 +44,10 @@ export class OauthToken {
     }
     return this.date + this.expiresIn * 1000 > Date.now()
   }
+
+  get accessToken() {
+    return this.isValid ? this.accessToken : null
+  }
 }
 
 export class AuthorizationFlowPKCE extends OauthFlow {
@@ -103,6 +107,7 @@ export class AuthorizationFlowPKCE extends OauthFlow {
       this.token.expiresIn = res.data['expires_in']
       this.token.refreshToken = res.data['refresh_token']
       this.token.scope = res.data['scope']
+      this.token.date = Date.now()
     } catch (err) {
       console.error("Error when getting token", err)
       this.token = "ERROR"
@@ -152,6 +157,7 @@ export class ImplicitFlow extends OauthFlow {
     this.token.expiresIn = urlParams.get('expires_in')
     this.token.refreshToken = urlParams.get('refresh_token')
     this.token.scope = urlParams.get('scope')
+    this.token.date = Date.now()
   }
 
   save() {

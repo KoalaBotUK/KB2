@@ -32,7 +32,7 @@ function select(id) {
     </div>
     <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-1 p-2 shadow-sm">
       <li v-for="channel in $props.guildMeta.channels.filter(c => c.type === 0)">
-        <a :class="(channel.id === selectedId && 'menu-active')" onclick="document.activeElement.blur()" @click="select(channel.id)">
+        <a :class="(channel.id === selectedId && 'menu-active text-base-content')" onclick="document.activeElement.blur()" @click="select(channel.id)">
           <ChannelTag :label="channel.name"></ChannelTag>
         </a>
       </li>

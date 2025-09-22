@@ -16,6 +16,12 @@ pub struct VoteOption {
     pub users: HashSet<Id<UserMarker>>
 }
 
+impl Display for VoteOption {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.label.as_ref().unwrap())
+    }
+}
+
 impl From<&HashMap<String, AttributeValue>> for VoteOption {
     fn from(item: &HashMap<String, AttributeValue>) -> Self {
         VoteOption {
@@ -59,6 +65,8 @@ impl Display for RoleListType {
     }
 }
 
+fn default_multi_select() -> bool {true}
+
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct VoteVote {
     pub message_id: Id<MessageMarker>,
@@ -69,7 +77,9 @@ pub struct VoteVote {
     pub close_at: Option<DateTime<Utc>>,
     pub open: bool,
     pub role_list: HashSet<Id<RoleMarker>>,
-    pub role_list_type: RoleListType
+    pub role_list_type: RoleListType,
+    #[serde(default="default_multi_select")]
+    pub is_multi_select: bool
 }
 
 impl From<&HashMap<String, AttributeValue>> for VoteVote {
@@ -84,6 +94,7 @@ impl From<&HashMap<String, AttributeValue>> for VoteVote {
             open: as_bool(item.get("open"), false),
             role_list: as_u64_set(item.get("role_list")).into_iter().map(|s| Id::new(s)).collect(),
             role_list_type: as_string_opt(item.get("role_list_type")).filter(|v| !v.is_empty()).and_then(|v| serde_json::from_str(&*v).unwrap()).unwrap_or_default(),
+            is_multi_select: as_bool(item.get("is_multi_select"), false),
         }
     }
 }
@@ -100,6 +111,7 @@ impl From<VoteVote> for HashMap<String, AttributeValue> {
         item.insert("open".to_string(), AttributeValue::Bool(vote.open));
         item.insert("role_list".to_string(), AttributeValue::L(vote.role_list.iter().map(|u| AttributeValue::N(u.to_string())).collect()));
         item.insert("role_list_type".to_string(), AttributeValue::S(serde_json::to_string(&vote.role_list_type).unwrap()));
+        item.insert("is_multi_select".to_string(), AttributeValue::Bool(vote.is_multi_select));
         item
     }
 }

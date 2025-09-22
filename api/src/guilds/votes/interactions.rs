@@ -1,7 +1,6 @@
 use std::default::Default;
 use axum::Json;
 use http::StatusCode;
-use lambda_http::tracing::info;
 use serde_json::{json, Value};
 use twilight_model::application::interaction::{Interaction, InteractionData};
 use twilight_model::channel::message::MessageFlags;
@@ -9,7 +8,7 @@ use twilight_model::guild::PartialMember;
 use twilight_model::http::interaction::{InteractionResponse, InteractionResponseData, InteractionResponseType};
 use crate::AppState;
 use crate::guilds::models::Guild;
-use crate::guilds::votes::models::{RoleListType, VoteOption, VoteVote};
+use crate::guilds::votes::models::{RoleListType, VoteVote};
 use crate::guilds::votes::utils::VoteOptionComponent;
 
 pub(crate) async fn handle_component_interaction(
@@ -31,16 +30,14 @@ pub(crate) async fn handle_component_interaction(
     let user_id = user.unwrap().id;
 
     let mut guild = Guild::from_db(guild_id.unwrap(), &app_state.dynamo).await.unwrap();
-    info!("guild retreived");
 
-    let VoteVote { options, role_list, role_list_type, .. } = match guild.vote.votes.iter_mut().find(|v| v.message_id == message_id) {
+    let VoteVote { options, role_list, role_list_type,
+        is_multi_select, .. } = match guild.vote.votes.iter_mut().find(|v| v.message_id == message_id) {
         Some(v) => v,
         None => return Err(StatusCode::NOT_FOUND),
     };
-    info!("debug 1");
 
     let role_in_role_list = roles.iter().any(|r| role_list.contains(r));
-    info!("debug 2");
 
     let allowed = match role_list_type {
         RoleListType::BLACKLIST => {
@@ -50,7 +47,6 @@ pub(crate) async fn handle_component_interaction(
             role_in_role_list
         }
     };
-    info!("debug 3");
     if !allowed {
         return Ok(Json(json!(
             InteractionResponse {
@@ -63,31 +59,24 @@ pub(crate) async fn handle_component_interaction(
             }
         )));
     }
-    info!("debug 4");
+    let mut responses = vec![];
 
-    let VoteOption { users, label, .. } = options.iter_mut().find(|o| o.custom_id() == data.custom_id).unwrap();
-    let exists = users.iter().any(|&u| u == user_id);
-    if exists {
-        // Already voted, need to remove.
-        users.retain(|&u| u != user_id);
-
-    } else {
-        users.insert(user_id);
+    for o in options.iter_mut() {
+        if o.users.contains(&user_id) && (data.custom_id == o.custom_id() || !*is_multi_select)  {
+            o.users.remove(&user_id);
+            responses.push(format!("You have removed your vote for {o}."));
+        } else if !o.users.contains(&user_id) && data.custom_id == o.custom_id() {
+            o.users.insert(user_id);
+            responses.push(format!("You have added a vote for {o}."));
+        }
     }
-    let label = label.as_ref().unwrap();
-    let content = Some(if exists {
-        format!("You have removed your vote for {:?}.", label).to_string()
-    } else {
-        format!("You have voted for {:?}.", label).to_string()
-    });
-    info!("guild about to be saved");
     guild.save(&app_state.dynamo).await;
     
     Ok(Json(json!(
         InteractionResponse {
             kind: InteractionResponseType::ChannelMessageWithSource,
             data: Some(InteractionResponseData {
-                content,
+                content: Some(responses.join("\n")),
                 flags: Some(MessageFlags::EPHEMERAL),
                 ..Default::default()
             }),

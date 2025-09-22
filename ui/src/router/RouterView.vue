@@ -9,9 +9,11 @@ import VerifyEmailWait from "../pages/verify/VerifyEmailWait.vue";
 import DashBaseView from "../pages/dashboard/DashBaseView.vue";
 import HomeView from "../pages/HomeView.vue";
 import VerifyView from "../pages/verify/VerifyView.vue";
+import LoginView from "../pages/LoginView.vue";
 
 const routes = {
   '^/$': HomeView,
+  '^/login$': LoginView,
   '^/verify$': VerifyView,
   '^/auth/discord/callback$': DiscordAuthCallback,
   '^/verify/microsoft/callback$': VerifyMicrosoftCallback,

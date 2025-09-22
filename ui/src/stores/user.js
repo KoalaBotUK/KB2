@@ -107,6 +107,7 @@ export class User {
     let cacheUser = localStorage.getItem('user');
     if (localStorage.getItem('user') === null) return null
     let user = Object.assign(new User, JSON.parse(cacheUser))
+    user.token = user.token ? Object.assign(new OauthToken, user.token) : user.token
     user.links = user.links.map(l => Object.assign(new Link, l))
     user.linkGuilds = user.linkGuilds.map(lg => Object.assign(new LinkGuild, lg))
     return user
@@ -139,6 +140,13 @@ export class User {
     User.saveCache(this)
   }
 
+  logout() {
+    this.token = null
+    User.saveCache(this)
+  }
+
 }
 
-
+export function isUserLoggedIn(user) {
+  return user !== undefined && user !== null && user.token !== null && user.token.isValid
+}

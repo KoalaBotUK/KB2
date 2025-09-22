@@ -6,7 +6,6 @@ use lambda_http::{run, tracing, Error};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
-use lambda_http::tracing::info;
 use tower_http::cors::CorsLayer;
 
 mod dynamo;

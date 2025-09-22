@@ -7,8 +7,7 @@ export function formatInternalRedirect(path) {
 }
 
 export function internalRedirect(path) {
-  const currentPath = window.location.pathname
-  localStorage.setItem("lastPath", currentPath.value)
+  localStorage.setItem("lastPath", window.location.pathname)
   window.location.href = formatInternalRedirect(path)
 }
 
@@ -27,4 +26,7 @@ export function redirectToLastPath() {
   }
 }
 
+export function reload() {
+  location.reload()
+}
 
