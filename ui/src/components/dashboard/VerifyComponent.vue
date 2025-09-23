@@ -34,12 +34,12 @@ let emits = defineEmits(
 
 const userRef = ref(User.loadCache())
 
-function updateGuild() {
-  props.guild.save();
+async function updateGuild() {
+  await props.guild.save();
   emits('update');
 }
 
-function addVerifyRole() {
+async function addVerifyRole() {
   if (!roleSelected || !modelPattern) {
     alert("Please fill in all fields.");
     return;
@@ -56,16 +56,16 @@ function addVerifyRole() {
   }
   props.guild.verify.roles = props.guild.verify.roles.filter(r => r.roleId !== roleId)
   props.guild.verify.roles.push(new VerifyRole(roleId, null, pattern, 0));
-  updateGuild();
+  await updateGuild();
   // Reset form fields
   roleSelected.value = null;
   modelPattern.value = '';
   modalActiveRef.value = false;
 }
 
-function removeVerifyRole(role) {
+async function removeVerifyRole(role) {
   props.guild.verify.roles = props.guild.verify.roles.filter(r => r.roleId !== role.roleId);
-  updateGuild();
+  await updateGuild();
 }
 
 function validRole() {

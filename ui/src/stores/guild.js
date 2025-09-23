@@ -145,13 +145,13 @@ export class VoteVote {
 export class Vote {
   votes
 
-  constructor(roles) {
-    this.roles = roles
+  constructor(votes) {
+    this.votes = votes
   }
 
   toJson() {
     return {
-      'roles': this.roles.map(r => r.toJson()),
+      'votes': this.votes.map(r => r.toJson()),
     }
   }
 

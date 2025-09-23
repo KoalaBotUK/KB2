@@ -61,7 +61,7 @@ function loadMemGuilds() {
   let memGuilds = JSON.parse(localStorage.getItem('guilds'), reviver);
   if (memGuilds === null) return;
   for (let k of Object.keys(memGuilds)) {
-    memGuilds.set(k, Object.assign(new Guild(), memGuilds[k]));
+    memGuilds.set(k, Guild.fromJson(memGuilds[k]));
   }
   guildsKb.value = memGuilds;
   if (guildsKb.value.size > 0) {
@@ -82,7 +82,7 @@ onMounted(async () => {
 async function setCurrentGuild(gid) {
   currentGuildId.value = gid
   localStorage.setItem('currentGuildId', JSON.stringify(gid))
-  syncCurrentGuild()
+  await syncCurrentGuild()
 }
 
 async function syncCurrentGuild() {
