@@ -1,18 +1,25 @@
 <script setup>
 
 import DiscordAuthButton from "../../components/auth/DiscordAuthButton.vue";
-import {ref} from "vue";
+import {onMounted, ref} from "vue";
 import {isUserLoggedIn, User} from "../../stores/user.js";
 import LinkedAccountsTable from "../../components/verify/LinkedAccountsTable.vue";
 import LinkAccountButton from "../../components/verify/LinkAccountButton.vue";
 import MainWithFooter from "../../components/MainWithFooter.vue";
 import LinkedGuildsSelect from "../../components/verify/LinkedGuildsSelect.vue";
 import {internalRedirect, reload} from "../../helpers/redirect.js";
+import {PartialGuildMeta} from "../../stores/meta.js";
 
 let user = ref(User.loadCache());
+let guildMetaArr = ref([])
 if (!isUserLoggedIn(user.value)){
   internalRedirect("/login")
 }
+
+onMounted(async () => {
+  guildMetaArr.value = await PartialGuildMeta.fetchAll(user.value.token.accessToken)
+})
+
 
 </script>
 
@@ -43,10 +50,11 @@ if (!isUserLoggedIn(user.value)){
 
         <div class="divider"></div>
         <div class="flex flex-col w-full">
-          <div class="flex flex-row justify-between mb-2.5">
-            <h3 class="text-lg font-bold self-center">Linked Servers</h3>
+          <div class="justify-between mb-2.5">
+            <h3 class="text-lg font-bold">Linked Servers</h3>
+            <h3 class="text-sm italic">Click to enable</h3>
           </div>
-          <LinkedGuildsSelect :user="user"/>
+          <LinkedGuildsSelect :user="user" :guild-meta-arr="guildMetaArr"/>
         </div>
       </div>
     </div>

@@ -78,7 +78,7 @@ impl From<UserLink> for HashMap<String, AttributeValue> {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct Verify {
     pub roles: Vec<VerifyRole>,
     pub user_links: HashMap<Id<UserMarker>, Vec<Link>>,

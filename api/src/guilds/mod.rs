@@ -63,16 +63,6 @@ async fn post_guilds(
 ) -> Result<Json<Value>, StatusCode> {
     let admin_guilds = admin_guilds(&discord_user, &app_state.discord_bot).await?;
     let mut guilds = Guild::vec_from_db(admin_guilds.iter().map(|g| g.id).collect(), &app_state.dynamo).await;
-    for guild in &mut guilds {
-        for g in &admin_guilds {
-            if g.id == guild.guild_id && (g.name != guild.name || g.icon != guild.icon) {
-                guild.name = g.name.clone();
-                guild.icon = g.icon.clone();
-                guild.save(&app_state.dynamo).await;
-            }
-        }
-    }
-    
     let missing_guilds: Vec<&CurrentUserGuild> =  admin_guilds.iter().filter(|a| !guilds.iter().any(|g| g.guild_id == a.id)).collect();
     for admin_guild in missing_guilds {
         guilds.push(Guild {
@@ -112,15 +102,10 @@ async fn post_guilds_id(
     State(app_state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
     is_client_admin_guild(guild_id, &current_user, &app_state.discord_bot).await?;
-    let mut guild = Guild::from_db(guild_id, &app_state.dynamo).await.unwrap_or(Guild {
+    let guild = Guild::from_db(guild_id, &app_state.dynamo).await.unwrap_or(Guild {
         guild_id,
         ..Default::default()
     });
-    let guild_dsc = get_guild(guild.guild_id, &app_state.discord_bot).await?;
-    guild.name = guild_dsc.name;
-    guild.icon = guild_dsc.icon;
-    guild.save(&app_state.dynamo).await;
-
     Ok(Json(json!(guild)))
 }
 

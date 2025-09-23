@@ -4,45 +4,8 @@ use lambda_http::tracing::info;
 use regex::Regex;
 use twilight_model::id::Id;
 use twilight_model::id::marker::{GuildMarker, RoleMarker, UserMarker};
-use crate::discord::{add_guild_member_role, get_current_user_guilds, get_guild_member, remove_guild_member_role};
+use crate::discord::{add_guild_member_role, get_guild_member, remove_guild_member_role};
 use crate::guilds::verify::models::VerifyRole;
-
-pub async fn _update_guilds(bot: &twilight_http::Client, dynamo: &aws_sdk_dynamodb::Client) -> Result<(), StatusCode> {
-    info!("Updating guilds...");
-    let d_guilds = get_current_user_guilds(bot).await?;
-
-    let k_guilds =
-        Guild::vec_from_db(d_guilds.iter().map(|g| g.id).collect(), dynamo).await;
-
-    for d_guild in d_guilds {
-        let mut found = false;
-        for k_guild in &k_guilds {
-            if d_guild.id == k_guild.guild_id {
-                info!("Guild {} found in DB, checking for updates...", d_guild.id);
-                let mut updated_guild = k_guild.clone();
-                updated_guild.name = d_guild.name.clone();
-                updated_guild.icon = d_guild.icon;
-                if updated_guild != *k_guild {
-                    updated_guild.save(dynamo).await;
-                    info!("Guild {} updated.", d_guild.id);
-                }
-                found = true;
-                continue;
-            }
-        }
-        if !found {
-            let new_guild = Guild {
-                guild_id: d_guild.id,
-                name: d_guild.name.clone(),
-                icon: d_guild.icon,
-                ..Default::default()
-            };
-            new_guild.save(dynamo).await;
-        }
-    }
-    info!("Guilds updated.");
-    Ok(())
-}
 
 async fn assign_role_user(
     guild_id: Id<GuildMarker>,

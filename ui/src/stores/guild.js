@@ -166,16 +166,12 @@ export class Guild {
   guildId
   verify
   vote
-  name
-  icon
   userLinks
 
-  constructor(guildId, verify, vote, name, icon, userLinks) {
+  constructor(guildId, verify, vote, userLinks) {
     this.guildId = guildId
     this.verify = verify
     this.vote = vote
-    this.name = name
-    this.icon = icon
     this.userLinks = userLinks
   }
 
@@ -184,8 +180,6 @@ export class Guild {
       'guild_id': this.guildId,
       'verify': this.verify.toJson(),
       'vote': this.vote.toJson(),
-      'name': this.name,
-      'icon': this.icon,
     }
   }
 
@@ -194,8 +188,6 @@ export class Guild {
     guild.guildId = json['guild_id']
     guild.verify = Verify.fromJson(json['verify'])
     guild.vote = Vote.fromJson(json['vote'])
-    guild.name = json['name']
-    guild.icon = json['icon']
     return guild
   }
 
