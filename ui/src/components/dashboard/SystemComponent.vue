@@ -16,11 +16,11 @@ md.use(markdownItAttrs, {
 const selected = ref(null)
 
 let extensions = new Map([
-    ['Verify', ['success', '']],
-    ['Vote', ['success', '']],
-    ['Insights', ['warning', '']],
-    ['Colour Role', ['', '']],
-    ['Stream Alert', ['', '']],
+    ['Verify', ['success', 'Verify is a feature that allows to configure roles that require users to be verified with a certain email address.']],
+    ['Vote', ['success', 'Vote is a feature that allows creation of votes with choices hidden until the vote is closed. Also supports whitelists/ blacklists for voting']],
+    ['Insights', ['warning', 'Insights is a feature that allows for visibility of the performance of the bot.']],
+    ['Colour Role', ['', 'Colour Role allows for custom role colours to be assigned per user based on their status in the server.']],
+    ['Stream Alert', ['', 'Stream Alert gives alerts in channels whenever a user or team goes live on streaming platforms.']],
     ['React For Role', ['error', md.render('Discord now supports a first party approach to customising roles as a user through [Discord Onboarding](https://support.discord.com/hc/en-us/articles/11074987197975-Community-Onboarding-FAQ){.link}. Unless Koala can offer an improvement, we will no longer offer this functionality.')]],
     ['Text Filter', ['error', md.render('Discord now supports a first party approach to moderating user messages through [Discord AutoMod](https://support.discord.com/hc/en-us/articles/4421269296535-AutoMod-FAQ){.link}. Unless Koala can offer an improvement, we will no longer offer this functionality.')]],
     ['Announce', ['error', md.render('Discord doesn\'t allow for messages without explicit permission from the user within their [Discord Developer Policy](https://support-dev.discord.com/hc/en-us/articles/8563934450327-Discord-Developer-Policy){.link}. Unless Koala can offer an approach that meets this requirement, we will no longer offer this functionality.')]],
