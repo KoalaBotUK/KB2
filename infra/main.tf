@@ -50,3 +50,8 @@ module "dynamodb" {
   source = "./modules/data/dynamodb"
   deployment_env = var.deployment_env
 }
+
+module "ses" {
+  source = "./modules/data/ses"
+  deployment_env = var.deployment_env
+}

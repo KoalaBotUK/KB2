@@ -1,5 +1,6 @@
 mod links;
 pub mod models;
+mod email;
 
 use std::sync::Arc;
 use crate::AppState;
