@@ -7,7 +7,12 @@ import {ref} from "vue";
 import {onClickOutside} from "@vueuse/core";
 import {User} from "../../stores/user.js";
 
-const userRef = ref(User.loadCache())
+const props = defineProps({
+  user: {
+    type: User,
+    required: true
+  }
+})
 
 const modalActiveRef = ref(false)
 const modalBox = ref(null)
@@ -19,14 +24,14 @@ onClickOutside(modalBox, () => {
 </script>
 
 <template>
-  <button class="btn btn-xs btn-primary" :class="!userRef ? 'btn-disabled' : ''"
+  <button class="btn btn-xs btn-primary" :class="!$props.user ? 'btn-disabled' : ''"
           @click="modalActiveRef = true">
     <fa :icon="['fas', 'plus']"/>
     add
   </button>
 
   <Teleport to="#modal">
-    <div class="modal" :class="modalActiveRef ? 'modal-open' : ''" v-if="userRef">
+    <div class="modal" :class="modalActiveRef ? 'modal-open' : ''" v-if="$props.user">
       <div class="modal-box w-96 bg-base-300" ref="modalBox">
         <h3 class="text-lg font-bold">Link Account</h3>
         <div class="modal-action">
@@ -35,7 +40,7 @@ onClickOutside(modalBox, () => {
             <br>
             <GoogleAuthButton/>
             <div class="divider">Other</div>
-            <EmailAuthText/>
+            <EmailAuthText :user="$props.user"/>
           </div>
 
         </div>

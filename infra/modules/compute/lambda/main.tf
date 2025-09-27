@@ -24,6 +24,10 @@ resource "aws_iam_role_policy_attachment" "dynamodb_role_attach" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess_v2"
 }
 
+resource "aws_iam_role_policy_attachment" "ses_role_attach" {
+  role       = aws_iam_role.lambda_execute_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSESFullAccess"
+}
 
 data "aws_iam_policy_document" "cloudwatch_readwrite" {
   statement {

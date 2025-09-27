@@ -7,6 +7,13 @@ import {User} from "../../stores/user.js";
 
 const KB_API_URL = import.meta.env.VITE_KB_API_URL
 
+let props = defineProps({
+  user: {
+    type: User,
+    required: true
+  }
+})
+
 let todo = false;
 let emailInput = defineModel();
 let disableTextField = ref(false);
@@ -19,13 +26,12 @@ function sendEmail() {
   if (!isValidEmail()) return
 
   disableTextField.value = true
-  const user = User.loadCache();
-  axios.post(`${KB_API_URL}/verify/email/send`,{
+  axios.post(`${KB_API_URL}/users/${props.user.userId}/links/send-email`,{
     email: emailInput.value
   },
   {
     headers: {
-      'Authorization': 'Discord ' + user.token.accessToken
+      'Authorization': 'Discord ' + props.user.token.accessToken
     }
   }
   ).then(

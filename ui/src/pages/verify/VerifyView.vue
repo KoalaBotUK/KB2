@@ -43,7 +43,7 @@ onMounted(async () => {
         <div class="flex flex-col w-full">
           <div class="flex flex-row justify-between mb-2.5">
             <h3 class="text-lg font-bold self-center">Linked Accounts</h3>
-            <LinkAccountButton/>
+            <LinkAccountButton :user="user"/>
           </div>
           <LinkedAccountsTable/>
         </div>
