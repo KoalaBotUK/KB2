@@ -40,14 +40,13 @@ module "s3" {
 }
 
 module "api" {
-  depends_on = ["module.lambda"]
   count = var.deployment_env == "local" ? 0 : 1
   source = "./modules/api/api-gateway"
   deployment_env = var.deployment_env
   root_domain_name = var.root_domain_name
-  lambda_function_invoke_arn = module.lambda.lambda_function_invoke_arn
-  lambda_function_name = module.lambda.lambda_function_name
-  ui_hostname = module.s3.ui_hostname
+  lambda_function_invoke_arn = module.lambda[0].lambda_function_invoke_arn
+  lambda_function_name = module.lambda[0].lambda_function_name
+  ui_hostname = module.s3[0].ui_hostname
 }
 
 module "dynamodb" {
