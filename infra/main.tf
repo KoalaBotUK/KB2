@@ -40,6 +40,7 @@ module "s3" {
 }
 
 module "api" {
+  depends_on = ["module.lambda"]
   count = var.deployment_env == "local" ? 0 : 1
   source = "./modules/api/api-gateway"
   deployment_env = var.deployment_env
