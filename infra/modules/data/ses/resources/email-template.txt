@@ -1,6 +1,6 @@
 Hi {{name}},
 Someone has requested to link their Discord account to this email address. If this was you, please confirm by clicking the link below.
-{{linkUrl}}
+{{link_url}}
 
 If this was not you, please ignore this email, or if you are having further issues, please contact our support team.
 

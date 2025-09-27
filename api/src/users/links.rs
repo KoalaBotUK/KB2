@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use crate::AppState;
 use crate::users::models::{Link, User};
 use axum::extract::{Path, State};
@@ -7,15 +8,21 @@ use lambda_http::tracing::info;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
+use hmac::{Hmac, Mac};
+use jwt::{SignWithKey, VerifyWithKey};
+use sha2::Sha256;
 use tower_http::cors::CorsLayer;
 use twilight_model::id::Id;
 use twilight_model::id::marker::UserMarker;
 use twilight_model::user::CurrentUser;
+use crate::discord::ise;
 use crate::guilds::models::Guild;
+use crate::users::email::send_verify_email;
 
 pub fn router() -> axum::Router<AppState> {
     axum::Router::new()
         .route("/", post(post_link))
+        .route("/send-email", post(post_send_email))
         .route("/{link_address}", delete(delete_link))
         .layer(CorsLayer::permissive())
 }
@@ -69,7 +76,13 @@ async fn post_link(
             .await?
         }
         LinkOrigin::Email => {
-            todo!();
+            let key: Hmac<Sha256> = Hmac::new_from_slice(std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set").into_bytes().as_ref())
+                .map_err(ise)?;
+            let claims: BTreeMap<String, String> = link_req.token.verify_with_key(&key).map_err(ise)?;
+            if claims.get("exp").unwrap().parse::<u64>().unwrap() < chrono::Utc::now().timestamp() as u64 {
+                return Err(http::StatusCode::UNAUTHORIZED);
+            }
+            claims.get("sub").unwrap().to_string()
         }
     };
 
@@ -169,4 +182,27 @@ async fn delete_link(
     Ok(Json(
         json!({"status": "success", "message": "Link deleted"}),
     ))
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+struct SendEmailRequest {
+    email: String,
+}
+
+async fn post_send_email(
+    // Path(_user_id): Path<Id<UserMarker>>,
+    Extension(current_user): Extension<CurrentUser>,
+    State(app_state): State<AppState>,
+    Json(send_email_req): Json<SendEmailRequest>,
+) -> Result<Json<serde_json::Value>, http::StatusCode> {
+    let key: Hmac<Sha256> = Hmac::new_from_slice(std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set").into_bytes().as_ref())
+        .map_err(ise)?;
+    let mut claims = BTreeMap::new();
+    claims.insert("sub", send_email_req.email.clone());
+    claims.insert("exp", (chrono::Utc::now() + chrono::Duration::hours(1)).timestamp().to_string());
+    let token_str = claims.sign_with_key(&key).map_err(ise)?;
+
+    send_verify_email(&app_state.ses, &*current_user.name, send_email_req.email, &token_str).await?;
+    
+    Ok(Json(json!({"status": "success"})))
 }

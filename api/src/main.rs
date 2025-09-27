@@ -21,6 +21,7 @@ mod meta;
 pub struct AppState {
     dynamo: aws_sdk_dynamodb::Client,
     scheduler: aws_sdk_scheduler::Client,
+    ses: aws_sdk_sesv2::Client,
     discord_bot: Arc<twilight_http::Client>,
     reqwest: Arc<reqwest::Client>,
 }
@@ -72,6 +73,7 @@ async fn main() -> Result<(), Error> {
     let app_state = AppState {
         dynamo: aws_sdk_dynamodb::Client::new(&config),
         scheduler: aws_sdk_scheduler::Client::new(&config),
+        ses: aws_sdk_sesv2::Client::new(&config),
         discord_bot,
         reqwest: Arc::new(reqwest::Client::new()),
     };

@@ -7,7 +7,7 @@ import {User} from "../../stores/user.js";
 
 const KB_API_URL = import.meta.env.VITE_KB_API_URL
 
-let todo = true;
+let todo = false;
 let emailInput = defineModel();
 let disableTextField = ref(false);
 
