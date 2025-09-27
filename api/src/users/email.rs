@@ -19,7 +19,7 @@ pub async fn send_verify_email(
     let env = std::env::var("DEPLOYMENT_ENV").expect("DEPLOYMENT_ENV must be set");
     let mut host = "koalabot.uk".to_string();
     if env != "prod" {
-        host = format!("{}.{}", env, host);
+        host = format!("{env}.{host}");
     }
 
     let t_data = serde_json::to_string(&TemplateData {

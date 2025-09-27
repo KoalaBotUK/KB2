@@ -221,7 +221,7 @@ async fn post_send_email(
 
     send_verify_email(
         &app_state.ses,
-        &*current_user.name,
+        &current_user.name,
         send_email_req.email,
         &token_str,
     )

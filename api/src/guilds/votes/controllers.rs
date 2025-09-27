@@ -168,10 +168,7 @@ async fn post_votes_id_close(
     let _message = update_message(vote.channel_id, vote.message_id, Some(Some(&format!("# [CLOSED] {}\n{}\n", vote.title, vote.description))), 
                                   Some(Some(group_to_rows(vote.options.iter().map(|o| {
         let mut c = o.to_component();
-        match c {
-            Component::Button(ref mut b) => b.disabled = true,
-            _ => (),
-        }
+        if let Component::Button(ref mut b) = c { b.disabled = true }
         c
     }).collect())?.as_slice())), &app_state.discord_bot).await?;
 

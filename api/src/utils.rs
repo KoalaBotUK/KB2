@@ -11,7 +11,7 @@ pub async fn member_guilds(
     discord_bot: &Client
 ) -> Result<Vec<CurrentUserGuild>, StatusCode> {
     let mut bot_guilds = get_current_user_guilds(discord_bot).await?;
-    bot_guilds.retain(|g| is_admin(g));
+    bot_guilds.retain(is_admin);
     let user_guilds = get_current_user_guilds(discord_user).await?;
     let mut guilds = vec![];
     for u_guild in &user_guilds {

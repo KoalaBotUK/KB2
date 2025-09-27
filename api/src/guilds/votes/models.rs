@@ -25,7 +25,7 @@ impl Display for VoteOption {
 impl From<&HashMap<String, AttributeValue>> for VoteOption {
     fn from(item: &HashMap<String, AttributeValue>) -> Self {
         VoteOption {
-            emoji: as_string_opt(item.get("emoji")).filter(|s| !s.is_empty()).and_then(|v| serde_json::from_str(&*v).unwrap()),
+            emoji: as_string_opt(item.get("emoji")).filter(|s| !s.is_empty()).and_then(|v| serde_json::from_str(&v).unwrap()),
             label: as_string_opt(item.get("label")),
             users: as_u64_set(item.get("label")).into_iter().map(|s| Id::new(s)).collect(),
         }
@@ -55,13 +55,15 @@ impl VoteOptionComponent for VoteOption {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub enum RoleListType {
     #[default]
-    BLACKLIST,
-    WHITELIST
+    #[serde(rename = "BLACKLIST")]
+    Blacklist,
+    #[serde(rename = "WHITELIST")]
+    Whitelist
 }
 
 impl Display for RoleListType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -90,10 +92,10 @@ impl From<&HashMap<String, AttributeValue>> for VoteVote {
             description: as_string(item.get("description"), &"".to_string()),
             options: as_map_vec(item.get("options")).iter().map(|&v| VoteOption::from(v)).collect(),
             channel_id: Id::new(as_u64(item.get("channel_id"), 0)),
-            close_at: as_string_opt(item.get("close_at")).filter(|v| !v.is_empty()).and_then(|v| serde_json::from_str(&*v).unwrap()),
+            close_at: as_string_opt(item.get("close_at")).filter(|v| !v.is_empty()).and_then(|v| serde_json::from_str(&v).unwrap()),
             open: as_bool(item.get("open"), false),
             role_list: as_u64_set(item.get("role_list")).into_iter().map(|s| Id::new(s)).collect(),
-            role_list_type: as_string_opt(item.get("role_list_type")).filter(|v| !v.is_empty()).and_then(|v| serde_json::from_str(&*v).unwrap()).unwrap_or_default(),
+            role_list_type: as_string_opt(item.get("role_list_type")).filter(|v| !v.is_empty()).and_then(|v| serde_json::from_str(&v).unwrap()).unwrap_or_default(),
             is_multi_select: as_bool(item.get("is_multi_select"), false),
         }
     }

@@ -9,7 +9,6 @@ use hex::FromHex;
 use http::{HeaderMap, StatusCode};
 use http::header::AUTHORIZATION;
 use http_body_util::BodyExt;
-use lambda_http::tracing::error;
 use once_cell::sync::Lazy;
 use serde_json::{Value, json};
 use tower_http::cors::CorsLayer;

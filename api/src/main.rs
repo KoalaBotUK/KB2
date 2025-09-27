@@ -55,7 +55,8 @@ async fn get_bot_redirect() -> Response<Body> {
 async fn run_local(app: Router) -> Result<(), Error> {
     let router = Router::new().nest("/lambda-url/api", app)
         .route_layer(axum::middleware::from_fn(middleware::mock_ctx_middleware));
-    Ok(axum::serve(tokio::net::TcpListener::bind("0.0.0.0:9000").await.unwrap(), router).await.unwrap())
+    axum::serve(tokio::net::TcpListener::bind("0.0.0.0:9000").await.unwrap(), router).await.unwrap();
+    Ok(())
 }
 
 #[tokio::main]

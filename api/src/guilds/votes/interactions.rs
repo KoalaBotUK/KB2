@@ -40,10 +40,10 @@ pub(crate) async fn handle_component_interaction(
     let role_in_role_list = roles.iter().any(|r| role_list.contains(r));
 
     let allowed = match role_list_type {
-        RoleListType::BLACKLIST => {
+        RoleListType::Blacklist => {
             !role_in_role_list
         }
-        RoleListType::WHITELIST => {
+        RoleListType::Whitelist => {
             role_in_role_list
         }
     };

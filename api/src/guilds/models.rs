@@ -34,8 +34,8 @@ impl From<&HashMap<String, AttributeValue>> for Guild {
                 .parse::<u64>()
                 .map(Id::new)
                 .unwrap(),
-            verify: as_string_opt(item.get("verify")).map(|v| serde_json::from_str(&*v).unwrap_or_default()).unwrap_or_default(),
-            vote: as_string_opt(item.get("vote")).map(|v| serde_json::from_str(&*v).unwrap_or_default()).unwrap_or_default(),
+            verify: as_string_opt(item.get("verify")).map(|v| serde_json::from_str(&v).unwrap_or_default()).unwrap_or_default(),
+            vote: as_string_opt(item.get("vote")).map(|v| serde_json::from_str(&v).unwrap_or_default()).unwrap_or_default(),
         }
     }
 }
@@ -146,7 +146,7 @@ impl Guild {
         {
             Ok(_) => {
                 info!("Saved guild to DynamoDB");
-                ()
+                
             },
             Err(e) => {
                 error!("DynamoDB write error: {}", e);

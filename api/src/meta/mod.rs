@@ -107,11 +107,11 @@ async fn refresh_meta_cache(discord_bot: Arc<Client>) {
     loop {
         debug!("Refreshing meta cache");
         let time = Instant::now();
-        match get_current_user_guilds_prime_cache(&*discord_bot).await {
+        match get_current_user_guilds_prime_cache(&discord_bot).await {
             Ok(guilds) => {
                 debug!("Refreshing meta cache: {}", guilds.len());
                 for guild in guilds {
-                    let _ = get_guild_prime_cache(guild.id, &*discord_bot).await;
+                    let _ = get_guild_prime_cache(guild.id, &discord_bot).await;
                 }
             }
             Err(e) => {
