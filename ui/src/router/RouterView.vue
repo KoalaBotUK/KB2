@@ -10,6 +10,7 @@ import DashBaseView from "../pages/dashboard/DashBaseView.vue";
 import HomeView from "../pages/HomeView.vue";
 import VerifyView from "../pages/verify/VerifyView.vue";
 import LoginView from "../pages/LoginView.vue";
+import {Health} from "../stores/health.js";
 
 const routes = {
   '^/$': HomeView,
@@ -31,6 +32,7 @@ window.addEventListener('hashchange', () => {
 })
 
 const currentView = computed(() => {
+  Health.loadHealth().then(() => console.log("Backend is Healthy"))
   for (const path in routes) {
     if (new RegExp(path).test(currentPath.value)) {
       return routes[path]
