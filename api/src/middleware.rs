@@ -13,15 +13,12 @@ pub async fn auth_middleware(
     next: Next,
 ) -> Result<Response, StatusCode> {
     // do something with `request`...
-    println!("Attempting to authenticate user");
-
     if headers.get("Authorization").is_none() {
         return Err(StatusCode::UNAUTHORIZED);
     }
 
     let auth_header = headers.get("Authorization").unwrap().to_str().unwrap();
     let (scheme, credentials) = auth_header.split_once(' ').unwrap();
-    println!("credentials: {credentials}");
     if scheme == "Discord" {
         let client = Client::new(format!("Bearer {credentials}"));
         let current_user = get_current_user(&client).await?;

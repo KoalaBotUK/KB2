@@ -23,7 +23,10 @@ import {redirectTo} from "../helpers/redirect.js";
         <a @click="redirectTo('https://github.com/KoalaBotUK')" class="btn btn-ghost"> <fa :icon="['fab', 'github']" size="xl"/></a>
       </nav>
       <nav class="justify-end" aria-label="Theme Toggle">
+        <div class="block">
+        <a href="https://legal.koalabot.uk" class="link">Privacy Policy</a>
         <ThemeToggle/>
+        </div>
       </nav>
 
     </footer>

@@ -26,6 +26,7 @@ provider "aws" {}
 # }
 
 module "lambda" {
+  count = var.deployment_env == "local" ? 0 : 1
   source         = "./modules/compute/lambda"
   deployment_env = var.deployment_env
   discord_bot_token = var.discord_bot_token
@@ -33,11 +34,13 @@ module "lambda" {
 }
 
 module "s3" {
+  count = var.deployment_env == "local" ? 0 : 1
   source = "./modules/data/s3"
   deployment_env = var.deployment_env
 }
 
 module "api" {
+  count = var.deployment_env == "local" ? 0 : 1
   source = "./modules/api/api-gateway"
   deployment_env = var.deployment_env
   root_domain_name = var.root_domain_name

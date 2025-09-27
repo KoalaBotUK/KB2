@@ -30,7 +30,9 @@ pub fn router() -> Router<AppState> {
 
 pub fn setup(discord_bot: Arc<Client>) {
     info!("Spawning meta cache refresh task");
-    tokio::spawn(refresh_meta_cache(discord_bot));
+    if false {
+        tokio::spawn(refresh_meta_cache(discord_bot));
+    }
 }
 
 
@@ -94,7 +96,7 @@ async fn get_meta_guilds_id(
             icon: guild.icon,
             is_admin: u_guild.owner || u_guild.permissions & Permissions::ADMINISTRATOR == Permissions::ADMINISTRATOR,
             roles: guild.roles,
-            channels: channels
+            channels
         }
     )))
 }
