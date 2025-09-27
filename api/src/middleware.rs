@@ -3,9 +3,9 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::middleware::Next;
 use axum::response::Response;
 use http_body_util::BodyExt;
-use lambda_http::tracing::{error, info};
+use lambda_http::tracing::info;
 use twilight_http::Client;
-use crate::discord::get_current_user;
+use crate::discord::{get_current_user, ise};
 
 pub async fn auth_middleware(
     headers: HeaderMap,
@@ -36,10 +36,7 @@ pub async fn log_middleware(request: Request, next: Next) -> Result<Response, St
     let body = body
         .collect()
         .await
-        .map_err(|e| {
-            error!("Internal Server Error: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?
+        .map_err(ise)?
         .to_bytes();
 
     info!("Received request: {:?} {:?}", parts, body);
@@ -53,10 +50,7 @@ pub async fn log_middleware(request: Request, next: Next) -> Result<Response, St
     let body = body
         .collect()
         .await
-        .map_err(|e| {
-            error!("Internal Server Error: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?
+        .map_err(ise)?
         .to_bytes();
 
     // Log the response

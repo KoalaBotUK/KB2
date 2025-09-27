@@ -1,23 +1,23 @@
-use std::collections::BTreeMap;
 use crate::AppState;
+use crate::discord::ise;
+use crate::guilds::models::Guild;
+use crate::users::email::send_verify_email;
 use crate::users::models::{Link, User};
 use axum::extract::{Path, State};
 use axum::routing::{delete, post};
 use axum::{Extension, Json};
+use hmac::{Hmac, Mac};
+use jwt::{SignWithKey, VerifyWithKey};
 use lambda_http::tracing::info;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::sync::Arc;
-use hmac::{Hmac, Mac};
-use jwt::{SignWithKey, VerifyWithKey};
 use sha2::Sha256;
+use std::collections::BTreeMap;
+use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use twilight_model::id::Id;
 use twilight_model::id::marker::UserMarker;
 use twilight_model::user::CurrentUser;
-use crate::discord::ise;
-use crate::guilds::models::Guild;
-use crate::users::email::send_verify_email;
 
 pub fn router() -> axum::Router<AppState> {
     axum::Router::new()
@@ -51,7 +51,7 @@ async fn post_link(
     if current_user.id != user_id {
         return Err(http::StatusCode::UNAUTHORIZED);
     }
-    
+
     let email = match link_req.origin {
         LinkOrigin::Discord => {
             // Handle Discord linking logic here
@@ -76,10 +76,18 @@ async fn post_link(
             .await?
         }
         LinkOrigin::Email => {
-            let key: Hmac<Sha256> = Hmac::new_from_slice(std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set").into_bytes().as_ref())
-                .map_err(ise)?;
-            let claims: BTreeMap<String, String> = link_req.token.verify_with_key(&key).map_err(ise)?;
-            if claims.get("exp").unwrap().parse::<u64>().unwrap() < chrono::Utc::now().timestamp() as u64 {
+            let key: Hmac<Sha256> = Hmac::new_from_slice(
+                std::env::var("DISCORD_BOT_TOKEN")
+                    .expect("DISCORD_BOT_TOKEN must be set")
+                    .into_bytes()
+                    .as_ref(),
+            )
+            .map_err(ise)?;
+            let claims: BTreeMap<String, String> =
+                link_req.token.verify_with_key(&key).map_err(ise)?;
+            if claims.get("exp").unwrap().parse::<u64>().unwrap()
+                < chrono::Utc::now().timestamp() as u64
+            {
                 return Err(http::StatusCode::UNAUTHORIZED);
             }
             claims.get("sub").unwrap().to_string()
@@ -99,7 +107,9 @@ async fn post_link(
         .links
         .retain(|l| l.link_address != new_link.link_address);
     for link_guild in &user_model.link_guilds {
-        let mut guild = Guild::from_db(link_guild.guild_id, &app_state.dynamo).await.unwrap();
+        let mut guild = Guild::from_db(link_guild.guild_id, &app_state.dynamo)
+            .await
+            .unwrap();
         crate::guilds::tasks::assign_roles_guild_user_link(
             link_guild.enabled,
             &new_link.link_address,
@@ -119,32 +129,29 @@ async fn oidc_email(
     token: String,
     app_state: &AppState,
 ) -> Result<String, http::StatusCode> {
-    let resp = app_state
+    let response = app_state
         .reqwest
         .get(url)
         .header("Authorization", format!("Bearer {token}"))
         .send()
-        .await;
-    match resp {
-        Ok(response) => {
-            if response.status().is_success() {
-                let user_info: serde_json::Value = response
-                    .json()
-                    .await
-                    .map_err(|_| http::StatusCode::INTERNAL_SERVER_ERROR)?;
-                // Process user_info to link with the user_id
-                // For example, save to DynamoDB or update user profile
-                Ok(user_info
-                    .get("email")
-                    .and_then(|email| email.as_str())
-                    .ok_or(http::StatusCode::UNAUTHORIZED)?
-                    .parse()
-                    .unwrap())
-            } else {
-                Err(http::StatusCode::UNAUTHORIZED)
-            }
-        }
-        Err(_) => Err(http::StatusCode::INTERNAL_SERVER_ERROR),
+        .await
+        .map_err(ise)?;
+
+    if response.status().is_success() {
+        let user_info: serde_json::Value = response
+            .json()
+            .await
+            .map_err(ise)?;
+        // Process user_info to link with the user_id
+        // For example, save to DynamoDB or update user profile
+        Ok(user_info
+            .get("email")
+            .and_then(|email| email.as_str())
+            .ok_or(http::StatusCode::UNAUTHORIZED)?
+            .parse()
+            .unwrap())
+    } else {
+        Err(http::StatusCode::UNAUTHORIZED)
     }
 }
 
@@ -195,14 +202,30 @@ async fn post_send_email(
     State(app_state): State<AppState>,
     Json(send_email_req): Json<SendEmailRequest>,
 ) -> Result<Json<serde_json::Value>, http::StatusCode> {
-    let key: Hmac<Sha256> = Hmac::new_from_slice(std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set").into_bytes().as_ref())
-        .map_err(ise)?;
+    let key: Hmac<Sha256> = Hmac::new_from_slice(
+        std::env::var("DISCORD_BOT_TOKEN")
+            .expect("DISCORD_BOT_TOKEN must be set")
+            .into_bytes()
+            .as_ref(),
+    )
+    .map_err(ise)?;
     let mut claims = BTreeMap::new();
     claims.insert("sub", send_email_req.email.clone());
-    claims.insert("exp", (chrono::Utc::now() + chrono::Duration::hours(1)).timestamp().to_string());
+    claims.insert(
+        "exp",
+        (chrono::Utc::now() + chrono::Duration::hours(1))
+            .timestamp()
+            .to_string(),
+    );
     let token_str = claims.sign_with_key(&key).map_err(ise)?;
 
-    send_verify_email(&app_state.ses, &*current_user.name, send_email_req.email, &token_str).await?;
-    
+    send_verify_email(
+        &app_state.ses,
+        &*current_user.name,
+        send_email_req.email,
+        &token_str,
+    )
+    .await?;
+
     Ok(Json(json!({"status": "success"})))
 }

@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use twilight_model::id::Id;
 use twilight_model::id::marker::{GuildMarker, UserMarker};
 use twilight_model::util::ImageHash;
+use crate::discord::ise;
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct Link {
@@ -144,7 +145,7 @@ impl User {
             .expression_attribute_values(":uid", AttributeValue::S(user_id.to_string()))
             .send()
             .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+            .map_err(ise)
             .and_then(|resp| {
                 let items = resp.items.unwrap_or_default();
                 if items.is_empty() {

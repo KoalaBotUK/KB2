@@ -114,10 +114,7 @@ impl Guild {
             .set_request_items(Some(request_items))
             .send()
             .await
-            .map_err(|e| {
-                error!("Error fetching guilds from DynamoDB: {}", e); 
-                StatusCode::INTERNAL_SERVER_ERROR
-            })
+            .map_err(ise)
             .and_then(|resp| {
                 let items = resp.responses.unwrap_or_default();
                 if items.is_empty() {

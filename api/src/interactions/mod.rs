@@ -23,6 +23,7 @@ use twilight_model::http::interaction::{
     InteractionResponse, InteractionResponseData, InteractionResponseType,
 };
 use twilight_model::id::Id;
+use crate::discord::ise;
 
 static PUB_KEY: Lazy<VerifyingKey> = Lazy::new(|| {
     VerifyingKey::from_bytes(
@@ -48,10 +49,7 @@ pub async fn pubkey_middleware(request: Request, next: Next) -> Result<Response,
     let body = body
         .collect()
         .await
-        .map_err(|e| {
-            error!("Internal Server Error: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?
+        .map_err(ise)?
         .to_bytes();
     let headers = parts.headers.clone();
     let new_request = Request::from_parts(parts, axum::body::Body::from(body.clone()));
@@ -69,10 +67,7 @@ pub async fn pubkey_middleware(request: Request, next: Next) -> Result<Response,
         .get("x-signature-ed25519")
         .and_then(|v| v.to_str().ok())
     {
-        hex_sig.parse().map_err(|e| {
-            error!("Internal Server Error: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?
+        hex_sig.parse().map_err(ise)?
     } else {
         return Err(StatusCode::BAD_REQUEST);
     };
@@ -226,16 +221,10 @@ async fn register_commands(
         .discord_bot
         .current_user_application()
         .await
-        .map_err(|e| {
-            error!("Internal Server Error: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?
+        .map_err(ise)?
         .model()
         .await
-        .map_err(|e| {
-            error!("Internal Server Error: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?
+        .map_err(ise)?
         .id;
     let resp = app_state
         .discord_bot
@@ -285,15 +274,9 @@ async fn register_commands(
             },
         ])
         .await
-        .map_err(|e| {
-            error!("Internal Server Error: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?
+        .map_err(ise)?
         .model()
         .await
-        .map_err(|e| {
-            error!("Internal Server Error: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+        .map_err(ise)?;
     Ok(Json(json!(resp)))
 }

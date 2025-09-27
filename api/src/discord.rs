@@ -53,8 +53,7 @@ pub fn as_http_err(e: Error) -> StatusCode {
             StatusCode::from_u16(status.get()).map_err(ise).unwrap()
         },
         _ => {
-            error!("Internal Server Error: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
+            ise(e)
         }
     }
 }
