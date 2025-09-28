@@ -1,4 +1,4 @@
-use crate::dynamo::{as_bool, as_map_vec, as_string, as_string_opt, as_u64};
+use crate::dynamo::{as_bool, as_map_vec, as_string, as_u64};
 use aws_sdk_dynamodb::types::AttributeValue;
 use http::StatusCode;
 use lambda_http::tracing::error;
@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use twilight_model::id::Id;
 use twilight_model::id::marker::{GuildMarker, UserMarker};
-use twilight_model::util::ImageHash;
 use crate::discord::ise;
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
@@ -39,8 +38,6 @@ impl From<Link> for HashMap<String, AttributeValue> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LinkGuild {
     pub guild_id: Id<GuildMarker>,
-    pub name: String,
-    pub icon: Option<ImageHash>,
     pub enabled: bool,
 }
 
@@ -53,8 +50,6 @@ impl From<&HashMap<String, AttributeValue>> for LinkGuild {
                     .parse::<u64>()
                     .unwrap_or(0),
             ),
-            name: as_string(item.get("name"), &"".to_string()),
-            icon: as_string_opt(item.get("icon")).and_then(|s| ImageHash::parse(s.as_bytes()).ok()),
             enabled: as_bool(item.get("enabled"), false),
         }
     }
@@ -64,10 +59,6 @@ impl From<LinkGuild> for HashMap<String, AttributeValue> {
     fn from(link_guild: LinkGuild) -> Self {
         let mut lg_map = HashMap::new();
         lg_map.insert("guild_id".to_string(), AttributeValue::S(link_guild.guild_id.to_string()));
-        lg_map.insert("name".to_string(), AttributeValue::S(link_guild.name));
-        if let Some(icon) = link_guild.icon {
-            lg_map.insert("icon".to_string(), AttributeValue::S(icon.to_string()));
-        }
         lg_map.insert("enabled".to_string(), AttributeValue::Bool(link_guild.enabled));
         lg_map
     }
@@ -76,8 +67,6 @@ impl From<LinkGuild> for HashMap<String, AttributeValue> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct User {
     pub user_id: Id<UserMarker>,
-    pub global_name: String,
-    pub avatar: Option<ImageHash>,
     pub links: Vec<Link>,
     pub link_guilds: Vec<LinkGuild>,
 }
@@ -86,8 +75,6 @@ impl Default for User {
     fn default() -> Self {
         User {
             user_id: Id::new(1),
-            global_name: "".to_string(),
-            avatar: None,
             links: vec![],
             link_guilds: vec![],
         }
@@ -102,8 +89,6 @@ impl From<&HashMap<String, AttributeValue>> for User {
                     .parse::<u64>()
                     .unwrap_or(0),
             ),
-            global_name: as_string(item.get("global_name"), &"".to_string()),
-            avatar: as_string_opt(item.get("avatar")).and_then(|s| ImageHash::parse(s.as_bytes()).ok()),
             links: as_map_vec(item.get("links"))
                 .into_iter()
                 .map(|m| m.into())
@@ -120,10 +105,6 @@ impl From<User> for HashMap<String, AttributeValue> {
     fn from(user: User) -> Self {
         let mut user_map = HashMap::new();
         user_map.insert("user_id".to_string(), AttributeValue::S(user.user_id.to_string()));
-        user_map.insert("global_name".to_string(), AttributeValue::S(user.global_name));
-        if let Some(avatar) = user.avatar {
-            user_map.insert("avatar".to_string(), AttributeValue::S(avatar.to_string()));
-        }
         let links: Vec<AttributeValue> = user.links.into_iter().map(|l| AttributeValue::M(l.into())).collect();
         user_map.insert("links".to_string(), AttributeValue::L(links));
         let link_guilds: Vec<AttributeValue> = user.link_guilds.into_iter().map(|lg| AttributeValue::M(lg.into())).collect();

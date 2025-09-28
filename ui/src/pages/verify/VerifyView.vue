@@ -8,15 +8,17 @@ import LinkAccountButton from "../../components/verify/LinkAccountButton.vue";
 import MainWithFooter from "../../components/MainWithFooter.vue";
 import LinkedGuildsSelect from "../../components/verify/LinkedGuildsSelect.vue";
 import {internalRedirect, reload} from "../../helpers/redirect.js";
-import {PartialGuildMeta} from "../../stores/meta.js";
+import {PartialGuildMeta, UserMeta} from "../../stores/meta.js";
 
 let user = ref(User.loadCache());
 let guildMetaArr = ref([])
+let userMeta = ref(null)
 if (!isUserLoggedIn(user.value)){
   internalRedirect("/login")
 }
 
 onMounted(async () => {
+  userMeta.value = await UserMeta.fetch(user.value.token.accessToken)
   guildMetaArr.value = await PartialGuildMeta.fetchAll(user.value.token.accessToken)
 })
 
@@ -37,7 +39,7 @@ onMounted(async () => {
         <h1 class="card-title text-xl font-bold self-center">KoalaBot Verify</h1>
         <div class="h-2.5"></div>
         <div class="flex flex-col w-full">
-          <DiscordAuthButton :long-text="true" :user="user" @logout="reload"/>
+          <DiscordAuthButton :long-text="true" :user="user" :user-meta="userMeta" @logout="reload"/>
         </div>
         <div class="divider"></div>
         <div class="flex flex-col w-full">

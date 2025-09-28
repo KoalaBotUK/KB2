@@ -1,8 +1,9 @@
 <script setup>
 
-import {User} from "../../stores/user.js";
+import {LinkGuild, User} from "../../stores/user.js";
 import {ref} from "vue";
 import {GuildMeta} from "../../stores/meta.js";
+import {linkGuild} from "../../helpers/verify.js";
 
 let props = defineProps({
       user: {
@@ -19,9 +20,16 @@ let loadingGuilds = ref([])
 async function toggle_guild(guildId) {
   loadingGuilds.value.push(guildId)
 
-  let link_guild = props.user.linkGuilds.filter(guild => guild.guildId === guildId)[0]
-  link_guild.enabled = !link_guild.enabled
-  await props.user.save();
+  let newEnabled = !isLinked(guildId)
+
+  let resp = await linkGuild(guildId, newEnabled)
+  props.user.linkGuilds = props.user.linkGuilds.filter(lg => lg.guildId !== guildId);
+  if (newEnabled) {
+    console.log(resp.data);
+    props.user.linkGuilds.push(LinkGuild.fromJson(resp.data));
+  }
+  console.log(props.user.linkGuilds);
+
   loadingGuilds.value = loadingGuilds.value.filter(guild => guild !== guildId)
 }
 

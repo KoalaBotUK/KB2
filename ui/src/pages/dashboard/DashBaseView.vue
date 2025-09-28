@@ -9,7 +9,7 @@ import {Guild} from "../../stores/guild.js";
 import {internalRedirect, INVITE_URL, reload} from "../../helpers/redirect.js";
 import {isUserLoggedIn, User} from "../../stores/user.js";
 import {fetchGuildMetaMap, filterByAdmin} from "../../helpers/meta.js";
-import {GuildMeta, PartialGuildMeta} from "../../stores/meta.js";
+import {GuildMeta, PartialGuildMeta, UserMeta} from "../../stores/meta.js";
 
 const currentPath = ref(window.location.pathname)
 
@@ -40,6 +40,7 @@ function reviver(key, value) {
 }
 
 let user = ref(User.loadCache());
+let userMeta = ref(null);
 if (!isUserLoggedIn(user.value)){
   internalRedirect("/login")
 }
@@ -72,8 +73,11 @@ function loadMemGuilds() {
 
 onMounted(async () => {
   loadMemGuilds();
+  userMeta.value = await UserMeta.fetch(user.value.token.accessToken)
   await loadMetadata();
-  await setCurrentGuild(currentGuildId.value);
+  if (currentGuildId.value) {
+    await setCurrentGuild(currentGuildId.value);
+  }
   // Load remaining guilds
   // await getAdminDscGuilds();
   await sync_guilds_kb();
@@ -158,7 +162,7 @@ async function sync_guilds_kb() {
           </a>
         </div>
         <div class="navbar-end px-10">
-          <DiscordAuthButton long-text="false" class="" :user="user" @logout="reload"></DiscordAuthButton>
+          <DiscordAuthButton long-text="false" class="" :user="user" :user-meta="userMeta" @logout="reload"></DiscordAuthButton>
         </div>
       </div>
     </header>

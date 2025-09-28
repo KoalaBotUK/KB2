@@ -11,7 +11,7 @@ use twilight_model::channel::message::Component;
 use twilight_model::guild::{Guild, Member, Role};
 use twilight_model::id::Id;
 use twilight_model::id::marker::{ChannelMarker, GuildMarker, MessageMarker, RoleMarker, UserMarker};
-use twilight_model::user::{CurrentUser, CurrentUserGuild};
+use twilight_model::user::{CurrentUser, CurrentUserGuild, User};
 
 pub fn ise<T: std::fmt::Debug>(e: T) -> StatusCode {
     error!("Internal Server Error: {:?}", e);
@@ -83,6 +83,11 @@ pub async fn remove_guild_member_role(guild_id: Id<GuildMarker>, user_id: Id<Use
 #[cached(time = 3600, key = "String", convert = r##"{ format!("{:?}", client.token().unwrap()) }"##)]
 pub async fn get_current_user(client: &Client) -> Result<CurrentUser,StatusCode> {
     retry_on_rl(|| async { client.current_user().await}).await.map_err(as_http_err)?.model().await.map_err(ise)
+}
+
+#[cached(time = 3600, key = "String", convert = r##"{ format!("{user_id}{:?}", client.token().unwrap()) }"##)]
+pub async fn get_user(user_id: Id<UserMarker>, client: &Client) -> Result<User,StatusCode> {
+    retry_on_rl(|| async { client.user(user_id).await}).await.map_err(as_http_err)?.model().await.map_err(ise)
 }
 
 #[cached(time = 60, key = "String", convert = r##"{ format!("{guild_id}{:?}", client.token().unwrap()) }"##)]

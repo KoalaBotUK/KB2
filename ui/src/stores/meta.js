@@ -65,3 +65,21 @@ export class GuildMeta extends PartialGuildMeta {
     return GuildMeta.fromJson(r.data);
   }
 }
+
+export class UserMeta {
+  constructor(id, globalName, avatar) {
+    this.id = id;
+    this.globalName = globalName;
+    this.avatar = avatar;
+  }
+  
+  static fromJson(json) {
+    return new UserMeta(json['id'], json['global_name'], json['avatar']);
+  }
+  
+  static async fetch(token) {
+    let r = await axios.get(`${VITE_KB_API_URL}/meta/users/@me`,
+      { headers: { 'Authorization': 'Discord ' + token } });
+    return UserMeta.fromJson(r.data);
+  }  
+}

@@ -16,3 +16,15 @@ export async function linkEmail(organization, token, overwrite=false) {
     }
   )
 }
+
+export async function linkGuild(guildId, enabled){
+  return await axios.put(`${VITE_KB_API_URL}/users/${user.userId}/link_guilds/${guildId}`, {
+      'enabled': enabled,
+    },
+    {
+      headers: {
+        'Authorization': 'Discord ' + user.token.accessToken
+      }
+    }
+  )
+}

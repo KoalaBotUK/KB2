@@ -25,24 +25,22 @@ export class Link {
 
 export class LinkGuild {
   guildId
-  name
-  icon
   enabled
 
-  constructor(guildId, name, icon, enabled) {
+  constructor(guildId, enabled) {
     this.guildId = guildId
-    this.name = name
-    this.icon = icon
     this.enabled = enabled
   }
 
   toJson() {
     return {
       'guild_id': this.guildId,
-      'name': this.name,
-      'icon': this.icon,
       'enabled': this.enabled
     }
+  }
+
+  static fromJson(json) {
+    return new LinkGuild(json['guild_id'],json['enabled'])
   }
 }
 
@@ -51,14 +49,6 @@ export class User {
    * @property {string}
    */
   userId
-  /**
-   * @property {string}
-   */
-  globalName
-  /**
-   * @property {string}
-   */
-  avatar
   /**
    * @property {Link[]}
    */
@@ -72,27 +62,23 @@ export class User {
    */
   token
 
-  constructor(userId, globalName, avatar, links, linkGuilds, token) {
+  constructor(userId, links, linkGuilds, token) {
     this.userId = userId
-    this.globalName = globalName
-    this.avatar = avatar
     this.links = links
     this.linkGuilds = linkGuilds
     this.token = token
   }
 
   static async loadMe(token) {
-    let r = await axios.post(`${VITE_KB_API_URL}/users/@me`, {}, {
+    let r = await axios.get(`${VITE_KB_API_URL}/users/@me`, {
       headers: {
         'Authorization': 'Discord ' + token.accessToken
       }
     })
     return new User(
       r.data['user_id'],
-      r.data['global_name'],
-      r.data['avatar'],
       r.data['links'].map(l => new Link(['link_address'], l['linked_at'], l['active'])),
-      r.data['link_guilds'].map(lg => new LinkGuild(lg['guild_id'],  lg['name'], lg['icon'], lg['enabled'])),
+      r.data['link_guilds'].map(LinkGuild.fromJson),
       token
     )
   }

@@ -6,11 +6,15 @@ import BaseAuthButton from "../verify/BaseAuthButton.vue";
 import {isUserLoggedIn, User} from "../../stores/user.js";
 import {onClickOutside} from "@vueuse/core";
 import {AuthorizationFlowPKCE} from "../../helpers/auth";
+import {UserMeta} from "../../stores/meta.js";
 
 let props = defineProps(
     {
       user: {
         type: User
+      },
+      userMeta: {
+        type: UserMeta
       }
     },
     {
@@ -52,21 +56,21 @@ function logout() {
   <button class="btn place-items-center self-center" :class="!props.longText ? 'w-60' : ''" v-if="isUserLoggedIn(props.user)" @click="modalActiveRef = true">
     <div class="avatar w-7 h-auto self-center">
       <div class="ring-primary rounded-full ring">
-        <img :src="`https://cdn.discordapp.com/avatars/${props.user.userId}/${props.user.avatar}.webp`" alt="discord avatar" />
+        <img :src="`https://cdn.discordapp.com/avatars/${props.user.userId}/${props.userMeta.avatar}.webp`" alt="discord avatar" v-if="props.userMeta" />
       </div>
     </div>
-    {{ longtext ? 'Logged in as ' : ''}}{{ props.user.globalName }}
+    {{ longtext ? 'Logged in as ' : ''}}{{ props.userMeta ? props.userMeta.globalName : '' }}
   </button>
 
   <Teleport to="#modal">
     <div class="modal" :class="modalActiveRef ? 'modal-open' : ''" v-if="isUserLoggedIn(props.user)" >
       <div class="modal-box w-96 bg-base-300 flex flex-col" ref="modalBox">
         <div class="flex flex-row justify-between">
-          <h3 class="text-lg font-bold">Logged in as {{ props.user.globalName }}</h3>
+          <h3 class="text-lg font-bold">Logged in as {{ props.userMeta ? props.userMeta.globalName : '' }}</h3>
 
           <div class="avatar w-10 h-auto self-center mb-4">
             <div class="ring-primary rounded-full ring">
-              <img :src="`https://cdn.discordapp.com/avatars/${props.user.userId}/${props.user.avatar}.webp`" alt="discord avatar" />
+              <img :src="`https://cdn.discordapp.com/avatars/${props.user.userId}/${props.userMeta.avatar}.webp`" alt="discord avatar" v-if="props.userMeta" />
             </div>
           </div>
         </div>

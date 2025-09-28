@@ -29,6 +29,11 @@ resource "aws_iam_role_policy_attachment" "ses_role_attach" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSESFullAccess"
 }
 
+resource "aws_cloudwatch_log_group" "default" {
+  name              = "/aws/lambda/${aws_lambda_function.lambda_function.function_name}" # Replace with your log group name
+  retention_in_days = 14                              # Set the desired retention period in days
+}
+
 data "aws_iam_policy_document" "cloudwatch_readwrite" {
   statement {
     effect = "Allow"
@@ -40,7 +45,7 @@ data "aws_iam_policy_document" "cloudwatch_readwrite" {
     effect = "Allow"
     actions = ["logs:CreateLogStream", "logs:PutLogEvents",]
     resources = [
-      "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${aws_lambda_function.lambda_function.function_name}:*"
+      "${aws_cloudwatch_log_group.default.arn}:*"
     ]
   }
 }

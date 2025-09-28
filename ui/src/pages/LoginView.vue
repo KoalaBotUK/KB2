@@ -4,6 +4,7 @@ import {isUserLoggedIn, User} from "../stores/user.js";
 import {onMounted, ref} from "vue";
 import {internalRedirect, reload} from "../helpers/redirect.js";
 import MainWithFooter from "../components/MainWithFooter.vue";
+import {UserMeta} from "../stores/meta.js";
 
 function setPrePath() {
   let lastPath = localStorage.getItem('lastPath');
@@ -20,11 +21,16 @@ function redirectPrePath() {
 
 
 let user = ref(User.loadCache());
+let userMeta = ref(null);
 if (isUserLoggedIn(user.value)) {
   redirectPrePath()
 } else {
   setPrePath()
 }
+
+onMounted(async () => {
+  userMeta.value = await UserMeta.fetch(user.value.token.accessToken)
+})
 
 
 </script>
@@ -38,7 +44,7 @@ if (isUserLoggedIn(user.value)) {
           <p>By logging in, you agree to our
           <a href="https://legal.koalabot.uk" class="link">Privacy Policy</a>
           </p>
-            <DiscordAuthButton longText="true" :user="user" @logout="reload"></DiscordAuthButton>
+            <DiscordAuthButton longText="true" :user="user" :user-meta="userMeta" @logout="reload"></DiscordAuthButton>
           <a class="btn btn-neutral btn-soft btn-sm" href="/">Back</a>
         </div>
   </div>
