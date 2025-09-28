@@ -124,7 +124,7 @@ function validAdd() {
                 <fa :icon="['fas', 'ellipsis']"/>
               </div>
               <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-1 p-2 shadow-sm">
-                <li><a>Edit</a></li>
+<!--                <li><a>Edit</a></li>-->
                 <li class="text-error" @click="removeVerifyRole(role)"><a>Remove</a></li>
               </ul>
             </div>

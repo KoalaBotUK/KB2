@@ -4,7 +4,7 @@ use lambda_http::tracing::info;
 use regex::Regex;
 use twilight_model::id::Id;
 use twilight_model::id::marker::{GuildMarker, RoleMarker, UserMarker};
-use crate::discord::{add_guild_member_role, get_guild_member, remove_guild_member_role};
+use crate::discord::{add_guild_member_role, get_guild_member, get_guild_member_no_cache, remove_guild_member_role};
 use crate::guilds::verify::models::VerifyRole;
 
 async fn assign_role_user(
@@ -72,7 +72,7 @@ pub async fn assign_roles_guild_user_link(
     let roles = &mut guild.verify.roles;
     for i in 0..roles.len() {
         let role = roles.get_mut(i).unwrap();
-        let has_dsc_role = get_guild_member(guild.guild_id, user_id, bot).await?.roles.contains(&role.role_id);
+        let has_dsc_role = get_guild_member_no_cache(guild.guild_id, user_id, bot).await?.roles.contains(&role.role_id);
         if enabled && Regex::new(&role.pattern)
             .unwrap()
             .is_match(link_address)
@@ -86,7 +86,9 @@ pub async fn assign_roles_guild_user_link(
             info!("Removing role {} from user {}", role.role_id, user_id);
             if has_dsc_role {
                 remove_role_user(guild.guild_id, user_id, role.role_id, bot).await?;
-                role.members -= 1;
+                if role.members != 0 {
+                    role.members -= 1;
+                }
             }
         }
     }
