@@ -68,13 +68,11 @@ pub async fn get_current_user_guild(guild_id: Id<GuildMarker>, client: &Client) 
     Ok(retry_on_rl(|| async { client.current_user_guilds().after(Id::new(guild_id.get()-1)).limit(1).await}).await.map_err(as_http_err)?.models().await.map_err(ise)?.pop().unwrap())
 }
 
-#[cached(time = 60, key = "String", convert = r##"{ format!("{guild_id}{user_id}{role_id}{:?}", client.token().unwrap()) }"##)]
 pub async fn add_guild_member_role(guild_id: Id<GuildMarker>, user_id: Id<UserMarker>, role_id: Id<RoleMarker>, client: &Client) -> Result<(),StatusCode> {
     retry_on_rl(|| async { client.add_guild_member_role(guild_id, user_id, role_id).await}).await.map_err(as_http_err)?;
     Ok(())
 }
 
-#[cached(time = 60, key = "String", convert = r##"{ format!("{guild_id}{user_id}{role_id}{:?}", client.token().unwrap()) }"##)]
 pub async fn remove_guild_member_role(guild_id: Id<GuildMarker>, user_id: Id<UserMarker>, role_id: Id<RoleMarker>, client: &Client) -> Result<(),StatusCode> {
     retry_on_rl(|| async { client.remove_guild_member_role(guild_id, user_id, role_id).await}).await.map_err(as_http_err)?;
     Ok(())

@@ -35,12 +35,12 @@ async fn put_link_guilds_id(
     if current_user.id != user_id || !is_client_guild_member(guild_id, &discord_user).await {
         return Err(http::StatusCode::UNAUTHORIZED);
     }
-    
+
     let new_link_guild = LinkGuild {
         guild_id,
         enabled: link_guilds_req.enabled,
     };
-    
+
     let mut user = User::from_db(&user_id.to_string(), &app_state.dynamo).await.unwrap();
     match user.link_guilds.iter_mut().find(|g| g.guild_id == guild_id) {
         Some(link_guild) => {
@@ -60,9 +60,9 @@ async fn put_link_guilds_id(
         }
     }
     user.save(&app_state.dynamo).await;
-    
+
     let mut guild = Guild::from_db(guild_id, &app_state.dynamo).await.unwrap();
-    
+
     match guild.verify.user_links.get(&user.user_id) {
         Some(_links) => {
             if !new_link_guild.enabled {
@@ -80,7 +80,7 @@ async fn put_link_guilds_id(
                 // Already verified on this server
                 return Ok(Json(json!(new_link_guild)));
             }
-            
+
         },
         None => {
             if new_link_guild.enabled {

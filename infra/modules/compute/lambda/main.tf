@@ -76,6 +76,7 @@ resource "aws_lambda_function" "lambda_function" {
   role          = aws_iam_role.lambda_execute_role.arn
   handler       = "main"
   filename      = data.archive_file.empty_zip.output_path
+  timeout = 10
 
   runtime = "provided.al2023"
 
