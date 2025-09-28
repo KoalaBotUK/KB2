@@ -1,7 +1,13 @@
 <script setup>
 import { ref } from 'vue'
 
-const theme=ref(localStorage.getItem('data-theme'))
+function getCurrentTheme() {
+  let t = localStorage.getItem('data-theme')
+  if (t === null) return 'light'
+  return t
+}
+
+const theme=ref(getCurrentTheme())
 document.documentElement.setAttribute("data-theme", theme.value);
 
 function onThemeToggle(){
