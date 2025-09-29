@@ -20,6 +20,7 @@ if (!isUserLoggedIn(user.value)){
 onMounted(async () => {
   userMeta.value = await UserMeta.fetch(user.value.token.accessToken)
   guildMetaArr.value = await PartialGuildMeta.fetchAll(user.value.token.accessToken)
+  user.value = await User.loadMeCache(user.value.token)
 })
 
 

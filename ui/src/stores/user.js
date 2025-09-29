@@ -85,7 +85,7 @@ export class User {
 
   static async loadMeCache(token) {
     let cacheUser = await User.loadMe(token)
-    User.saveCache(cacheUser)
+    cacheUser.saveCache()
     return cacheUser
   }
 
@@ -110,25 +110,18 @@ export class User {
   toJson() {
     return {
       'user_id': this.userId,
-      'global_name': this.globalName,
-      'avatar': this.avatar,
       'links': this.links.map(l => l.toJson()),
       'link_guilds': this.linkGuilds.map(lg => lg.toJson())
     }
   }
 
-  async save() {
-    await axios.put(`${VITE_KB_API_URL}/users/@me`, this.toJson(), {
-      headers: {
-        'Authorization': 'Discord ' + this.token.accessToken
-      }
-    });
+   saveCache(){
     User.saveCache(this)
   }
 
   logout() {
     this.token = null
-    User.saveCache(this)
+    this.saveCache()
   }
 
 }

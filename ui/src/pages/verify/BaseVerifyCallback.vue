@@ -1,7 +1,7 @@
 <script setup>
 
 import {onMounted, ref} from "vue";
-import {linkEmail} from "../../helpers/verify.js";
+import {linkEmail} from "../../helpers/user.js";
 import {OauthFlow} from "../../helpers/auth.js";
 import {internalRedirect} from "../../helpers/redirect.js";
 

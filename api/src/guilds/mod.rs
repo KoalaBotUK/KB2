@@ -1,4 +1,3 @@
-use std::collections::{HashSet};
 use crate::AppState;
 use crate::guilds::models::Guild;
 use axum::extract::State;
@@ -15,20 +14,17 @@ use twilight_model::id::Id;
 use twilight_model::id::marker::GuildMarker;
 use twilight_model::user::{CurrentUser, CurrentUserGuild};
 use crate::discord::{get_guild, get_guild_member};
-use crate::guilds::tasks::{add_role_to_guild, remove_role_from_guild};
-use crate::guilds::verify::models::VerifyRole;
 use crate::utils::{admin_guilds, is_client_admin_guild};
 
 pub mod models;
 pub mod verify;
 pub(crate) mod utils;
-pub mod tasks;
 pub(crate) mod votes;
 
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(get_guilds).post(post_guilds))
-        .route("/{guild_id}", get(get_guilds_id).put(put_guilds_id).post(post_guilds_id))
+        .route("/{guild_id}", get(get_guilds_id).post(post_guilds_id))
         .nest("/{guild_id}/verify", verify::controllers::router())
         .nest("/{guild_id}/votes", votes::controllers::router())
         .layer(CorsLayer::permissive())
@@ -133,37 +129,4 @@ async fn get_guilds_id(
             new_guild
         }
     })))
-}
-
-async fn put_guilds_id(
-    Path(guild_id): Path<Id<GuildMarker>>,
-    Extension(current_user): Extension<CurrentUser>,
-    State(app_state): State<AppState>,
-    Json(guild_req): Json<Guild>,
-) -> Result<Json<Value>, StatusCode> {
-    if !is_client_admin_guild(guild_id, &current_user, &app_state.discord_bot).await? {
-        return Err(StatusCode::UNAUTHORIZED);
-    }
-
-    let mut old_guild = match Guild::from_db(guild_id, &app_state.dynamo).await {
-        Some(g) => g,
-        None => return Err(StatusCode::NOT_FOUND),
-    };
-
-    let old_set: HashSet<VerifyRole> = HashSet::from_iter(old_guild.verify.roles.clone());
-    let new_set: HashSet<VerifyRole> = HashSet::from_iter(guild_req.verify.roles);
-
-    let add_roles: HashSet<VerifyRole> = new_set.difference(&old_set).cloned().collect();
-    let remove_roles: HashSet<VerifyRole> = old_set.difference(&new_set).cloned().collect();
-
-    for role in add_roles {
-        add_role_to_guild(&mut old_guild, role, &app_state.discord_bot).await?;
-    }
-
-    for role in remove_roles {
-        remove_role_from_guild(&mut old_guild, role.role_id, &app_state.discord_bot).await?;
-    }
-
-    old_guild.save(&app_state.dynamo).await;
-    Ok(Json(json!(old_guild)))
 }

@@ -19,15 +19,30 @@ pub async fn auth_middleware(
 
     let auth_header = headers.get("Authorization").unwrap().to_str().unwrap();
     let (scheme, credentials) = auth_header.split_once(' ').unwrap();
-    if scheme == "Discord" {
-        let client = Client::new(format!("Bearer {credentials}"));
-        let current_user = get_current_user(&client).await?;
-        let ext_mut = request.extensions_mut();
-        ext_mut.insert(std::sync::Arc::new(client));
-        ext_mut.insert(current_user);
-        Ok(next.run(request).await)
-    } else {
-        Err(StatusCode::UNAUTHORIZED)
+    match scheme {
+        "Discord" => {
+            let client = Client::new(format!("Bearer {credentials}"));
+            let current_user = get_current_user(&client).await?;
+            if current_user.bot {
+                return Err(StatusCode::UNAUTHORIZED);
+            }
+            let ext_mut = request.extensions_mut();
+            ext_mut.insert(std::sync::Arc::new(client));
+            ext_mut.insert(current_user);
+            Ok(next.run(request).await)
+        }
+        "Bot" => {
+            if credentials != std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set") {
+                return Err(StatusCode::UNAUTHORIZED);
+            }
+            let client = Client::new(format!("Bot {credentials}"));
+            let ext_mut = request.extensions_mut();
+            ext_mut.insert(std::sync::Arc::new(client));
+            Ok(next.run(request).await)
+        }
+        _ => {
+            Err(StatusCode::UNAUTHORIZED)
+        }
     }
 }
 

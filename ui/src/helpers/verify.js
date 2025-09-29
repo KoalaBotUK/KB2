@@ -1,29 +1,24 @@
 import axios from "axios";
-import {User} from "../stores/user.js";
 
 const VITE_KB_API_URL = import.meta.env.VITE_KB_API_URL
-const user = User.loadCache()
 
-export async function linkEmail(organization, token, overwrite=false) {
-  await axios.post(`${VITE_KB_API_URL}/users/${user.userId}/links`, {
-      'origin': organization,
-      'token': token
-    },
+export async function putVerifyRole(guildId, roleId, pattern, accessToken) {
+  return await axios.put(`${VITE_KB_API_URL}/guilds/${guildId}/verify/roles/${roleId}`, {
+    'pattern': pattern
+  },
     {
       headers: {
-        'Authorization': 'Discord ' + user.token.accessToken
+        'Authorization': 'Discord ' + accessToken
       }
     }
   )
 }
 
-export async function linkGuild(guildId, enabled){
-  return await axios.put(`${VITE_KB_API_URL}/users/${user.userId}/link_guilds/${guildId}`, {
-      'enabled': enabled,
-    },
+export async function deleteVerifyRole(guildId, roleId, accessToken) {
+  return await axios.delete(`${VITE_KB_API_URL}/guilds/${guildId}/verify/roles/${roleId}`,
     {
       headers: {
-        'Authorization': 'Discord ' + user.token.accessToken
+        'Authorization': 'Discord ' + accessToken
       }
     }
   )

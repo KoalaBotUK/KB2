@@ -7,6 +7,7 @@ import {GuildMeta} from "../../stores/meta.js";
 import {INVITE_URL} from "../../helpers/redirect.js";
 import RoleTag from "../discord/RoleTag.vue";
 import RoleSelect from "../discord/RoleSelect.vue";
+import {deleteVerifyRole, putVerifyRole} from "../../helpers/verify.js";
 
 let roleSelected = ref(null);
 let modelPattern = defineModel('modelPattern');
@@ -35,7 +36,6 @@ let emits = defineEmits(
 const userRef = ref(User.loadCache())
 
 async function updateGuild() {
-  await props.guild.save();
   emits('update');
 }
 
@@ -54,9 +54,10 @@ async function addVerifyRole() {
   if (!props.guild.verify.roles) {
     props.guild.verify.roles = []
   }
+  let putResp = await putVerifyRole(props.guild.guildId, roleId, pattern, userRef.value.token.accessToken)
   props.guild.verify.roles = props.guild.verify.roles.filter(r => r.roleId !== roleId)
-  props.guild.verify.roles.push(new VerifyRole(roleId, null, pattern, 0));
-  await updateGuild();
+  props.guild.verify.roles.push(VerifyRole.fromJson(putResp.data));
+
   // Reset form fields
   roleSelected.value = null;
   modelPattern.value = '';
@@ -64,8 +65,8 @@ async function addVerifyRole() {
 }
 
 async function removeVerifyRole(role) {
+  await deleteVerifyRole(props.guild.guildId, role.roleId, userRef.value.token.accessToken);
   props.guild.verify.roles = props.guild.verify.roles.filter(r => r.roleId !== role.roleId);
-  await updateGuild();
 }
 
 function validRole() {

@@ -4,15 +4,24 @@ use aws_sdk_dynamodb::types::AttributeValue;
 use serde::{Deserialize, Serialize};
 use twilight_model::id::Id;
 use twilight_model::id::marker::{RoleMarker, UserMarker};
-use crate::dynamo::{as_map, as_map_vec, as_string, as_string_opt, as_u32};
+use crate::dynamo::{as_map, as_map_vec, as_string, as_u32};
 use crate::users::models::Link;
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct VerifyRole {
     pub role_id: Id<RoleMarker>,
-    pub role_name: Option<String>,
     pub pattern: String,
     pub members: u32,
+}
+
+impl Default for VerifyRole {
+    fn default() -> Self {
+        VerifyRole {
+            role_id: Id::new(1),
+            pattern: "".to_string(),
+            members: 0,
+        }
+    }
 }
 
 impl Hash for VerifyRole {
@@ -30,7 +39,6 @@ impl From<&HashMap<String, AttributeValue>> for VerifyRole {
                     .parse::<u64>()
                     .unwrap_or(0),
             ),
-            role_name: as_string_opt(item.get("role_name")),
             pattern: as_string(item.get("pattern"), &"".to_string()),
             members: as_u32(item.get("members"), 0),
         }
@@ -41,9 +49,6 @@ impl From<VerifyRole> for HashMap<String, AttributeValue> {
     fn from(role: VerifyRole) -> Self {
         let mut role_map = HashMap::new();
         role_map.insert("role_id".to_string(), AttributeValue::S(role.role_id.to_string()));
-        if let Some(role_name) = role.role_name {
-            role_map.insert("role_name".to_string(), AttributeValue::S(role_name));
-        }
         role_map.insert("pattern".to_string(), AttributeValue::S(role.pattern));
         role_map.insert("members".to_string(), AttributeValue::N(role.members.to_string()));
         role_map
