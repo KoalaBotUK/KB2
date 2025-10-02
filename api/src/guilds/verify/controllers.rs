@@ -4,7 +4,6 @@ use crate::AppState;
 use axum::{Extension, Json};
 use axum::routing::{post, put};
 use http::StatusCode;
-use lambda_http::tracing::info;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tower_http::cors::CorsLayer;

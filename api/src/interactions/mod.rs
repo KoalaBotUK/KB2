@@ -17,7 +17,7 @@ use twilight_model::application::interaction::{
     Interaction, InteractionContextType, InteractionData, InteractionType,
 };
 use twilight_model::channel::message::component::{ActionRow, Button, ButtonStyle};
-use twilight_model::channel::message::{Component, MessageFlags};
+use twilight_model::channel::message::{Component, EmojiReactionType, MessageFlags};
 use twilight_model::http::interaction::{
     InteractionResponse, InteractionResponseData, InteractionResponseType,
 };
@@ -184,19 +184,25 @@ async fn verify() -> Result<Json<Value>, StatusCode> {
     Ok(Json(json!(InteractionResponse {
         kind: InteractionResponseType::ChannelMessageWithSource,
         data: Some(InteractionResponseData {
-            content: Some("Verify yourself on our site!".into()),
+            content: Some("# How To
+1. Go to Koala Verify with the link below and log in with your discord account
+2. Click `+ Add` and choose between the email linking options
+3. Click to enable a link with a server 
+
+# FAQ
+**Q: Continue with Microsoft 'Required Approval'**
+A: Koala requires approval from some IT administrators, you can use the `other` option and enter your email manually instead.".into()),
             components: Some(vec![Component::ActionRow(ActionRow {
                 components: vec![Component::Button(Button {
                     custom_id: None,
                     disabled: false,
-                    emoji: None,
+                    emoji: Some(EmojiReactionType::Unicode {name: "🔗".to_owned()}),
                     label: Some("Koala Verify".to_owned()),
                     style: ButtonStyle::Link,
                     url: Some(format!("{url}/verify").to_owned()),
                     sku_id: None,
                 })],
             })]),
-            flags: Some(MessageFlags::EPHEMERAL),
             ..Default::default()
         }),
     })))

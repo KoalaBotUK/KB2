@@ -34,7 +34,7 @@ async fn put_link_guilds_id(
     let new_link_guild = LinkGuild {guild_id,enabled: true};
 
     let mut user = User::from_db(&user_id.to_string(), &app_state.dynamo).await.unwrap();
-    if user.link_guilds.iter().any(|g| g.guild_id == guild_id && g.enabled == false) {
+    if user.link_guilds.iter().any(|g| g.guild_id == guild_id && !g.enabled) {
         // Already exists
         return Ok(Json(json!(new_link_guild)));
     }
