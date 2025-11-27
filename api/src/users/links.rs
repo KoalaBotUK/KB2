@@ -177,7 +177,8 @@ async fn delete_link(
     let mut user_model = User::from_db(&user_id.to_string(), &app_state.dynamo)
         .await
         .unwrap();
-    let existing_link = user_model.links.pop_if(|l| l.link_address == link_address);
+    let pos = user_model.links.iter().position(|l| l.link_address == link_address);
+    let existing_link = pos.map(|i| user_model.links.remove(i));
     info!("Deleting link for user {}: {}", user_id, link_address);
     if existing_link.is_none() {
         return Err(StatusCode::NOT_FOUND);
