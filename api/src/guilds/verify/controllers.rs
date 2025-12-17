@@ -52,8 +52,11 @@ async fn put_roles_id(
 
     for (user_id, user_links) in &guild.verify.user_links {
         if link_arr_match(user_links, &new_role.pattern) {
-            add_guild_member_role(guild.guild_id, *user_id, role_id, &app_state.discord_bot).await?;
-            new_role.members += 1;
+            let r = add_guild_member_role(guild.guild_id, *user_id, role_id, &app_state.discord_bot).await;
+            if !(r.is_err() && r.err().unwrap().eq(&StatusCode::NOT_FOUND)) {
+                r?;
+                new_role.members += 1;
+            } 
         }
     }
     guild.verify.roles.push(new_role);
@@ -96,7 +99,10 @@ async fn remove_existing_role(
 
     for (user_id, user_links) in &guild.verify.user_links {
         if link_arr_match(user_links, &existing_role.pattern) {
-            remove_guild_member_role(guild.guild_id, *user_id, role_id, &app_state.discord_bot).await?
+            let r = remove_guild_member_role(guild.guild_id, *user_id, role_id, &app_state.discord_bot).await;
+            if !(r.is_err() && r.err().unwrap().eq(&StatusCode::NOT_FOUND)) {
+                r?;
+            }
         }
     }
 
@@ -120,10 +126,16 @@ async fn post_recon(
         role.members = 0;
         for (user_id, links) in &*user_links {
             if link_arr_match(links, &role.pattern) {
-                add_guild_member_role(guild.guild_id, *user_id, role.role_id, &app_state.discord_bot).await?;
-                role.members += 1;
+                let r = add_guild_member_role(guild.guild_id, *user_id, role.role_id, &app_state.discord_bot).await;
+                if !(r.is_err() && r.err().unwrap().eq(&StatusCode::NOT_FOUND)) {
+                    r?;
+                    role.members += 1;
+                }
             } else {
-                remove_guild_member_role(guild.guild_id, *user_id, role.role_id, &app_state.discord_bot).await?;
+                let r = remove_guild_member_role(guild.guild_id, *user_id, role.role_id, &app_state.discord_bot).await;
+                if !(r.is_err() && r.err().unwrap().eq(&StatusCode::NOT_FOUND)) {
+                    r?;
+                }
             }
         }
     }
