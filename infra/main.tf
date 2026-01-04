@@ -11,7 +11,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = "~> 6.27"
     }
   }
 
@@ -48,6 +48,11 @@ module "api" {
 
 module "dynamodb" {
   source = "./modules/data/dynamodb"
+  deployment_env = var.deployment_env
+}
+
+module "dsql" {
+  source = "./modules/data/dsql"
   deployment_env = var.deployment_env
 }
 
