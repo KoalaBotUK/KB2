@@ -1,35 +1,30 @@
+use crate::dsql::establish_connection;
 use aws_config::BehaviorVersion;
 use axum::body::Body;
-use axum::{http::StatusCode, routing::get, Json, Router};
+use axum::{Json, Router, http::StatusCode, routing::get};
 use http::Response;
-use lambda_http::{run, tracing, Error};
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use lambda_http::{Error, run, tracing};
+use serde_json::{Value, json};
+use sqlx::{Pool, Postgres};
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 
-mod dynamo;
+mod discord;
+mod dsql;
 mod guilds;
 mod interactions;
+mod meta;
 mod middleware;
 mod users;
 mod utils;
-mod discord;
-mod meta;
 
 #[derive(Clone)]
 pub struct AppState {
-    dynamo: aws_sdk_dynamodb::Client,
     scheduler: aws_sdk_scheduler::Client,
     ses: aws_sdk_sesv2::Client,
+    pg_pool: Pool<Postgres>,
     discord_bot: Arc<twilight_http::Client>,
     reqwest: Arc<reqwest::Client>,
-}
-
-#[derive(Deserialize, Serialize)]
-struct Params {
-    first: Option<String>,
-    second: Option<String>,
 }
 
 async fn health_check() -> (StatusCode, Json<Value>) {
@@ -53,9 +48,15 @@ async fn get_bot_redirect() -> Response<Body> {
 }
 
 async fn run_local(app: Router) -> Result<(), Error> {
-    let router = Router::new().nest("/lambda-url/api", app)
+    let router = Router::new()
+        .nest("/lambda-url/api", app)
         .route_layer(axum::middleware::from_fn(middleware::mock_ctx_middleware));
-    axum::serve(tokio::net::TcpListener::bind("0.0.0.0:9000").await.unwrap(), router).await.unwrap();
+    axum::serve(
+        tokio::net::TcpListener::bind("0.0.0.0:9000").await.unwrap(),
+        router,
+    )
+    .await
+    .unwrap();
     Ok(())
 }
 
@@ -65,21 +66,29 @@ async fn main() -> Result<(), Error> {
     tracing::init_default_subscriber();
 
     let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
+
+    let pool = establish_connection(
+        std::env::var("DSQL_USER").expect("env variable `DSQL_USER` should be set"),
+        std::env::var("DSQL_ENDPOINT").expect("env variable `DSQL_ENDPOINT` should be set"),
+        config.region().unwrap(),
+    )
+    .await?;
+
     let discord_bot = Arc::new(
         twilight_http::Client::builder()
             .token(std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set"))
-        .build()
+            .build(),
     );
 
     let app_state = AppState {
-        dynamo: aws_sdk_dynamodb::Client::new(&config),
         scheduler: aws_sdk_scheduler::Client::new(&config),
         ses: aws_sdk_sesv2::Client::new(&config),
+        pg_pool: pool,
         discord_bot,
         reqwest: Arc::new(reqwest::Client::new()),
     };
-    
-    // guilds::tasks::update_guilds(&app_state.discord_bot, &app_state.dynamo).await;
+
+    // guilds::tasks::update_guilds(&app_state.discord_bot, &app_state.pg_pool).await;
     setup(app_state.discord_bot.clone());
     let app = Router::new()
         .nest("/users", users::router())
@@ -99,7 +108,6 @@ async fn main() -> Result<(), Error> {
         run_local(app).await
     }
 }
-
 
 fn setup(discord_bot: Arc<twilight_http::Client>) {
     meta::setup(discord_bot);

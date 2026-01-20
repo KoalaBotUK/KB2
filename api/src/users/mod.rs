@@ -1,7 +1,7 @@
-mod links;
-pub mod models;
 pub mod email;
 mod link_guilds;
+mod links;
+pub mod models;
 pub mod utils;
 
 use crate::AppState;
@@ -13,7 +13,7 @@ use http::StatusCode;
 use serde_json::{Value, json};
 use tower_http::cors::CorsLayer;
 use twilight_model::id::Id;
-use twilight_model::id::marker::{UserMarker};
+use twilight_model::id::marker::UserMarker;
 use twilight_model::user::CurrentUser;
 
 pub fn router() -> axum::Router<AppState> {
@@ -34,7 +34,12 @@ async fn get_users_me(
     Extension(current_user): Extension<CurrentUser>,
     State(app_state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
-    get_users_id(Path(current_user.id), Extension(current_user), State(app_state)).await
+    get_users_id(
+        Path(current_user.id),
+        Extension(current_user),
+        State(app_state),
+    )
+    .await
 }
 
 async fn get_users_id(
@@ -48,16 +53,16 @@ async fn get_users_id(
     }
 
     // Fetch user from DynamoDB
-    let result = match User::from_db(&user_id.to_string(), &app_state.dynamo).await {
+    let result = match User::from_db(user_id, &app_state.pg_pool).await {
         Some(user) => user,
         None => {
             let u = User {
                 user_id,
                 ..Default::default()
             };
-            u.save(&app_state.dynamo).await;
+            u.save(&app_state.pg_pool).await;
             u
-        },
+        }
     };
     Ok(Json(json!(result)))
 }

@@ -1,24 +1,23 @@
 use crate::AppState;
+use crate::discord::{get_guild, get_guild_member};
 use crate::guilds::models::Guild;
+use crate::utils::{admin_guilds, is_client_admin_guild};
 use axum::extract::State;
 use axum::{Extension, Json, Router, extract::Path, routing::get};
 use http::StatusCode;
 use lambda_http::tracing::warn;
 use serde_json::{Value, json};
 use std::sync::Arc;
-use serde::{Deserialize, Serialize};
 use tower_http::cors::CorsLayer;
 use twilight_http::Client;
 use twilight_model::guild::Permissions;
 use twilight_model::id::Id;
 use twilight_model::id::marker::GuildMarker;
 use twilight_model::user::{CurrentUser, CurrentUserGuild};
-use crate::discord::{get_guild, get_guild_member};
-use crate::utils::{admin_guilds, is_client_admin_guild};
 
 pub mod models;
-pub mod verify;
 pub(crate) mod utils;
+pub mod verify;
 pub(crate) mod votes;
 
 pub fn router() -> Router<AppState> {
@@ -28,11 +27,6 @@ pub fn router() -> Router<AppState> {
         .nest("/{guild_id}/verify", verify::controllers::router())
         .nest("/{guild_id}/votes", votes::controllers::router())
         .layer(CorsLayer::permissive())
-}
-
-#[derive(Clone, Deserialize, Serialize)]
-struct GuildRequest {
-    guild_id: Id<GuildMarker>,
 }
 
 async fn _verify_admin(
@@ -46,7 +40,9 @@ async fn _verify_admin(
         return Ok(());
     }
     for role in guild.roles {
-        if member.roles.contains(&role.id) && role.permissions & Permissions::ADMINISTRATOR == Permissions::ADMINISTRATOR {
+        if member.roles.contains(&role.id)
+            && role.permissions & Permissions::ADMINISTRATOR == Permissions::ADMINISTRATOR
+        {
             return Ok(());
         }
     }
@@ -58,8 +54,15 @@ async fn post_guilds(
     State(app_state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
     let admin_guilds = admin_guilds(&discord_user, &app_state.discord_bot).await?;
-    let mut guilds = Guild::vec_from_db(admin_guilds.iter().map(|g| g.id).collect(), &app_state.dynamo).await;
-    let missing_guilds: Vec<&CurrentUserGuild> =  admin_guilds.iter().filter(|a| !guilds.iter().any(|g| g.guild_id == a.id)).collect();
+    let mut guilds = Guild::vec_from_db(
+        admin_guilds.iter().map(|g| g.id).collect(),
+        &app_state.pg_pool,
+    )
+    .await;
+    let missing_guilds: Vec<&CurrentUserGuild> = admin_guilds
+        .iter()
+        .filter(|a| !guilds.iter().any(|g| g.guild_id == a.id))
+        .collect();
     for admin_guild in missing_guilds {
         guilds.push(Guild {
             guild_id: admin_guild.id,
@@ -67,30 +70,24 @@ async fn post_guilds(
         })
     }
 
-    
-
     Ok(Json(json!(guilds)))
 }
-
 
 async fn get_guilds(
     Extension(discord_user): Extension<Arc<Client>>,
     State(app_state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
     let guilds = Guild::vec_from_db(
-        utils::intersect_admin_guilds(
-            &discord_user,
-            &app_state.discord_bot,
-        ).await?
+        utils::intersect_admin_guilds(&discord_user, &app_state.discord_bot)
+            .await?
             .iter()
             .map(|g| g.id)
             .collect(),
-        &app_state.dynamo,
+        &app_state.pg_pool,
     )
     .await;
     Ok(Json(json!(guilds)))
 }
-
 
 async fn post_guilds_id(
     Path(guild_id): Path<Id<GuildMarker>>,
@@ -98,13 +95,14 @@ async fn post_guilds_id(
     State(app_state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
     is_client_admin_guild(guild_id, &current_user, &app_state.discord_bot).await?;
-    let guild = Guild::from_db(guild_id, &app_state.dynamo).await.unwrap_or(Guild {
-        guild_id,
-        ..Default::default()
-    });
+    let guild = Guild::from_db(guild_id, &app_state.pg_pool)
+        .await
+        .unwrap_or(Guild {
+            guild_id,
+            ..Default::default()
+        });
     Ok(Json(json!(guild)))
 }
-
 
 async fn get_guilds_id(
     Path(guild_id): Path<Id<GuildMarker>>,
@@ -116,7 +114,7 @@ async fn get_guilds_id(
         return Err(StatusCode::NOT_FOUND);
     }
 
-    let guild = Guild::from_db(guild_id, &app_state.dynamo).await;
+    let guild = Guild::from_db(guild_id, &app_state.pg_pool).await;
 
     Ok(Json(json!(match guild {
         Some(g) => g,
@@ -125,7 +123,7 @@ async fn get_guilds_id(
                 guild_id,
                 ..Default::default()
             };
-            new_guild.save(&app_state.dynamo).await;
+            new_guild.save(&app_state.pg_pool).await;
             new_guild
         }
     })))

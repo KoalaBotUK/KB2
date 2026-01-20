@@ -1,0 +1,138 @@
+-- no-transaction
+CREATE TABLE IF NOT EXISTS users(
+    id NUMERIC(20, 0) NOT NULL PRIMARY KEY, -- u64
+    links TEXT,
+    link_guilds TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+-- Future Use Case
+--
+-- CREATE TABLE users(
+--     id NUMERIC(20, 0) NOT NULL PRIMARY KEY, -- u64
+--     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+-- );
+--
+-- INSERT INTO users(id) VALUES (228541431483072513); -- Insert JayDwee
+--
+-- CREATE TABLE guilds(
+--     id NUMERIC(20, 0) NOT NULL PRIMARY KEY, -- u64
+--     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+-- );
+--
+-- CREATE TABLE audit(
+--     id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+--     user_id NUMERIC(20, 0) NOT NULL, -- u64
+--     guild_id NUMERIC(20, 0), -- u64
+--     action VARCHAR,
+--     data VARCHAR,
+--     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+-- );
+--
+--
+-- CREATE TABLE feature_flags(
+--     id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+--     name VARCHAR NOT NULL,
+--     description VARCHAR,
+--     enabled BOOLEAN NOT NULL,
+--     type SMALLINT NOT NULL,
+--     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+-- );
+-- COMMENT ON COLUMN feature_flags.type IS '1: user, 2: guild';
+--
+-- INSERT INTO feature_flags(name, description, enabled, type) VALUES ('admin_view_as_user', 'Allows an admin to view a page as another user in the case of support access', true, 1);
+--
+-- CREATE TABLE user_feature_flag_assignments(
+--     user_id NUMERIC(20, 0) NOT NULL, -- u64
+--     feature_flag_id UUID NOT NULL,
+--     user_visible BOOLEAN NOT NULL,
+--     user_enabled BOOLEAN NOT NULL
+-- );
+--
+-- INSERT INTO user_feature_flag_assignments(user_id, feature_flag_id, user_visible, user_enabled) SELECT 228541431483072513, id, FALSE, TRUE FROM feature_flags WHERE name = 'admin_view_as_user';
+--
+--
+-- CREATE TABLE user_links(
+--     id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+--     user_id NUMERIC(20, 0) NOT NULL, -- u64
+--     link_type SMALLINT NOT NULL,
+--     address VARCHAR NOT NULL,
+--     linked_at TIMESTAMP NOT NULL,
+--     status SMALLINT NOT NULL,
+--     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+-- );
+-- COMMENT ON COLUMN user_links.link_type IS '1: email';
+-- COMMENT ON COLUMN user_links.status IS '0: deleted, 1: active';
+--
+--
+--
+-- CREATE TABLE guild_verify_roles(
+--     guild_id NUMERIC(20, 0) NOT NULL, -- u64
+--     role_id NUMERIC(20, 0) NOT NULL, -- u64
+--     pattern VARCHAR NOT NULL,
+--     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--
+--     PRIMARY KEY (guild_id, role_id)
+-- );
+--
+-- CREATE TABLE user_verify_role_assignments(
+--     user_link_id UUID NOT NULL,
+--     guild_verify_role_id UUID NOT NULL,
+--     status SMALLINT NOT NULL,
+--     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--
+--     PRIMARY KEY (user_link_id, guild_verify_role_id)
+-- );
+-- COMMENT ON COLUMN user_verify_role_assignments.status IS '1: pending assignment, 2: assigned, 3: pending unassignment, 4: unassigned';
+--
+-- CREATE TABLE guild_votes(
+--     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--     guild_id NUMERIC(20, 0) NOT NULL, -- u64
+--     channel_id NUMERIC(20, 0) NOT NULL, -- u64
+--     message_id NUMERIC(20, 0) NOT NULL, -- u64
+--     title VARCHAR NOT NULL,
+--     description VARCHAR NOT NULL,
+--     close_at TIMESTAMP,
+--     open BOOLEAN NOT NULL,
+--     multi_select BOOLEAN NOT NULL,
+--     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+-- );
+--
+--
+-- CREATE TABLE guild_vote_options(
+--     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--     vote_id UUID NOT NULL,
+--     emoji_id NUMERIC(20, 0), -- u64
+--     label VARCHAR
+-- );
+--
+-- CREATE TABLE guild_vote_role_list(
+--     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--     guild_id NUMERIC(20, 0) NOT NULL, -- u64
+--     channel_id NUMERIC(20, 0) NOT NULL, -- u64
+--     message_id NUMERIC(20, 0) NOT NULL, -- u64
+--     role_id NUMERIC(20, 0) NOT NULL, -- u64
+--     list_type SMALLINT NOT NULL,
+--     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+-- );
+-- COMMENT ON COLUMN guild_vote_role_list.list_type IS '1: Whitelist, 2: Blacklist';
+--
+--
+-- CREATE TABLE user_votes(
+--     guild_vote_option_id UUID NOT NULL,
+--     user_id NUMERIC(20, 0) NOT NULL, -- u64
+--     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+-- );

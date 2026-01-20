@@ -1,8 +1,8 @@
 use crate::discord::{create_message, ise, update_message};
 use crate::guilds::models::Guild;
 use crate::guilds::votes::models::{RoleListType, VoteOption, VoteVote};
-use crate::guilds::votes::utils::{group_to_rows, VoteOptionComponent};
-use crate::{utils, AppState};
+use crate::guilds::votes::utils::{VoteOptionComponent, group_to_rows};
+use crate::{AppState, utils};
 use aws_sdk_scheduler::types::{FlexibleTimeWindow, FlexibleTimeWindowMode, Target};
 use axum::extract::{Path, State};
 use axum::routing::{get, post};
@@ -10,15 +10,15 @@ use axum::{Extension, Json};
 use chrono::{DateTime, Utc};
 use http::header::{AUTHORIZATION, CONTENT_TYPE};
 use http::{HeaderMap, Method, StatusCode};
-use lambda_http::aws_lambda_events::apigw::ApiGatewayProxyRequest;
 use lambda_http::Context;
+use lambda_http::aws_lambda_events::apigw::ApiGatewayProxyRequest;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::{HashMap, HashSet};
 use tower_http::cors::CorsLayer;
 use twilight_model::channel::message::{Component, EmojiReactionType};
-use twilight_model::id::marker::{ChannelMarker, GuildMarker, MessageMarker, RoleMarker};
 use twilight_model::id::Id;
+use twilight_model::id::marker::{ChannelMarker, GuildMarker, MessageMarker, RoleMarker};
 use twilight_model::user::CurrentUser;
 
 pub fn router() -> axum::Router<AppState> {
@@ -71,16 +71,27 @@ async fn post_votes(
     let message = create_message(
         vote_req.channel_id,
         Some(&format!("# {}\n{}\n", vote_req.title, vote_req.description)),
-        Some(group_to_rows(vote_req.options.iter().map(|o| o.to_component()).collect())?.as_slice()),
+        Some(
+            group_to_rows(vote_req.options.iter().map(|o| o.to_component()).collect())?.as_slice(),
+        ),
         &app_state.discord_bot,
-    ).await?;
+    )
+    .await?;
 
-    let mut guild = Guild::from_db(guild_id, &app_state.dynamo).await.unwrap();
+    let mut guild = Guild::from_db(guild_id, &app_state.pg_pool).await.unwrap();
     let new_vote = VoteVote {
         message_id: message.id,
         title: vote_req.title.clone(),
         description: vote_req.description.clone(),
-        options: vote_req.options.iter().map(|o| VoteOption { emoji: o.emoji.clone(), label: o.label.clone(), ..Default::default() }).collect(),
+        options: vote_req
+            .options
+            .iter()
+            .map(|o| VoteOption {
+                emoji: o.emoji.clone(),
+                label: o.label.clone(),
+                ..Default::default()
+            })
+            .collect(),
         channel_id: vote_req.channel_id,
         close_at: vote_req.close_at,
         open: true,
@@ -89,19 +100,33 @@ async fn post_votes(
         is_multi_select: vote_req.is_multi_select,
     };
     guild.vote.votes.push(new_vote.clone());
-    guild.save(&app_state.dynamo).await;
+    guild.save(&app_state.pg_pool).await;
 
     if vote_req.close_at.is_some() {
         let mut headers = HeaderMap::new();
         headers.insert(CONTENT_TYPE, "application/json".parse().unwrap());
-        headers.insert(AUTHORIZATION, format!("Discord {}", app_state.discord_bot.token().unwrap()).parse().unwrap());
+        headers.insert(
+            AUTHORIZATION,
+            format!("Discord {}", app_state.discord_bot.token().unwrap())
+                .parse()
+                .unwrap(),
+        );
 
         let payload = ApiGatewayProxyRequest {
             resource: Some("/{proxy+}".parse().unwrap()),
-            path: Some(format!("/guilds/{}/votes/{}/close", guild_id, message.id).parse().unwrap()),
+            path: Some(
+                format!("/guilds/{}/votes/{}/close", guild_id, message.id)
+                    .parse()
+                    .unwrap(),
+            ),
             http_method: Method::POST,
             headers,
-            path_parameters: HashMap::from_iter(vec![("proxy".parse().unwrap(), format!("/guilds/{}/votes/{}", guild_id, message.id).parse().unwrap())]),
+            path_parameters: HashMap::from_iter(vec![(
+                "proxy".parse().unwrap(),
+                format!("/guilds/{}/votes/{}", guild_id, message.id)
+                    .parse()
+                    .unwrap(),
+            )]),
             ..Default::default()
         };
 
@@ -141,11 +166,15 @@ async fn get_votes_id(
         return Err(StatusCode::FORBIDDEN);
     }
 
-    let guild = Guild::from_db(guild_id, &app_state.dynamo).await.unwrap();
-    let vote: &VoteVote = guild.vote.votes.iter().find(|v| v.message_id == message_id).unwrap();
+    let guild = Guild::from_db(guild_id, &app_state.pg_pool).await.unwrap();
+    let vote: &VoteVote = guild
+        .vote
+        .votes
+        .iter()
+        .find(|v| v.message_id == message_id)
+        .unwrap();
     Ok(Json(json!(vote)))
 }
-
 
 async fn post_votes_id_close(
     Path((guild_id, message_id)): Path<(Id<GuildMarker>, Id<MessageMarker>)>,
@@ -156,21 +185,50 @@ async fn post_votes_id_close(
         return Err(StatusCode::FORBIDDEN);
     }
 
-    let mut guild = Guild::from_db(guild_id, &app_state.dynamo).await.unwrap();
-    let vote: &mut VoteVote = match guild.vote.votes.iter_mut().find(|v| v.message_id == message_id) {
+    let mut guild = Guild::from_db(guild_id, &app_state.pg_pool).await.unwrap();
+    let vote: &mut VoteVote = match guild
+        .vote
+        .votes
+        .iter_mut()
+        .find(|v| v.message_id == message_id)
+    {
         Some(v) => v,
         None => return Err(StatusCode::NOT_FOUND),
     };
     vote.open = false;
-    guild.save(&app_state.dynamo).await;
+    guild.save(&app_state.pg_pool).await;
 
-    let vote: &VoteVote = guild.vote.votes.iter().find(|v| v.message_id == message_id).unwrap();
-    let _message = update_message(vote.channel_id, vote.message_id, Some(Some(&format!("# [CLOSED] {}\n{}\n", vote.title, vote.description))), 
-                                  Some(Some(group_to_rows(vote.options.iter().map(|o| {
-        let mut c = o.to_component();
-        if let Component::Button(ref mut b) = c { b.disabled = true }
-        c
-    }).collect())?.as_slice())), &app_state.discord_bot).await?;
+    let vote: &VoteVote = guild
+        .vote
+        .votes
+        .iter()
+        .find(|v| v.message_id == message_id)
+        .unwrap();
+    let _message = update_message(
+        vote.channel_id,
+        vote.message_id,
+        Some(Some(&format!(
+            "# [CLOSED] {}\n{}\n",
+            vote.title, vote.description
+        ))),
+        Some(Some(
+            group_to_rows(
+                vote.options
+                    .iter()
+                    .map(|o| {
+                        let mut c = o.to_component();
+                        if let Component::Button(ref mut b) = c {
+                            b.disabled = true
+                        }
+                        c
+                    })
+                    .collect(),
+            )?
+            .as_slice(),
+        )),
+        &app_state.discord_bot,
+    )
+    .await?;
 
     Ok(Json(json!(vote)))
 }

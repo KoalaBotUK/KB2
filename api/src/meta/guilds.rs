@@ -1,14 +1,20 @@
-use std::ops::{Add, Sub};
-use std::sync::Arc;
-use std::time::Duration;
-use axum::{Extension, Json, Router};
+use crate::AppState;
+use crate::discord::{
+    get_current_user_guild, get_current_user_guilds_prime_cache, get_guild, get_guild_channels,
+    get_guild_prime_cache,
+};
+use crate::utils::member_guilds;
 use axum::extract::{Path, State};
 use axum::routing::get;
+use axum::{Extension, Json, Router};
 use http::StatusCode;
 use lambda_http::tracing::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
-use tokio::time::{sleep, Instant};
+use serde_json::{Value, json};
+use std::ops::{Add, Sub};
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::time::{Instant, sleep};
 use tower_http::cors::CorsLayer;
 use twilight_http::Client;
 use twilight_model::channel::Channel;
@@ -17,9 +23,6 @@ use twilight_model::id::Id;
 use twilight_model::id::marker::GuildMarker;
 use twilight_model::user::CurrentUserGuild;
 use twilight_model::util::ImageHash;
-use crate::AppState;
-use crate::discord::{get_current_user_guild, get_current_user_guilds_prime_cache, get_guild, get_guild_channels, get_guild_prime_cache};
-use crate::utils::member_guilds;
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -35,7 +38,6 @@ pub fn setup(discord_bot: Arc<Client>) {
     }
 }
 
-
 #[derive(Debug, Serialize, Deserialize)]
 struct PartialGuildMeta {
     id: Id<GuildMarker>,
@@ -49,11 +51,11 @@ impl From<CurrentUserGuild> for PartialGuildMeta {
             id: guild.id,
             name: guild.name,
             icon: guild.icon,
-            is_admin: guild.owner || guild.permissions & Permissions::ADMINISTRATOR == Permissions::ADMINISTRATOR,
+            is_admin: guild.owner
+                || guild.permissions & Permissions::ADMINISTRATOR == Permissions::ADMINISTRATOR,
         }
     }
 }
-
 
 #[derive(Debug, Serialize, Deserialize)]
 struct GuildMeta {
@@ -70,8 +72,11 @@ async fn get_meta_guilds(
     State(app_state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
     Ok(Json(json!(
-        member_guilds(&discord_user, &app_state.discord_bot).await?
-        .into_iter().map(PartialGuildMeta::from).collect::<Vec<PartialGuildMeta>>()
+        member_guilds(&discord_user, &app_state.discord_bot)
+            .await?
+            .into_iter()
+            .map(PartialGuildMeta::from)
+            .collect::<Vec<PartialGuildMeta>>()
     )))
 }
 
@@ -80,7 +85,13 @@ async fn get_meta_guilds_id(
     Extension(discord_user): Extension<Arc<Client>>,
     State(app_state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
-    if !crate::guilds::utils::is_intersect_admin_guild(guild_id, &discord_user, &app_state.discord_bot).await? {
+    if !crate::guilds::utils::is_intersect_admin_guild(
+        guild_id,
+        &discord_user,
+        &app_state.discord_bot,
+    )
+    .await?
+    {
         warn!("User is not an admin in guild {}", guild_id);
         return Err(StatusCode::NOT_FOUND);
     }
@@ -89,19 +100,16 @@ async fn get_meta_guilds_id(
     let guild = get_guild(guild_id, &app_state.discord_bot).await?;
     let channels = get_guild_channels(guild_id, &app_state.discord_bot).await?;
 
-    Ok(Json(json!(
-        GuildMeta{
-            id: guild_id,
-            name: guild.name,
-            icon: guild.icon,
-            is_admin: u_guild.owner || u_guild.permissions & Permissions::ADMINISTRATOR == Permissions::ADMINISTRATOR,
-            roles: guild.roles,
-            channels
-        }
-    )))
+    Ok(Json(json!(GuildMeta {
+        id: guild_id,
+        name: guild.name,
+        icon: guild.icon,
+        is_admin: u_guild.owner
+            || u_guild.permissions & Permissions::ADMINISTRATOR == Permissions::ADMINISTRATOR,
+        roles: guild.roles,
+        channels
+    })))
 }
-
-
 
 async fn refresh_meta_cache(discord_bot: Arc<Client>) {
     loop {
@@ -118,7 +126,12 @@ async fn refresh_meta_cache(discord_bot: Arc<Client>) {
                 error!("refresh_meta_cache error: {:#?}", e);
             }
         }
-        debug!("{:?} {:?} Waiting {} seconds",time, Instant::now(), (time.sub(Instant::now()).add(Duration::from_secs(50))).as_secs());
+        debug!(
+            "{:?} {:?} Waiting {} seconds",
+            time,
+            Instant::now(),
+            (time.sub(Instant::now()).add(Duration::from_secs(50))).as_secs()
+        );
         sleep((time.sub(Instant::now())).add(Duration::from_secs(50))).await;
     }
 }

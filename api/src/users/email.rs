@@ -1,13 +1,13 @@
+use crate::discord::ise;
 use aws_sdk_sesv2::Client;
 use aws_sdk_sesv2::types::{Destination, EmailContent, Template};
 use http::StatusCode;
 use serde::Serialize;
-use crate::discord::ise;
 
 #[derive(Serialize)]
 struct TemplateData {
     name: String,
-    link_url: String
+    link_url: String,
 }
 
 pub async fn send_verify_email(
@@ -25,8 +25,9 @@ pub async fn send_verify_email(
     let t_data = serde_json::to_string(&TemplateData {
         name: global_name.to_string(),
         link_url: format!("https://{host}/verify/email/callback?token={token}").to_string(),
-    }).map_err(ise)?;
-    
+    })
+    .map_err(ise)?;
+
     let email_content = EmailContent::builder()
         .template(
             Template::builder()
@@ -47,4 +48,3 @@ pub async fn send_verify_email(
 
     Ok(())
 }
-

@@ -1,4 +1,5 @@
 use crate::AppState;
+use crate::discord::ise;
 use axum::extract::{Request, State};
 use axum::middleware::Next;
 use axum::response::Response;
@@ -6,8 +7,8 @@ use axum::routing::post;
 use axum::{Json, middleware};
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, Verifier, VerifyingKey};
 use hex::FromHex;
-use http::{HeaderMap, StatusCode};
 use http::header::AUTHORIZATION;
+use http::{HeaderMap, StatusCode};
 use http_body_util::BodyExt;
 use once_cell::sync::Lazy;
 use serde_json::{Value, json};
@@ -22,7 +23,6 @@ use twilight_model::http::interaction::{
     InteractionResponse, InteractionResponseData, InteractionResponseType,
 };
 use twilight_model::id::Id;
-use crate::discord::ise;
 
 static PUB_KEY: Lazy<VerifyingKey> = Lazy::new(|| {
     VerifyingKey::from_bytes(
@@ -45,14 +45,20 @@ pub fn router() -> axum::Router<AppState> {
 
 pub async fn pubkey_middleware(request: Request, next: Next) -> Result<Response, StatusCode> {
     let (parts, body) = request.into_parts();
-    let body = body
-        .collect()
-        .await
-        .map_err(ise)?
-        .to_bytes();
+    let body = body.collect().await.map_err(ise)?.to_bytes();
     let headers = parts.headers.clone();
     let new_request = Request::from_parts(parts, axum::body::Body::from(body.clone()));
-    if headers.get(AUTHORIZATION) == Some(&format!("Bot {}", std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set")).as_str().parse().unwrap()) {
+    if headers.get(AUTHORIZATION)
+        == Some(
+            &format!(
+                "Bot {}",
+                std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set")
+            )
+            .as_str()
+            .parse()
+            .unwrap(),
+        )
+    {
         return Ok(next.run(new_request).await);
     }
 
@@ -108,8 +114,12 @@ async fn post_interactions(
             kind: InteractionResponseType::Pong,
             data: None
         }))),
-        InteractionType::ApplicationCommand => handle_command_interaction(app_state, interaction).await,
-        InteractionType::MessageComponent => handle_component_interaction(app_state, interaction).await,
+        InteractionType::ApplicationCommand => {
+            handle_command_interaction(app_state, interaction).await
+        }
+        InteractionType::MessageComponent => {
+            handle_component_interaction(app_state, interaction).await
+        }
         InteractionType::ApplicationCommandAutocomplete => Err(StatusCode::NOT_IMPLEMENTED),
         InteractionType::ModalSubmit => Err(StatusCode::NOT_IMPLEMENTED),
         _ => Err(StatusCode::BAD_REQUEST),
@@ -142,7 +152,10 @@ async fn handle_component_interaction(
     }?;
 
     match &data.custom_id[..2] {
-        "vt" => crate::guilds::votes::interactions::handle_component_interaction(app_state, interaction).await,
+        "vt" => {
+            crate::guilds::votes::interactions::handle_component_interaction(app_state, interaction)
+                .await
+        }
         _ => Err(StatusCode::BAD_REQUEST),
     }
 }

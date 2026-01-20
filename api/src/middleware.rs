@@ -1,3 +1,4 @@
+use crate::discord::{get_current_user, ise};
 use axum::extract::Request;
 use axum::http::{HeaderMap, StatusCode};
 use axum::middleware::Next;
@@ -5,7 +6,6 @@ use axum::response::Response;
 use http_body_util::BodyExt;
 use lambda_http::tracing::info;
 use twilight_http::Client;
-use crate::discord::{get_current_user, ise};
 
 pub async fn auth_middleware(
     headers: HeaderMap,
@@ -32,7 +32,9 @@ pub async fn auth_middleware(
             Ok(next.run(request).await)
         }
         "Bot" => {
-            if credentials != std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set") {
+            if credentials
+                != std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set")
+            {
                 return Err(StatusCode::UNAUTHORIZED);
             }
             let client = Client::new(format!("Bot {credentials}"));
@@ -40,19 +42,13 @@ pub async fn auth_middleware(
             ext_mut.insert(std::sync::Arc::new(client));
             Ok(next.run(request).await)
         }
-        _ => {
-            Err(StatusCode::UNAUTHORIZED)
-        }
+        _ => Err(StatusCode::UNAUTHORIZED),
     }
 }
 
 pub async fn log_middleware(request: Request, next: Next) -> Result<Response, StatusCode> {
     let (parts, body) = request.into_parts();
-    let body = body
-        .collect()
-        .await
-        .map_err(ise)?
-        .to_bytes();
+    let body = body.collect().await.map_err(ise)?.to_bytes();
 
     info!("Received request: {:?} {:?}", parts, body);
 
@@ -62,11 +58,7 @@ pub async fn log_middleware(request: Request, next: Next) -> Result<Response, St
         .await;
 
     let (parts, body) = response.into_parts();
-    let body = body
-        .collect()
-        .await
-        .map_err(ise)?
-        .to_bytes();
+    let body = body.collect().await.map_err(ise)?.to_bytes();
 
     // Log the response
     info!("Response: {:?} {:?}", parts, body);
@@ -75,6 +67,8 @@ pub async fn log_middleware(request: Request, next: Next) -> Result<Response, St
 }
 
 pub async fn mock_ctx_middleware(mut request: Request, next: Next) -> Result<Response, StatusCode> {
-    request.extensions_mut().insert(lambda_http::Context::default());
+    request
+        .extensions_mut()
+        .insert(lambda_http::Context::default());
     Ok(next.run(request).await)
 }

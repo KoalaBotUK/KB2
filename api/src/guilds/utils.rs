@@ -1,11 +1,13 @@
+use crate::discord::{get_current_user_guild, get_current_user_guilds};
 use http::StatusCode;
 use twilight_model::guild::Permissions;
 use twilight_model::id::Id;
 use twilight_model::id::marker::GuildMarker;
 use twilight_model::user::CurrentUserGuild;
-use crate::discord::{get_current_user_guild, get_current_user_guilds};
 
-async fn client_admin_guilds(client: &twilight_http::Client) -> Result<Vec<CurrentUserGuild>, StatusCode> {
+async fn client_admin_guilds(
+    client: &twilight_http::Client,
+) -> Result<Vec<CurrentUserGuild>, StatusCode> {
     let guilds = get_current_user_guilds(client).await?;
     Ok(guilds
         .into_iter()
