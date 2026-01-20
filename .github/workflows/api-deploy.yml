@@ -51,7 +51,7 @@ jobs:
         run: |
           token=$(aws dsql generate-db-connect-admin-auth-token --hostname $DSQL_ENDPOINT)
           encoded_token=$(echo "$token" | jq -Rr @uri)
-          sqlx migrate run --database-url 'postgresql://admin:${encoded_token}@${DSQL_ENDPOINT}/postgres?sslmode=require'
+          sqlx migrate run --database-url "postgresql://admin:${encoded_token}@${DSQL_ENDPOINT}/postgres?sslmode=require"
 
       - name: Upload to Lambda
         run: aws lambda update-function-code --function-name kb2-lambda-function-${{ github.ref == 'refs/heads/main' && 'dev' || 'prod' }} --zip-file fileb://target/lambda/api/bootstrap.zip
