@@ -37,6 +37,7 @@ module "lambda" {
   discord_public_key = var.discord_public_key
   dsql_user = "admin"
   dsql_endpoint = module.dsql.dsql_endpoint
+  dsql_arn = module.dsql.dsql_arn
 }
 
 module "s3" {

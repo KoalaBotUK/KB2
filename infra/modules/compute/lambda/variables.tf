@@ -17,3 +17,7 @@ variable "dsql_user" {
 variable "dsql_endpoint" {
   type = string
 }
+
+variable "dsql_arn" {
+  default = ""
+}
