@@ -61,7 +61,7 @@ resource "aws_iam_role_policy_attachment" "execution_role_attach" {
   policy_arn = aws_iam_policy.cloudwatch_readwrite.arn
 }
 
-data "aws_iam_policy_document" "dsql_access" {
+data "aws_iam_policy_document" "dsql_dbconnect" {
   statement {
     effect = "Allow"
     actions = ["dsql:DbConnectAdmin",]
@@ -69,14 +69,14 @@ data "aws_iam_policy_document" "dsql_access" {
   }
 }
 
-resource "aws_iam_policy" "dsql_access" {
-  name   = "kb2-cloudwatch-readwrite-policy-${var.deployment_env}"
-  policy = data.aws_iam_policy_document.dsql_access.json
+resource "aws_iam_policy" "dsql_dbconnect" {
+  name   = "kb2-dsql-dbconnect-policy-${var.deployment_env}"
+  policy = data.aws_iam_policy_document.dsql_dbconnect.json
 }
 
-resource "aws_iam_role_policy_attachment" "dsql_access_attach" {
+resource "aws_iam_role_policy_attachment" "dsql_dbconnect_attach" {
   role       = aws_iam_role.lambda_execute_role.name
-  policy_arn = aws_iam_policy.dsql_access.arn
+  policy_arn = aws_iam_policy.dsql_dbconnect.arn
 }
 
 data "archive_file" "empty_zip" {
