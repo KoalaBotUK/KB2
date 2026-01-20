@@ -1,0 +1,2 @@
+-- no-transaction
+-- Init has no down migration

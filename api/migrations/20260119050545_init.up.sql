@@ -1,0 +1,8 @@
+-- no-transaction
+CREATE TABLE IF NOT EXISTS guilds(
+    id NUMERIC(20, 0) NOT NULL PRIMARY KEY, -- u64
+    verify TEXT,
+    vote TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

@@ -3,10 +3,12 @@ use crate::discord::{add_guild_member_role, ise, remove_guild_member_role};
 use crate::guilds::models::Guild;
 use crate::users::email::send_verify_email;
 use crate::users::models::{Link, User};
+use crate::users::utils::{link_arr_match, link_match};
 use axum::extract::{Path, State};
 use axum::routing::{delete, post};
 use axum::{Extension, Json};
 use hmac::{Hmac, Mac};
+use http::StatusCode;
 use jwt::{SignWithKey, VerifyWithKey};
 use lambda_http::tracing::info;
 use serde::{Deserialize, Serialize};
@@ -14,12 +16,10 @@ use serde_json::json;
 use sha2::Sha256;
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use http::StatusCode;
 use tower_http::cors::CorsLayer;
 use twilight_model::id::Id;
 use twilight_model::id::marker::UserMarker;
 use twilight_model::user::CurrentUser;
-use crate::users::utils::{link_arr_match, link_match};
 
 pub fn router() -> axum::Router<AppState> {
     axum::Router::new()
@@ -101,35 +101,42 @@ async fn post_link(
         linked_at: chrono::Utc::now().timestamp_millis() as u64,
         active: true,
     };
-    let mut user_model = User::from_db(&user_id.to_string(), &app_state.dynamo)
+    let mut user_model = User::from_db(user_id, &app_state.pg_pool)
         .await
         .unwrap();
     user_model
         .links
         .retain(|l| l.link_address != new_link.link_address);
     for link_guild in &user_model.link_guilds {
-        let mut guild = Guild::from_db(link_guild.guild_id, &app_state.dynamo)
+        let mut guild = Guild::from_db(link_guild.guild_id, &app_state.pg_pool)
             .await
             .unwrap();
         for role in &mut guild.verify.roles {
             if link_match(&new_link, &role.pattern) {
-                add_guild_member_role(guild.guild_id, user_id, role.role_id, &app_state.discord_bot).await?;
+                add_guild_member_role(
+                    guild.guild_id,
+                    user_id,
+                    role.role_id,
+                    &app_state.discord_bot,
+                )
+                .await?;
                 role.members += 1;
             }
         }
-        guild.verify.user_links.get_mut(&user_id).unwrap().push(new_link.clone());
-        guild.save(&app_state.dynamo).await;
+        guild
+            .verify
+            .user_links
+            .get_mut(&user_id)
+            .unwrap()
+            .push(new_link.clone());
+        guild.save(&app_state.pg_pool).await;
     }
     user_model.links.push(new_link.clone());
-    user_model.save(&app_state.dynamo).await;
+    user_model.save(&app_state.pg_pool).await;
     Ok(Json(json!(new_link)))
 }
 
-async fn oidc_email(
-    url: &str,
-    token: String,
-    app_state: &AppState,
-) -> Result<String, StatusCode> {
+async fn oidc_email(url: &str, token: String, app_state: &AppState) -> Result<String, StatusCode> {
     let response = app_state
         .reqwest
         .get(url)
@@ -139,10 +146,7 @@ async fn oidc_email(
         .map_err(ise)?;
 
     if response.status().is_success() {
-        let user_info: serde_json::Value = response
-            .json()
-            .await
-            .map_err(ise)?;
+        let user_info: serde_json::Value = response.json().await.map_err(ise)?;
         // Process user_info to link with the user_id
         // For example, save to DynamoDB or update user profile
         Ok(user_info
@@ -174,10 +178,13 @@ async fn delete_link(
         return Err(StatusCode::NOT_FOUND);
     }
 
-    let mut user_model = User::from_db(&user_id.to_string(), &app_state.dynamo)
+    let mut user_model = User::from_db(user_id, &app_state.pg_pool)
         .await
         .unwrap();
-    let pos = user_model.links.iter().position(|l| l.link_address == link_address);
+    let pos = user_model
+        .links
+        .iter()
+        .position(|l| l.link_address == link_address);
     let existing_link = pos.map(|i| user_model.links.remove(i));
     info!("Deleting link for user {}: {}", user_id, link_address);
     if existing_link.is_none() {
@@ -185,25 +192,43 @@ async fn delete_link(
     }
     let mut existing_link = existing_link.unwrap();
 
-    let active_only_links: Vec<Link> = user_model.links.clone().into_iter().filter(|l| l.active).collect();
+    let active_only_links: Vec<Link> = user_model
+        .links
+        .clone()
+        .into_iter()
+        .filter(|l| l.active)
+        .collect();
     for guild in &user_model.link_guilds {
-        let mut guild = Guild::from_db(guild.guild_id, &app_state.dynamo)
+        let mut guild = Guild::from_db(guild.guild_id, &app_state.pg_pool)
             .await
             .unwrap();
-        guild.verify.user_links.insert(user_id, active_only_links.clone());
+        guild
+            .verify
+            .user_links
+            .insert(user_id, active_only_links.clone());
         for role in &mut guild.verify.roles {
-            if !link_arr_match(guild.verify.user_links.get(&user_id).unwrap(), &role.pattern) && link_match(&existing_link, &role.pattern) {
-                remove_guild_member_role(guild.guild_id, user_id, role.role_id, &app_state.discord_bot).await?;
+            if !link_arr_match(
+                guild.verify.user_links.get(&user_id).unwrap(),
+                &role.pattern,
+            ) && link_match(&existing_link, &role.pattern)
+            {
+                remove_guild_member_role(
+                    guild.guild_id,
+                    user_id,
+                    role.role_id,
+                    &app_state.discord_bot,
+                )
+                .await?;
                 if role.members > 0 {
                     role.members -= 1;
                 }
             }
         }
-        guild.save(&app_state.dynamo).await;
-    };
+        guild.save(&app_state.pg_pool).await;
+    }
     existing_link.active = false;
     user_model.links.push(existing_link);
-    user_model.save(&app_state.dynamo).await;
+    user_model.save(&app_state.pg_pool).await;
     Ok(StatusCode::NO_CONTENT)
 }
 

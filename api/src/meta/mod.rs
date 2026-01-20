@@ -1,9 +1,9 @@
-use std::sync::Arc;
+use crate::AppState;
 use axum::Router;
 use lambda_http::tracing::info;
+use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use twilight_http::Client;
-use crate::AppState;
 
 mod guilds;
 mod users;
