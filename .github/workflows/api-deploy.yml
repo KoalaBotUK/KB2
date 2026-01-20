@@ -45,7 +45,7 @@ jobs:
 
       - name: Migrate Database
         env:
-          DSQL_ENDPOINT: ${{ vars.DSQL_ENDPOINT }}
+          DSQL_ENDPOINT: ${{ secrets.DSQL_ENDPOINT }}
         run: |
           token=$(aws dsql generate-db-connect-admin-auth-token --hostname $DSQL_ENDPOINT)
           encoded_token=$(echo "$token" | jq -Rr @uri)
