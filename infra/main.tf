@@ -25,11 +25,18 @@ provider "aws" {}
 #   deployment_env = var.deployment_env
 # }
 
+module "dsql" {
+  source = "./modules/data/dsql"
+  deployment_env = var.deployment_env
+}
+
 module "lambda" {
   source         = "./modules/compute/lambda"
   deployment_env = var.deployment_env
   discord_bot_token = var.discord_bot_token
   discord_public_key = var.discord_public_key
+  dsql_user = "admin"
+  dsql_endpoint = module.dsql.dsql_endpoint
 }
 
 module "s3" {
@@ -48,11 +55,6 @@ module "api" {
 
 module "dynamodb" {
   source = "./modules/data/dynamodb"
-  deployment_env = var.deployment_env
-}
-
-module "dsql" {
-  source = "./modules/data/dsql"
   deployment_env = var.deployment_env
 }
 
