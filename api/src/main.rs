@@ -1,27 +1,28 @@
-use crate::dsql::establish_connection;
+use common::dsql::establish_connection;
 use aws_config::BehaviorVersion;
 use axum::body::Body;
-use axum::{Json, Router, http::StatusCode, routing::get};
+use axum::{http::StatusCode, routing::get, Json, Router};
 use http::Response;
-use lambda_http::{Error, run, tracing};
-use serde_json::{Value, json};
+use lambda_http::{run, tracing, Error};
+use serde_json::{json, Value};
 use sqlx::{Pool, Postgres};
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 
 mod discord;
-mod dsql;
 mod guilds;
 mod interactions;
 mod meta;
 mod middleware;
 mod users;
 mod utils;
+mod audit;
 
 #[derive(Clone)]
 pub struct AppState {
     scheduler: aws_sdk_scheduler::Client,
     ses: aws_sdk_sesv2::Client,
+    sqs: aws_sdk_sqs::Client,
     pg_pool: Pool<Postgres>,
     discord_bot: Arc<twilight_http::Client>,
     reqwest: Arc<reqwest::Client>,
@@ -83,6 +84,7 @@ async fn main() -> Result<(), Error> {
     let app_state = AppState {
         scheduler: aws_sdk_scheduler::Client::new(&config),
         ses: aws_sdk_sesv2::Client::new(&config),
+        sqs: aws_sdk_sqs::Client::new(&config),
         pg_pool: pool,
         discord_bot,
         reqwest: Arc::new(reqwest::Client::new()),

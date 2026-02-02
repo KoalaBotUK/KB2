@@ -24,36 +24,33 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
         tracing::debug!(?event, "event");
 
-        match event {
-            twilight_gateway::Event::InteractionCreate(interaction) => {
-                let mut headers = reqwest::header::HeaderMap::new();
-                headers.insert(CONTENT_TYPE, "application/json".parse().unwrap());
-                headers.insert(AUTHORIZATION, format!("Bot {token}").parse().unwrap());
-                headers.insert("x-signature-timestamp", "mock".parse().unwrap());
-                headers.insert("x-signature-ed25519", "mock".parse().unwrap());
+        if let twilight_gateway::Event::InteractionCreate(interaction) = event {
+            let mut headers = reqwest::header::HeaderMap::new();
+            headers.insert(CONTENT_TYPE, "application/json".parse().unwrap());
+            headers.insert(AUTHORIZATION, format!("Bot {token}").parse().unwrap());
+            headers.insert("x-signature-timestamp", "mock".parse().unwrap());
+            headers.insert("x-signature-ed25519", "mock".parse().unwrap());
 
-                let r = client.post("http://localhost:9000/lambda-url/api/interactions").json(&interaction).headers(headers).send().await;
-                match r {
-                    Ok(r) => {
-                        match r.status() {
-                            reqwest::StatusCode::OK => {
-                                let headers = r.headers().clone();
-                                client.post(format!("https://discord.com/api/v10/interactions/{}/{}/callback",interaction.id, interaction.token))
-                                    .json(&r.json::<InteractionResponse>().await.unwrap())
-                                    .headers(headers).send().await.unwrap();
-                            },
-                            _ => {
-                                tracing::error!(?r, "error sending interaction");
-                                continue;
-                            }
+            let r = client.post("http://localhost:9000/lambda-url/api/interactions").json(&interaction).headers(headers).send().await;
+            match r {
+                Ok(r) => {
+                    match r.status() {
+                        reqwest::StatusCode::OK => {
+                            let headers = r.headers().clone();
+                            client.post(format!("https://discord.com/api/v10/interactions/{}/{}/callback",interaction.id, interaction.token))
+                                .json(&r.json::<InteractionResponse>().await.unwrap())
+                                .headers(headers).send().await.unwrap();
+                        },
+                        _ => {
+                            tracing::error!(?r, "error sending interaction");
+                            continue;
                         }
-                    },
-                    Err(e) => {
-                        tracing::error!(?e, "error sending interaction");
                     }
+                },
+                Err(e) => {
+                    tracing::error!(?e, "error sending interaction");
                 }
-            },
-            _ => (),
+            }
         }
     }
 

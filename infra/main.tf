@@ -30,6 +30,11 @@ module "dsql" {
   deployment_env = var.deployment_env
 }
 
+module "sqs" {
+  source = "./modules/data/sqs"
+  deployment_env = var.deployment_env
+}
+
 module "lambda" {
   source         = "./modules/compute/lambda"
   deployment_env = var.deployment_env
@@ -38,6 +43,8 @@ module "lambda" {
   dsql_user = "admin"
   dsql_endpoint = module.dsql.dsql_endpoint
   dsql_arn = module.dsql.dsql_arn
+  sqs_arn = module.sqs.queue_arn
+  sqs_url = module.sqs.queue_url
 }
 
 module "s3" {

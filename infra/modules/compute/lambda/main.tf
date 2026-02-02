@@ -6,7 +6,7 @@ data "aws_iam_policy_document" "assume_role" {
     effect = "Allow"
 
     principals {
-      type = "Service"
+      type        = "Service"
       identifiers = ["lambda.amazonaws.com"]
     }
 
@@ -31,19 +31,19 @@ resource "aws_iam_role_policy_attachment" "ses_role_attach" {
 
 resource "aws_cloudwatch_log_group" "default" {
   name              = "/aws/lambda/${aws_lambda_function.lambda_function.function_name}" # Replace with your log group name
-  retention_in_days = 14                              # Set the desired retention period in days
+  retention_in_days = 14                                                                 # Set the desired retention period in days
 }
 
 data "aws_iam_policy_document" "cloudwatch_readwrite" {
   statement {
-    effect = "Allow"
-    actions = ["logs:CreateLogGroup",]
+    effect    = "Allow"
+    actions   = ["logs:CreateLogGroup", ]
     resources = ["arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"]
   }
 
   statement {
-    effect = "Allow"
-    actions = ["logs:CreateLogStream", "logs:PutLogEvents",]
+    effect  = "Allow"
+    actions = ["logs:CreateLogStream", "logs:PutLogEvents", ]
     resources = [
       "${aws_cloudwatch_log_group.default.arn}:*"
     ]
@@ -63,8 +63,8 @@ resource "aws_iam_role_policy_attachment" "execution_role_attach" {
 
 data "aws_iam_policy_document" "dsql_dbconnect" {
   statement {
-    effect = "Allow"
-    actions = ["dsql:DbConnectAdmin",]
+    effect    = "Allow"
+    actions   = ["dsql:DbConnectAdmin", ]
     resources = [var.dsql_arn]
   }
 }
@@ -94,7 +94,7 @@ resource "aws_lambda_function" "lambda_function" {
   role          = aws_iam_role.lambda_execute_role.arn
   handler       = "main"
   filename      = data.archive_file.empty_zip.output_path
-  timeout = 10
+  timeout       = 10
 
   runtime = "provided.al2023"
 
@@ -108,6 +108,81 @@ resource "aws_lambda_function" "lambda_function" {
       DISCORD_PUBLIC_KEY                   = var.discord_public_key
       DSQL_USER                            = var.dsql_user
       DSQL_ENDPOINT                        = var.dsql_endpoint
+      SQS_URL                              = var.sqs_url
     }
   }
+}
+
+resource "aws_iam_role" "lambda_consumer_role" {
+  name               = "kb2-lambda-consumer-role-${var.deployment_env}"
+  assume_role_policy = data.aws_iam_policy_document.assume_role.json
+}
+
+resource "aws_iam_role_policy_attachment" "consumer_role_attach" {
+  role       = aws_iam_role.lambda_consumer_role.name
+  policy_arn = aws_iam_policy.cloudwatch_readwrite.arn
+}
+
+resource "aws_iam_role_policy_attachment" "consumer_dsql_dbconnect_attach" {
+  role       = aws_iam_role.lambda_consumer_role.name
+  policy_arn = aws_iam_policy.dsql_dbconnect.arn
+}
+
+resource "aws_iam_role_policy" "lambda_consumer_sqs_policy" {
+  name = "lambda-sqs-policy"
+  role = aws_iam_role.lambda_consumer_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes"
+        ]
+        Effect   = "Allow"
+        Resource = var.sqs_arn
+      },
+      {
+        Action   = "logs:CreateLogGroup"
+        Effect   = "Allow"
+        Resource = "arn:aws:logs:*:*:*"
+      },
+      {
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Effect   = "Allow"
+        Resource = "arn:aws:logs:*:*:log-group:/aws/lambda/*"
+      }
+    ]
+  })
+}
+
+resource "aws_lambda_function" "lambda_consumer" {
+  function_name = "kb2-lambda-consumer-${var.deployment_env}"
+  role          = aws_iam_role.lambda_consumer_role.arn
+  handler       = "main"
+  filename      = data.archive_file.empty_zip.output_path
+  timeout       = 10
+
+  runtime = "provided.al2023"
+
+  environment {
+    variables = {
+      AWS_LAMBDA_HTTP_IGNORE_STAGE_IN_PATH = "true"
+      AWS_LAMBDA_LOG_LEVEL                 = "info"
+      API_GATEWAY_BASE_PATH                = "/default"
+      DEPLOYMENT_ENV                       = var.deployment_env
+      DSQL_USER                            = var.dsql_user
+      DSQL_ENDPOINT                        = var.dsql_endpoint
+    }
+  }
+}
+
+resource "aws_lambda_event_source_mapping" "example_mapping" {
+  event_source_arn = var.sqs_arn
+  function_name    = aws_lambda_function.lambda_consumer.function_name
 }

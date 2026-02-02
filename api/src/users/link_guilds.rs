@@ -13,6 +13,8 @@ use tower_http::cors::CorsLayer;
 use twilight_model::id::Id;
 use twilight_model::id::marker::{GuildMarker, UserMarker};
 use twilight_model::user::CurrentUser;
+use common::audit::AuditMessage;
+use crate::audit::audit;
 
 pub fn router() -> axum::Router<AppState> {
     axum::Router::new()
@@ -41,6 +43,7 @@ async fn put_link_guilds_id(
     let mut user = User::from_db(user_id, &app_state.pg_pool)
         .await
         .unwrap();
+    let audit_old_data = user.link_guilds.clone();
     if user
         .link_guilds
         .iter()
@@ -51,6 +54,7 @@ async fn put_link_guilds_id(
     }
     user.link_guilds.retain(|g| g.guild_id != guild_id);
     user.link_guilds.push(new_link_guild.clone());
+    let audit_new_data = user.link_guilds.clone();
     user.save(&app_state.pg_pool).await;
 
     let mut guild = Guild::from_db(guild_id, &app_state.pg_pool).await.unwrap();
@@ -76,6 +80,11 @@ async fn put_link_guilds_id(
     }
 
     guild.save(&app_state.pg_pool).await;
+    
+    // write audit
+    audit(&AuditMessage::new("update_link_guilds".to_string(), user_id, Some(guild_id), 
+                             Some(audit_old_data), Some(audit_new_data)), &app_state.sqs).await;
+    
     Ok(Json(json!(new_link_guild)))
 }
 

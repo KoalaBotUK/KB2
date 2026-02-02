@@ -7,7 +7,7 @@ use bigdecimal::{BigDecimal, ToPrimitive};
 use sqlx::{Pool, Postgres, Row};
 use twilight_model::id::Id;
 use twilight_model::id::marker::GuildMarker;
-use crate::dsql::{bind_in_params, in_params};
+use common::dsql::{bind_in_params, in_params};
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct Guild {

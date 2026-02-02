@@ -19,5 +19,13 @@ variable "dsql_endpoint" {
 }
 
 variable "dsql_arn" {
-  default = ""
+  type = string
+}
+
+variable "sqs_arn" {
+  type = string
+}
+
+variable "sqs_url" {
+  type = string
 }

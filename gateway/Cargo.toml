@@ -1,12 +1,12 @@
 [package]
 name = "gateway"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
 
 [dependencies]
-tokio = { version = "1.47.1", features = ["rt-multi-thread"] }
-twilight-gateway = "0.16.0"
-twilight-model = "0.16.0"
-tracing = "0.1.41"
-tracing-subscriber = "0.3.20"
-reqwest = { version = "0.12.23", features = ["json"] }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+twilight-gateway = { workspace = true }
+twilight-model = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+reqwest = { workspace = true, features = ["json"] }
