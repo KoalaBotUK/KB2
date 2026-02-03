@@ -98,7 +98,7 @@ data "aws_iam_policy_document" "lambda_api_sqs_policy" {
 }
 
 resource "aws_iam_role_policy" "lambda_api_sqs_policy" {
-  name = "lambda-api-sqs-policy"
+  name = "kb2-api-sqs-policy-${var.deployment_env}"
   role = aws_iam_role.lambda_execute_role.id
 
   policy = data.aws_iam_policy_document.lambda_api_sqs_policy.json
@@ -179,7 +179,7 @@ data "aws_iam_policy_document" "lambda_consumer_sqs_policy" {
 }
 
 resource "aws_iam_role_policy" "lambda_consumer_sqs_policy" {
-  name = "lambda-consumer-sqs-policy"
+  name = "kb2-consumer-sqs-policy-${var.deployment_env}"
   role = aws_iam_role.lambda_consumer_role.id
 
   policy = data.aws_iam_policy_document.lambda_consumer_sqs_policy.json

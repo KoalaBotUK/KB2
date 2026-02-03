@@ -61,6 +61,12 @@ module "api" {
   ui_hostname = module.s3.ui_hostname
 }
 
+module "waf" {
+  source = "./modules/api/waf"
+  deployment_env = var.deployment_env
+  api_gw_arn = module.api.api_gw_arn
+}
+
 module "dynamodb" {
   source = "./modules/data/dynamodb"
   deployment_env = var.deployment_env
