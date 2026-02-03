@@ -10,7 +10,7 @@ where
     let queue_url = std::env::var("SQS_URL").expect("SQS_URL must be set");
     
     let new_audit = AuditMessage::new(
-        audit.event,
+        audit.action,
         audit.user_id,
         audit.guild_id,
         audit.data.old_data.map(|v: T| serde_json::to_string(&v).unwrap()),

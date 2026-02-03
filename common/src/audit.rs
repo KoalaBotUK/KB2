@@ -19,7 +19,7 @@ pub struct AuditMessage<T>
 where
     T: Serialize + for<'a> Deserialize<'a>,
 {
-    pub event: String,
+    pub action: String,
     pub user_id: Id<UserMarker>,
     pub guild_id: Option<Id<GuildMarker>>,
     pub data: AuditData<T>
@@ -29,9 +29,9 @@ impl<T> AuditMessage<T>
 where
     T: Serialize + for<'a> Deserialize<'a>,
 {
-    pub fn new(event: String, user_id: Id<UserMarker>, guild_id: Option<Id<GuildMarker>>, old_data: Option<T>, new_data: Option<T>) -> AuditMessage<T> {
+    pub fn new(action: String, user_id: Id<UserMarker>, guild_id: Option<Id<GuildMarker>>, old_data: Option<T>, new_data: Option<T>) -> AuditMessage<T> {
         AuditMessage {
-            event,
+            action,
             user_id,
             guild_id,
             data: AuditData{old_data,new_data}
