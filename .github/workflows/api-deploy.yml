@@ -19,6 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
       - name: Setup AWS CLI
         uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
         with:
@@ -29,8 +33,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
       - name: Install dependencies
         run: |
-          sudo apt install zig -y
-          curl -fsSL https://cargo-lambda.info/install.sh | sh
+          pip install cargo-lambda
           cargo install sqlx-cli
       - name: Build
         run: cargo lambda build --release --output-format zip -p api -p consumer
