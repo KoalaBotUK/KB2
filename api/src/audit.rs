@@ -17,7 +17,10 @@ where
         match sqs
             .send_message()
             .queue_url(&queue_url)
-            .message_attributes("kind", MessageAttributeValue::builder().string_value("audit").build().unwrap())
+            .message_attributes("kind", MessageAttributeValue::builder()
+                .data_type("String")
+                .string_value("audit")
+                .build().unwrap())
             .message_body(serde_json::to_string(audit).unwrap())
             .send()
             .await {

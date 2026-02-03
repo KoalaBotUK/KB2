@@ -113,6 +113,33 @@ resource "aws_lambda_function" "lambda_function" {
   }
 }
 
+resource "aws_cloudwatch_log_group" "consumer" {
+  name              = "/aws/lambda/${aws_lambda_function.lambda_consumer.function_name}" # Replace with your log group name
+  retention_in_days = 14                                                                 # Set the desired retention period in days
+}
+
+
+data "aws_iam_policy_document" "consumer_cloudwatch_readwrite" {
+  statement {
+    effect    = "Allow"
+    actions   = ["logs:CreateLogGroup", ]
+    resources = ["arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"]
+  }
+
+  statement {
+    effect  = "Allow"
+    actions = ["logs:CreateLogStream", "logs:PutLogEvents", ]
+    resources = [
+      "${aws_cloudwatch_log_group.default.arn}:*"
+    ]
+  }
+}
+
+resource "aws_iam_policy" "consumer_cloudwatch_readwrite" {
+  name   = "kb2-consumer-cloudwatch-readwrite-policy-${var.deployment_env}"
+  policy = data.aws_iam_policy_document.consumer_cloudwatch_readwrite.json
+}
+
 resource "aws_iam_role" "lambda_consumer_role" {
   name               = "kb2-lambda-consumer-role-${var.deployment_env}"
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
@@ -120,7 +147,7 @@ resource "aws_iam_role" "lambda_consumer_role" {
 
 resource "aws_iam_role_policy_attachment" "consumer_role_attach" {
   role       = aws_iam_role.lambda_consumer_role.name
-  policy_arn = aws_iam_policy.cloudwatch_readwrite.arn
+  policy_arn = aws_iam_policy.consumer_cloudwatch_readwrite.arn
 }
 
 resource "aws_iam_role_policy_attachment" "consumer_dsql_dbconnect_attach" {
