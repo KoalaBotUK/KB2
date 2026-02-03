@@ -8,6 +8,7 @@ on:
       - .github/workflows/api-deploy.yml
     tags:
       - '*.*.*'
+  workflow_dispatch: []
 permissions:
   contents: read
 
@@ -16,42 +17,35 @@ jobs:
     environment: ${{ github.ref == 'refs/heads/main' && 'dev' || 'prod' }}
     name: Build & Deploy 📦
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./api
-
-
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
       - name: Setup AWS CLI
         uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
-      - name: Install dependencies
-        run: |
-          pip install cargo-lambda
-          cargo install sqlx-cli
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: |
-            api
+      - name: Install dependencies
+        run: |
+          curl -fsSL https://cargo-lambda.info/install.sh | sh
+          cargo install sqlx-cli
       - name: Build
-        run: cargo lambda build --release --output-format zip
+        run: cargo lambda build --release --output-format zip -p api -p consumer
 
       - name: Migrate Database
         env:
           DSQL_ENDPOINT: ${{ secrets.DSQL_ENDPOINT }}
         run: |
+          cd api
           token=$(aws dsql generate-db-connect-admin-auth-token --hostname $DSQL_ENDPOINT)
           encoded_token=$(echo "$token" | jq -Rr @uri)
           sqlx migrate run --database-url "postgresql://admin:${encoded_token}@${DSQL_ENDPOINT}/postgres?sslmode=require"
+          cd ..
 
-      - name: Upload to Lambda
+      - name: Upload api to Lambda
         run: aws lambda update-function-code --function-name kb2-lambda-function-${{ github.ref == 'refs/heads/main' && 'dev' || 'prod' }} --zip-file fileb://target/lambda/api/bootstrap.zip
+
+      - name: Upload consumer to Lambda
+        run: aws lambda update-function-code --function-name kb2-lambda-consumer-${{ github.ref == 'refs/heads/main' && 'dev' || 'prod' }} --zip-file fileb://target/lambda/consumer/bootstrap.zip
