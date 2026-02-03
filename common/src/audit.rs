@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use twilight_model::id::Id;
 use twilight_model::id::marker::{GuildMarker, UserMarker};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(bound = "T: Serialize + for<'a> Deserialize<'a>")]
 pub struct AuditData<T>
 where
@@ -13,7 +13,7 @@ where
     pub new_data: Option<T>
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(bound = "T: Serialize + for<'a> Deserialize<'a>")]
 pub struct AuditMessage<T>
 where

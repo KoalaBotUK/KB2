@@ -82,7 +82,7 @@ async fn put_link_guilds_id(
     guild.save(&app_state.pg_pool).await;
     
     // write audit
-    audit(&AuditMessage::new("update_link_guilds".to_string(), user_id, Some(guild_id), 
+    audit(AuditMessage::new("update_link_guilds".to_string(), user_id, Some(guild_id),
                              Some(audit_old_data), Some(audit_new_data)), &app_state.sqs).await;
     
     Ok(Json(json!(new_link_guild)))
