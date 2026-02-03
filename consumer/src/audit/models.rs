@@ -17,8 +17,7 @@ pub struct Audit {
 
 impl Audit {
     pub async fn save(&self, pg_pool: &Pool<Postgres>) {
-        match sqlx::query("INSERT INTO audit (id, event, user_id, guild_id, old_data, new_data) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO UPDATE SET event = $2, user_id = $3, guild_id = $4, old_data = $5, new_data = $6, updated_at = CURRENT_TIMESTAMP")
-            .bind(self.id)
+        match sqlx::query("INSERT INTO audit (event, user_id, guild_id, old_data, new_data) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET event = $1, user_id = $2, guild_id = $3, old_data = $4, new_data = $5, updated_at = CURRENT_TIMESTAMP")
             .bind(self.event.as_str())
             .bind(BigDecimal::from(self.user_id.into_nonzero().get()))
             .bind(self.guild_id.map(|id| BigDecimal::from(id.into_nonzero().get())))

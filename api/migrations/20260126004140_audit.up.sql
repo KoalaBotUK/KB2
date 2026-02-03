@@ -1,6 +1,6 @@
 -- no-transaction
 CREATE TABLE audit(
-    id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event VARCHAR,
     user_id NUMERIC(20, 0) NOT NULL, -- u64
     guild_id NUMERIC(20, 0), -- u64
