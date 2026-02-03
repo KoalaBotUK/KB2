@@ -64,7 +64,7 @@ module "api" {
 module "waf" {
   source = "./modules/api/waf"
   deployment_env = var.deployment_env
-  api_gw_arn = module.api.api_gw_arn
+  api_gw_stage_arn = module.api.api_gw_stage_arn
 }
 
 module "dynamodb" {
