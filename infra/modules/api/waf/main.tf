@@ -45,6 +45,6 @@ resource "aws_wafv2_web_acl" "default" {
 }
 
 resource "aws_wafv2_web_acl_association" "default" {
-  resource_arn = var.api_gw_arn
+  resource_arn = var.api_gw_stage_arn
   web_acl_arn  = aws_wafv2_web_acl.default.arn
 }
