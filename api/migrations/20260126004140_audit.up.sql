@@ -1,3 +1,4 @@
+-- no-transaction
 CREATE TABLE audit(
     id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
     action VARCHAR,
