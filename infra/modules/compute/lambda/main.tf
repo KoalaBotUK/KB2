@@ -89,6 +89,21 @@ data "archive_file" "empty_zip" {
   }
 }
 
+data "aws_iam_policy_document" "lambda_api_sqs_policy" {
+  statement {
+    effect    = "Allow"
+    actions   = ["sqs:SendMessage", ]
+    resources = [var.sqs_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "lambda_api_sqs_policy" {
+  name = "lambda-api-sqs-policy"
+  role = aws_iam_role.lambda_execute_role.id
+
+  policy = data.aws_iam_policy_document.lambda_api_sqs_policy.json
+}
+
 resource "aws_lambda_function" "lambda_function" {
   function_name = "kb2-lambda-function-${var.deployment_env}"
   role          = aws_iam_role.lambda_execute_role.arn
@@ -155,37 +170,19 @@ resource "aws_iam_role_policy_attachment" "consumer_dsql_dbconnect_attach" {
   policy_arn = aws_iam_policy.dsql_dbconnect.arn
 }
 
+data "aws_iam_policy_document" "lambda_consumer_sqs_policy" {
+  statement {
+    effect    = "Allow"
+    actions   = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes", ]
+    resources = [var.sqs_arn]
+  }
+}
+
 resource "aws_iam_role_policy" "lambda_consumer_sqs_policy" {
-  name = "lambda-sqs-policy"
+  name = "lambda-consumer-sqs-policy"
   role = aws_iam_role.lambda_consumer_role.id
 
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = [
-          "sqs:ReceiveMessage",
-          "sqs:DeleteMessage",
-          "sqs:GetQueueAttributes"
-        ]
-        Effect   = "Allow"
-        Resource = var.sqs_arn
-      },
-      {
-        Action   = "logs:CreateLogGroup"
-        Effect   = "Allow"
-        Resource = "arn:aws:logs:*:*:*"
-      },
-      {
-        Action = [
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Effect   = "Allow"
-        Resource = "arn:aws:logs:*:*:log-group:/aws/lambda/*"
-      }
-    ]
-  })
+  policy = data.aws_iam_policy_document.lambda_consumer_sqs_policy.json
 }
 
 resource "aws_lambda_function" "lambda_consumer" {
