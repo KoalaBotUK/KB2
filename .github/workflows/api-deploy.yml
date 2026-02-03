@@ -29,7 +29,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
       - name: Install dependencies
         run: |
-          apt install zig -y
+          sudo apt install zig -y
           curl -fsSL https://cargo-lambda.info/install.sh | sh
           cargo install sqlx-cli
       - name: Build
