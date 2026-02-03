@@ -8,7 +8,7 @@ on:
       - .github/workflows/api-deploy.yml
     tags:
       - '*.*.*'
-  workflow_dispatch: []
+  workflow_dispatch: {}
 permissions:
   contents: read
 
