@@ -145,7 +145,7 @@ data "aws_iam_policy_document" "consumer_cloudwatch_readwrite" {
     effect  = "Allow"
     actions = ["logs:CreateLogStream", "logs:PutLogEvents", ]
     resources = [
-      "${aws_cloudwatch_log_group.default.arn}:*"
+      "${aws_cloudwatch_log_group.consumer.arn}:*"
     ]
   }
 }
