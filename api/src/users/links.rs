@@ -159,14 +159,32 @@ async fn oidc_email(url: &str, token: String, app_state: &AppState) -> Result<St
     }
 }
 
+/// Authorizes a `delete_link` request: the middleware-provided current user
+/// must match the `user_id` path segment being modified. Extracted as a pure
+/// function (instead of inlined in the handler) so the authz decision can be
+/// unit tested without standing up an axum request or a Discord client.
+///
+/// Regression coverage for koalabotuk/kb2#54: `delete_link` used to make its
+/// own uncached, double-`.unwrap()`ed `current_user()` Discord API call for
+/// this check instead of using the `Extension<CurrentUser>` already injected
+/// by `auth_middleware`, which could panic on a transient Discord error and
+/// returned the wrong status code (`NOT_FOUND`) on mismatch.
+fn check_delete_link_authorized(
+    current_user_id: Id<UserMarker>,
+    target_user_id: Id<UserMarker>,
+) -> Result<(), StatusCode> {
+    if current_user_id != target_user_id {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+    Ok(())
+}
+
 async fn delete_link(
     Path((user_id, link_address)): Path<(Id<UserMarker>, String)>,
     Extension(current_user): Extension<CurrentUser>,
     State(app_state): State<AppState>,
 ) -> Result<StatusCode, StatusCode> {
-    if current_user.id != user_id {
-        return Err(StatusCode::UNAUTHORIZED);
-    }
+    check_delete_link_authorized(current_user.id, user_id)?;
 
     let mut user_model = User::from_db(user_id, &app_state.pg_pool)
         .await
@@ -259,4 +277,31 @@ async fn post_send_email(
     .await?;
 
     Ok(Json(json!({"status": "success"})))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn check_delete_link_authorized_allows_matching_ids() {
+        let id = Id::<UserMarker>::new(228541431483072513);
+
+        assert_eq!(check_delete_link_authorized(id, id), Ok(()));
+    }
+
+    #[test]
+    fn check_delete_link_authorized_rejects_mismatched_ids_with_unauthorized() {
+        // Regression test for koalabotuk/kb2#54: a request whose
+        // middleware-provided current user does not match the target
+        // `user_id` must be rejected with UNAUTHORIZED, not NOT_FOUND (the
+        // old behaviour) and must not panic (the old uncached, double
+        // `.unwrap()`ed Discord call could panic on a transient error).
+        let current_user_id = Id::<UserMarker>::new(111111111111111111);
+        let target_user_id = Id::<UserMarker>::new(222222222222222222);
+
+        let result = check_delete_link_authorized(current_user_id, target_user_id);
+
+        assert_eq!(result, Err(StatusCode::UNAUTHORIZED));
+    }
 }
