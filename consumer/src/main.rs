@@ -1,6 +1,6 @@
 mod audit;
 
-use aws_lambda_events::event::sqs::SqsEvent;
+use aws_lambda_events::event::sqs::{SqsBatchResponse, SqsEvent};
 use aws_sdk_dsql::config::BehaviorVersion;
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 use sqlx::{Pool, Postgres};
@@ -12,13 +12,24 @@ pub struct AppState {
     pub pg_pool: Pool<Postgres>,
 }
 
-async fn function_handler(event: LambdaEvent<SqsEvent>, state: &AppState) -> Result<(), Error> {
+async fn function_handler(event: LambdaEvent<SqsEvent>, state: &AppState) -> Result<SqsBatchResponse, Error> {
+    let mut response = SqsBatchResponse::default();
+
     for message in event.payload.records {
+        let message_id = message.message_id.clone().unwrap_or_default();
         info!("Message body: {:?}", message.body);
         match message.message_attributes.get("kind") {
             Some(attr) => {
                 match attr.string_value.as_deref() {
-                    Some("audit") => audit::consume(message.clone(), state).await,
+                    Some("audit") => {
+                        if let Err(e) = audit::consume(message.clone(), state).await {
+                            // Report only this message as failed so the rest of the
+                            // batch can still succeed, instead of panicking and
+                            // causing the whole batch to be redelivered forever.
+                            error!("Failed to process audit message {}: {}", message_id, e);
+                            response.add_failure(message_id);
+                        }
+                    }
                     _ => error!("Unknown message type: {}; body: {}", attr.string_value.as_deref().unwrap_or_default(), message.body.as_deref().unwrap_or_default())
                 }
 
@@ -27,7 +38,7 @@ async fn function_handler(event: LambdaEvent<SqsEvent>, state: &AppState) -> Res
         }
     }
 
-    Ok(())
+    Ok(response)
 }
 
 #[tokio::main]
