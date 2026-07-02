@@ -98,10 +98,8 @@ async fn main() -> Result<(), Error> {
     // website script requests against it using a token it has obtained.
     let cors = CorsLayer::new()
         .allow_origin(
-            std::env::var("CORS_ALLOWED_ORIGIN")
-                .expect("env variable `CORS_ALLOWED_ORIGIN` should be set")
-                .parse::<http::HeaderValue>()
-                .expect("CORS_ALLOWED_ORIGIN must be a valid header value (e.g. https://koalabot.uk)"),
+            parse_cors_allowed_origin(std::env::var("CORS_ALLOWED_ORIGIN").ok().as_deref())
+                .expect("invalid CORS configuration"),
         )
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
         .allow_headers([http::header::AUTHORIZATION, http::header::CONTENT_TYPE]);
@@ -127,4 +125,57 @@ async fn main() -> Result<(), Error> {
 
 fn setup(discord_bot: Arc<twilight_http::Client>) {
     meta::setup(discord_bot);
+}
+
+/// Parses the `CORS_ALLOWED_ORIGIN` environment variable into a header value
+/// suitable for `CorsLayer::allow_origin`.
+///
+/// This is extracted out of `main()` so the parsing/validation logic can be
+/// unit tested in isolation. Whether the resulting `CorsLayer` actually
+/// enforces the restriction on real requests (i.e. that browsers sending an
+/// `Origin` header other than the configured one are rejected) is not
+/// unit-testable here since it depends on `tower_http`'s CORS middleware
+/// behaviour and axum's request handling; that should be covered by an
+/// integration/CI-level test that exercises the running service.
+fn parse_cors_allowed_origin(origin: Option<&str>) -> Result<http::HeaderValue, String> {
+    let origin = origin.ok_or_else(|| "env variable `CORS_ALLOWED_ORIGIN` should be set".to_string())?;
+
+    origin.parse::<http::HeaderValue>().map_err(|_| {
+        "CORS_ALLOWED_ORIGIN must be a valid header value (e.g. https://koalabot.uk)".to_string()
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_cors_allowed_origin_accepts_valid_origin() {
+        let result = parse_cors_allowed_origin(Some("https://koalabot.uk"));
+
+        assert_eq!(result.expect("should parse").to_str().unwrap(), "https://koalabot.uk");
+    }
+
+    #[test]
+    fn parse_cors_allowed_origin_rejects_missing_value() {
+        let result = parse_cors_allowed_origin(None);
+
+        assert_eq!(
+            result.unwrap_err(),
+            "env variable `CORS_ALLOWED_ORIGIN` should be set"
+        );
+    }
+
+    #[test]
+    fn parse_cors_allowed_origin_rejects_invalid_header_value() {
+        // Carriage-return/newline characters are not permitted in header
+        // values (they would allow header/response splitting), so this must
+        // be rejected rather than silently accepted.
+        let result = parse_cors_allowed_origin(Some("https://koalabot.uk\r\nEvil: 1"));
+
+        assert_eq!(
+            result.unwrap_err(),
+            "CORS_ALLOWED_ORIGIN must be a valid header value (e.g. https://koalabot.uk)"
+        );
+    }
 }
