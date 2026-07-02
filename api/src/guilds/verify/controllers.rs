@@ -8,6 +8,7 @@ use axum::extract::{Path, State};
 use axum::routing::{post, put};
 use axum::{Extension, Json};
 use http::StatusCode;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::sync::Arc;
@@ -31,6 +32,17 @@ struct PutRoleRequest {
     pub pattern: String,
 }
 
+/// Validates that a verify-role pattern compiles as a regex. Invalid
+/// patterns must never be persisted: once stored, every code path that
+/// matches links against the guild's roles would otherwise need to handle
+/// (or, before this fix, panic on) an uncompilable pattern.
+fn validate_verify_pattern(pattern: &str) -> Result<(), StatusCode> {
+    if Regex::new(pattern).is_err() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    Ok(())
+}
+
 async fn put_roles_id(
     Path((guild_id, role_id)): Path<(Id<GuildMarker>, Id<RoleMarker>)>,
     Extension(current_user): Extension<CurrentUser>,
@@ -41,13 +53,15 @@ async fn put_roles_id(
         return Err(StatusCode::FORBIDDEN);
     }
 
+    validate_verify_pattern(&put_role_request.pattern)?;
+
     let mut guild = Guild::from_db(guild_id, &app_state.pg_pool).await.unwrap();
 
     if guild.verify.roles.iter().any(|r| r.role_id == role_id) {
         remove_existing_role(&mut guild, role_id, &app_state).await?;
     }
 
-    let mut new_role = VerifyRole {
+    let new_role = VerifyRole {
         role_id,
         pattern: put_role_request.pattern,
         ..Default::default()
@@ -60,11 +74,13 @@ async fn put_roles_id(
                     .await;
             if !(r.is_err() && r.err().unwrap().eq(&StatusCode::NOT_FOUND)) {
                 r?;
-                new_role.members += 1;
             }
         }
     }
     guild.verify.roles.push(new_role);
+    // `members` is derived from `user_links`, not hand-incremented, so it
+    // can never drift out of sync with the other role/link handlers.
+    guild.verify.recompute_role_members();
     guild.save(&app_state.pg_pool).await;
 
     Ok(Json(json!(
@@ -139,12 +155,11 @@ async fn post_recon(
     let mut guild = Guild::from_db(guild_id, &app_state.pg_pool).await.unwrap();
     let Verify { roles, user_links } = &mut guild.verify;
 
-    for role in roles {
-        role.members = 0;
+    for role in roles.iter() {
         for (user_id, links) in &*user_links {
             if link_arr_match(links, &role.pattern) {
                 let r = add_guild_member_role(
-                    guild.guild_id,
+                    guild_id,
                     *user_id,
                     role.role_id,
                     &app_state.discord_bot,
@@ -152,11 +167,10 @@ async fn post_recon(
                 .await;
                 if !(r.is_err() && r.err().unwrap().eq(&StatusCode::NOT_FOUND)) {
                     r?;
-                    role.members += 1;
                 }
             } else {
                 let r = remove_guild_member_role(
-                    guild.guild_id,
+                    guild_id,
                     *user_id,
                     role.role_id,
                     &app_state.discord_bot,
@@ -168,7 +182,31 @@ async fn post_recon(
             }
         }
     }
+    // Recompute every role's `members` from `user_links` in one place so
+    // recon uses exactly the same counting logic as put_roles_id/add/remove,
+    // instead of a manual counter that can disagree with them.
+    guild.verify.recompute_role_members();
     guild.save(&app_state.pg_pool).await;
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn invalid_pattern_is_rejected_at_creation_time() {
+        // `(` is not a valid regex — this must be rejected up front with a
+        // clean 400 instead of being persisted and panicking later.
+        assert_eq!(
+            validate_verify_pattern("("),
+            Err(StatusCode::BAD_REQUEST)
+        );
+    }
+
+    #[test]
+    fn valid_pattern_is_accepted() {
+        assert_eq!(validate_verify_pattern(r"^https://example\.com/.*$"), Ok(()));
+    }
 }

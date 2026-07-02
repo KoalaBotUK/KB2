@@ -32,11 +32,12 @@ async fn is_client_admin_guild(
     guild_id: Id<GuildMarker>,
     client: &twilight_http::Client,
 ) -> Result<bool, StatusCode> {
-    let guild = get_current_user_guild(guild_id, client).await?;
-    if guild.owner || guild.permissions & Permissions::ADMINISTRATOR == Permissions::ADMINISTRATOR {
-        return Ok(true);
+    match get_current_user_guild(guild_id, client).await? {
+        Some(guild) => Ok(
+            guild.owner || guild.permissions & Permissions::ADMINISTRATOR == Permissions::ADMINISTRATOR,
+        ),
+        None => Ok(false),
     }
-    Ok(false)
 }
 
 pub async fn is_intersect_admin_guild(
