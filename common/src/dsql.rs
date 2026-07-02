@@ -14,6 +14,11 @@ const TOKEN_EXPIRATION_SECONDS: u64 = TOKEN_EXPIRATION_MINUTES * SECONDS_PER_MIN
 const TOKEN_REFRESH_MINUTES: u64 = TOKEN_EXPIRATION_MINUTES - 5;
 const TOKEN_REFRESH_SECONDS: u64 = TOKEN_REFRESH_MINUTES * SECONDS_PER_MINUTE;
 
+// If a refresh attempt fails, retry after this (much shorter) interval instead of
+// waiting for the next full refresh cycle, so we have a good chance of getting a
+// fresh token in place before the current one expires.
+const TOKEN_REFRESH_RETRY_SECONDS: u64 = 30;
+
 const _: () = assert!(
     TOKEN_EXPIRATION_MINUTES > TOKEN_REFRESH_MINUTES,
     "Token expiration time must be greater than refresh time"
@@ -23,14 +28,17 @@ async fn generate_password_token(
     cluster_user: &str,
     signer: &AuthTokenGenerator,
     sdk_config: &SdkConfig,
-) -> AuthToken {
+) -> anyhow::Result<AuthToken> {
     if cluster_user == "admin" {
         signer
             .db_connect_admin_auth_token(sdk_config)
             .await
-            .unwrap()
+            .map_err(|e| anyhow::anyhow!("{e}"))
     } else {
-        signer.db_connect_auth_token(sdk_config).await.unwrap()
+        signer
+            .db_connect_auth_token(sdk_config)
+            .await
+            .map_err(|e| anyhow::anyhow!("{e}"))
     }
 }
 
@@ -50,7 +58,7 @@ pub async fn establish_connection(
             .unwrap(),
     );
 
-    let password_token = generate_password_token(&cluster_user, &signer, &sdk_config).await;
+    let password_token = generate_password_token(&cluster_user, &signer, &sdk_config).await?;
     let schema = match cluster_user.as_str() {
         "admin" => "public",
         _ => "myschema",
@@ -84,10 +92,23 @@ pub async fn establish_connection(
         loop {
             time::sleep(Duration::from_secs(TOKEN_REFRESH_SECONDS)).await;
 
-            let password_token = generate_password_token(&cluster_user, &signer, &sdk_config).await;
-            let connect_options_with_new_token =
-                connection_options.clone().password(password_token.as_str());
-            _pool.set_connect_options(connect_options_with_new_token);
+            match generate_password_token(&cluster_user, &signer, &sdk_config).await {
+                Ok(password_token) => {
+                    let connect_options_with_new_token =
+                        connection_options.clone().password(password_token.as_str());
+                    _pool.set_connect_options(connect_options_with_new_token);
+                }
+                Err(err) => {
+                    // Keep the loop alive on a transient failure (e.g. an STS/DSQL
+                    // hiccup) instead of letting the detached task die, which would
+                    // otherwise permanently stop token refreshes for this pool.
+                    tracing::error!(
+                        error = ?err,
+                        "failed to refresh DSQL auth token, will retry shortly"
+                    );
+                    time::sleep(Duration::from_secs(TOKEN_REFRESH_RETRY_SECONDS)).await;
+                }
+            }
         }
     });
 
