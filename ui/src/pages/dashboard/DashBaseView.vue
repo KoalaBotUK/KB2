@@ -59,10 +59,10 @@ async function enrichMeta(gid) {
 }
 
 function loadMemGuilds() {
-  let memGuilds = JSON.parse(localStorage.getItem('guilds'), reviver);
-  if (memGuilds === null) return;
-  for (let k of Object.keys(memGuilds)) {
-    memGuilds.set(k, Guild.fromJson(memGuilds[k]));
+  const memGuilds = JSON.parse(localStorage.getItem('guilds'), reviver);
+  if (!(memGuilds instanceof Map)) return;
+  for (const [k, v] of memGuilds) {
+    memGuilds.set(k, Guild.fromJson(v));
   }
   guildsKb.value = memGuilds;
   if (guildsKb.value.size > 0) {
