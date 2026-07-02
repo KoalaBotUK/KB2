@@ -111,7 +111,7 @@ async fn post_link(
         let mut guild = Guild::from_db(link_guild.guild_id, &app_state.pg_pool)
             .await
             .unwrap();
-        for role in &mut guild.verify.roles {
+        for role in &guild.verify.roles {
             if link_match(&new_link, &role.pattern) {
                 add_guild_member_role(
                     guild.guild_id,
@@ -120,7 +120,6 @@ async fn post_link(
                     &app_state.discord_bot,
                 )
                 .await?;
-                role.members += 1;
             }
         }
         guild
@@ -129,6 +128,11 @@ async fn post_link(
             .get_mut(&user_id)
             .unwrap()
             .push(new_link.clone());
+        // Recompute from `user_links` instead of incrementing `role.members`
+        // by hand: a remove-then-re-add of the same address (see the
+        // `retain` above) would otherwise inflate the count every time the
+        // user re-links an address they already had.
+        guild.verify.recompute_role_members();
         guild.save(&app_state.pg_pool).await;
     }
     user_model.links.push(new_link.clone());
@@ -206,7 +210,7 @@ async fn delete_link(
             .verify
             .user_links
             .insert(user_id, active_only_links.clone());
-        for role in &mut guild.verify.roles {
+        for role in &guild.verify.roles {
             if !link_arr_match(
                 guild.verify.user_links.get(&user_id).unwrap(),
                 &role.pattern,
@@ -219,11 +223,12 @@ async fn delete_link(
                     &app_state.discord_bot,
                 )
                 .await?;
-                if role.members > 0 {
-                    role.members -= 1;
-                }
             }
         }
+        // `user_links` was already updated above; derive `members` from it
+        // instead of the old `if role.members > 0 { role.members -= 1 }`
+        // guard, which only existed because the counter was untrustworthy.
+        guild.verify.recompute_role_members();
         guild.save(&app_state.pg_pool).await;
     }
     existing_link.active = false;

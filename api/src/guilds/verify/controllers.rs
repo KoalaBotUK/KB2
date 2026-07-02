@@ -47,7 +47,7 @@ async fn put_roles_id(
         remove_existing_role(&mut guild, role_id, &app_state).await?;
     }
 
-    let mut new_role = VerifyRole {
+    let new_role = VerifyRole {
         role_id,
         pattern: put_role_request.pattern,
         ..Default::default()
@@ -60,11 +60,13 @@ async fn put_roles_id(
                     .await;
             if !(r.is_err() && r.err().unwrap().eq(&StatusCode::NOT_FOUND)) {
                 r?;
-                new_role.members += 1;
             }
         }
     }
     guild.verify.roles.push(new_role);
+    // `members` is derived from `user_links`, not hand-incremented, so it
+    // can never drift out of sync with the other role/link handlers.
+    guild.verify.recompute_role_members();
     guild.save(&app_state.pg_pool).await;
 
     Ok(Json(json!(
@@ -135,12 +137,11 @@ async fn post_recon(
     let mut guild = Guild::from_db(guild_id, &app_state.pg_pool).await.unwrap();
     let Verify { roles, user_links } = &mut guild.verify;
 
-    for role in roles {
-        role.members = 0;
+    for role in roles.iter() {
         for (user_id, links) in &*user_links {
             if link_arr_match(links, &role.pattern) {
                 let r = add_guild_member_role(
-                    guild.guild_id,
+                    guild_id,
                     *user_id,
                     role.role_id,
                     &app_state.discord_bot,
@@ -148,11 +149,10 @@ async fn post_recon(
                 .await;
                 if !(r.is_err() && r.err().unwrap().eq(&StatusCode::NOT_FOUND)) {
                     r?;
-                    role.members += 1;
                 }
             } else {
                 let r = remove_guild_member_role(
-                    guild.guild_id,
+                    guild_id,
                     *user_id,
                     role.role_id,
                     &app_state.discord_bot,
@@ -164,6 +164,10 @@ async fn post_recon(
             }
         }
     }
+    // Recompute every role's `members` from `user_links` in one place so
+    // recon uses exactly the same counting logic as put_roles_id/add/remove,
+    // instead of a manual counter that can disagree with them.
+    guild.verify.recompute_role_members();
     guild.save(&app_state.pg_pool).await;
 
     Ok(StatusCode::NO_CONTENT)
