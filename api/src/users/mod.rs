@@ -55,7 +55,7 @@ async fn get_users_id(
                 user_id,
                 ..Default::default()
             };
-            u.save(&app_state.pg_pool).await;
+            u.save(&app_state.pg_pool).await?;
             u
         }
     };

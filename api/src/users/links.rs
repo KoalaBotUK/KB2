@@ -129,10 +129,10 @@ async fn post_link(
             .get_mut(&user_id)
             .unwrap()
             .push(new_link.clone());
-        guild.save(&app_state.pg_pool).await;
+        guild.save(&app_state.pg_pool).await?;
     }
     user_model.links.push(new_link.clone());
-    user_model.save(&app_state.pg_pool).await;
+    user_model.save(&app_state.pg_pool).await?;
     Ok(Json(json!(new_link)))
 }
 
@@ -224,11 +224,11 @@ async fn delete_link(
                 }
             }
         }
-        guild.save(&app_state.pg_pool).await;
+        guild.save(&app_state.pg_pool).await?;
     }
     existing_link.active = false;
     user_model.links.push(existing_link);
-    user_model.save(&app_state.pg_pool).await;
+    user_model.save(&app_state.pg_pool).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 

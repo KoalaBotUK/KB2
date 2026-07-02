@@ -65,7 +65,7 @@ async fn put_roles_id(
         }
     }
     guild.verify.roles.push(new_role);
-    guild.save(&app_state.pg_pool).await;
+    guild.save(&app_state.pg_pool).await?;
 
     Ok(Json(json!(
         guild
@@ -90,7 +90,7 @@ async fn delete_roles_id(
 
     remove_existing_role(&mut guild, role_id, &app_state).await?;
 
-    guild.save(&app_state.pg_pool).await;
+    guild.save(&app_state.pg_pool).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -164,7 +164,7 @@ async fn post_recon(
             }
         }
     }
-    guild.save(&app_state.pg_pool).await;
+    guild.save(&app_state.pg_pool).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
