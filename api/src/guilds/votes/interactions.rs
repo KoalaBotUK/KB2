@@ -31,9 +31,13 @@ pub(crate) async fn handle_component_interaction(
     let PartialMember { user, roles, .. } = member.unwrap();
     let user_id = user.unwrap().id;
 
-    let mut guild = Guild::from_db(guild_id.unwrap(), &app_state.pg_pool)
-        .await
-        .unwrap();
+    let guild_id = guild_id.unwrap();
+    let mut guild = Guild::from_db(guild_id, &app_state.pg_pool)
+        .await?
+        .unwrap_or_else(|| Guild {
+            guild_id,
+            ..Default::default()
+        });
 
     let VoteVote {
         options,

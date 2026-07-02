@@ -41,7 +41,12 @@ async fn put_roles_id(
         return Err(StatusCode::FORBIDDEN);
     }
 
-    let mut guild = Guild::from_db(guild_id, &app_state.pg_pool).await.unwrap();
+    let mut guild = Guild::from_db(guild_id, &app_state.pg_pool)
+        .await?
+        .unwrap_or_else(|| Guild {
+            guild_id,
+            ..Default::default()
+        });
 
     if guild.verify.roles.iter().any(|r| r.role_id == role_id) {
         remove_existing_role(&mut guild, role_id, &app_state).await?;
@@ -86,7 +91,12 @@ async fn delete_roles_id(
         return Err(StatusCode::FORBIDDEN);
     }
 
-    let mut guild = Guild::from_db(guild_id, &app_state.pg_pool).await.unwrap();
+    let mut guild = Guild::from_db(guild_id, &app_state.pg_pool)
+        .await?
+        .unwrap_or_else(|| Guild {
+            guild_id,
+            ..Default::default()
+        });
 
     remove_existing_role(&mut guild, role_id, &app_state).await?;
 
@@ -132,7 +142,12 @@ async fn post_recon(
         return Err(StatusCode::FORBIDDEN);
     }
 
-    let mut guild = Guild::from_db(guild_id, &app_state.pg_pool).await.unwrap();
+    let mut guild = Guild::from_db(guild_id, &app_state.pg_pool)
+        .await?
+        .unwrap_or_else(|| Guild {
+            guild_id,
+            ..Default::default()
+        });
     let Verify { roles, user_links } = &mut guild.verify;
 
     for role in roles {

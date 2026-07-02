@@ -47,8 +47,8 @@ async fn get_users_id(
         return Err(StatusCode::UNAUTHORIZED);
     }
 
-    // Fetch user from DynamoDB
-    let result = match User::from_db(user_id, &app_state.pg_pool).await {
+    // Fetch user from DB
+    let result = match User::from_db(user_id, &app_state.pg_pool).await? {
         Some(user) => user,
         None => {
             let u = User {

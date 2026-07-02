@@ -58,7 +58,7 @@ async fn post_guilds(
         admin_guilds.iter().map(|g| g.id).collect(),
         &app_state.pg_pool,
     )
-    .await;
+    .await?;
     let missing_guilds: Vec<&CurrentUserGuild> = admin_guilds
         .iter()
         .filter(|a| !guilds.iter().any(|g| g.guild_id == a.id))
@@ -85,7 +85,7 @@ async fn get_guilds(
             .collect(),
         &app_state.pg_pool,
     )
-    .await;
+    .await?;
     Ok(Json(json!(guilds)))
 }
 
@@ -98,7 +98,7 @@ async fn post_guilds_id(
         return Err(StatusCode::FORBIDDEN);
     }
     let guild = Guild::from_db(guild_id, &app_state.pg_pool)
-        .await
+        .await?
         .unwrap_or(Guild {
             guild_id,
             ..Default::default()
@@ -116,7 +116,7 @@ async fn get_guilds_id(
         return Err(StatusCode::NOT_FOUND);
     }
 
-    let guild = Guild::from_db(guild_id, &app_state.pg_pool).await;
+    let guild = Guild::from_db(guild_id, &app_state.pg_pool).await?;
 
     Ok(Json(json!(match guild {
         Some(g) => g,
