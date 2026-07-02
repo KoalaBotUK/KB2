@@ -48,3 +48,48 @@ impl From<(Option<String>, AuditMessage<String>)> for Audit {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Regression test for https://github.com/KoalaBotUK/KB2/issues/31
+    //
+    // `Audit::save` dedupes on `sqs_message_id` via `ON CONFLICT (sqs_message_id) DO NOTHING`,
+    // which only works if the SQS message id is actually threaded from the incoming
+    // `SqsMessage` through to the `Audit` value that gets inserted. This test pins down that
+    // data-plumbing: a `message_id` provided to the `From<(Option<String>, AuditMessage<_>)>>`
+    // conversion must land unchanged in `Audit.sqs_message_id`.
+    #[test]
+    fn from_threads_sqs_message_id_into_audit() {
+        let message_id = Some("11111111-1111-1111-1111-111111111111".to_string());
+        let audit_message = AuditMessage::new(
+            "update_link_guilds".to_string(),
+            Id::new(228541431483072513),
+            Some(Id::new(590643624358969350)),
+            Some("old".to_string()),
+            Some("new".to_string()),
+        );
+
+        let audit: Audit = (message_id.clone(), audit_message).into();
+
+        assert_eq!(audit.sqs_message_id, message_id);
+    }
+
+    // Redeliveries with no SQS message id (shouldn't normally happen, but the field is
+    // `Option`) must not silently invent a value - `None` in means `None` out.
+    #[test]
+    fn from_threads_absent_sqs_message_id_into_audit() {
+        let audit_message = AuditMessage::new(
+            "update_link_guilds".to_string(),
+            Id::new(228541431483072513),
+            None,
+            None,
+            None,
+        );
+
+        let audit: Audit = (None, audit_message).into();
+
+        assert_eq!(audit.sqs_message_id, None);
+    }
+}
