@@ -157,6 +157,12 @@ async fn post_votes(
     Ok(Json(json!(new_vote)))
 }
 
+/// Locates a vote by message id within a guild's votes, without panicking
+/// when the message id isn't present.
+fn find_vote(votes: &[VoteVote], message_id: Id<MessageMarker>) -> Option<&VoteVote> {
+    votes.iter().find(|v| v.message_id == message_id)
+}
+
 async fn get_votes_id(
     Path((guild_id, message_id)): Path<(Id<GuildMarker>, Id<MessageMarker>)>,
     Extension(current_user): Extension<CurrentUser>,
@@ -167,12 +173,7 @@ async fn get_votes_id(
     }
 
     let guild = Guild::from_db(guild_id, &app_state.pg_pool).await.unwrap();
-    let vote: &VoteVote = guild
-        .vote
-        .votes
-        .iter()
-        .find(|v| v.message_id == message_id)
-        .unwrap();
+    let vote = find_vote(&guild.vote.votes, message_id).ok_or(StatusCode::NOT_FOUND)?;
     Ok(Json(json!(vote)))
 }
 
@@ -231,4 +232,54 @@ async fn post_votes_id_close(
     .await?;
 
     Ok(Json(json!(vote)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_vote(message_id: u64) -> VoteVote {
+        VoteVote {
+            message_id: Id::new(message_id),
+            title: "title".to_string(),
+            description: "description".to_string(),
+            options: vec![],
+            channel_id: Id::new(1),
+            close_at: None,
+            open: true,
+            role_list: HashSet::new(),
+            role_list_type: RoleListType::Blacklist,
+            is_multi_select: true,
+        }
+    }
+
+    #[test]
+    fn find_vote_returns_none_for_missing_message_id() {
+        let votes = vec![sample_vote(1), sample_vote(2)];
+
+        assert!(find_vote(&votes, Id::new(999)).is_none());
+    }
+
+    #[test]
+    fn find_vote_returns_some_for_existing_message_id() {
+        let votes = vec![sample_vote(1), sample_vote(2)];
+
+        let found = find_vote(&votes, Id::new(2)).expect("vote should be found");
+        assert_eq!(found.message_id, Id::new(2));
+    }
+
+    /// Regression test for issue #26: get_votes_id used to `.unwrap()` the
+    /// result of `find`, which panics (and surfaces as a 500) when the
+    /// message_id isn't a known vote. This asserts the handler's lookup
+    /// path now converts a missing vote into a NOT_FOUND result instead
+    /// of panicking.
+    #[test]
+    fn missing_vote_maps_to_404_instead_of_panicking() {
+        let votes = vec![sample_vote(1)];
+
+        let result: Result<&VoteVote, StatusCode> =
+            find_vote(&votes, Id::new(404)).ok_or(StatusCode::NOT_FOUND);
+
+        assert_eq!(result.err(), Some(StatusCode::NOT_FOUND));
+    }
 }
