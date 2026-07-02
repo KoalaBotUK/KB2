@@ -13,12 +13,11 @@ export class OauthFlow {
   }
 
   static load() {
-    let deserialized = JSON.parse(localStorage.getItem('authFlow'))
-    if (deserialized === undefined || deserialized === null) {
+    const raw = localStorage.getItem('authFlow')
+    if (raw === null) {
       return null
-    } else {
-      return Object.assign(new this.constructor, deserialized)
     }
+    return Object.assign(new this(), JSON.parse(raw))
   }
 
   async authorize() {
@@ -118,15 +117,6 @@ export class AuthorizationFlowPKCE extends OauthFlow {
   save() {
     localStorage.setItem('authFlow', JSON.stringify(this))
   }
-
-  static load() {
-    let deserialized = JSON.parse(localStorage.getItem('authFlow'))
-    if (deserialized === undefined || deserialized === null) {
-      return null
-    } else {
-      return Object.assign(new AuthorizationFlowPKCE, deserialized)
-    }
-  }
 }
 
 export class ImplicitFlow extends OauthFlow {
@@ -162,14 +152,5 @@ export class ImplicitFlow extends OauthFlow {
 
   save() {
     localStorage.setItem('authFlow', JSON.stringify(this))
-  }
-
-  static load() {
-    let deserialized = JSON.parse(localStorage.getItem('authFlow'))
-    if (deserialized === undefined || deserialized === null) {
-      return null
-    } else {
-      return Object.assign(new ImplicitFlow, deserialized)
-    }
   }
 }
