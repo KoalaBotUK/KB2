@@ -1,5 +1,6 @@
 use crate::AppState;
 use crate::discord::ise;
+use crate::utils::secure_compare;
 use axum::extract::{Request, State};
 use axum::middleware::Next;
 use axum::response::Response;
@@ -48,16 +49,12 @@ pub async fn pubkey_middleware(request: Request, next: Next) -> Result<Response,
     let body = body.collect().await.map_err(ise)?.to_bytes();
     let headers = parts.headers.clone();
     let new_request = Request::from_parts(parts, axum::body::Body::from(body.clone()));
-    if headers.get(AUTHORIZATION)
-        == Some(
-            &format!(
-                "Bot {}",
-                std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set")
-            )
-            .as_str()
-            .parse()
-            .unwrap(),
-        )
+    let expected_bot_auth = format!(
+        "Bot {}",
+        std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set")
+    );
+    if let Some(auth_header) = headers.get(AUTHORIZATION).and_then(|v| v.to_str().ok())
+        && secure_compare(auth_header, &expected_bot_auth)
     {
         return Ok(next.run(new_request).await);
     }
@@ -221,17 +218,24 @@ A: Koala requires approval from some IT administrators, you can use the `other` 
     })))
 }
 
+/// Pull the `Authorization` header value out of the request, returning
+/// `401 Unauthorized` (rather than panicking) when the header is absent
+/// entirely, and `400 Bad Request` when present but not valid UTF-8.
+fn extract_auth_token(header_map: &HeaderMap) -> Result<&str, StatusCode> {
+    header_map
+        .get("Authorization")
+        .ok_or(StatusCode::UNAUTHORIZED)?
+        .to_str()
+        .map_err(|_| StatusCode::BAD_REQUEST)
+}
+
 async fn register_commands(
     header_map: HeaderMap,
     State(app_state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
-    let auth_token = header_map
-        .get("Authorization")
-        .unwrap()
-        .to_str()
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    let auth_token = extract_auth_token(&header_map)?;
 
-    if auth_token != app_state.discord_bot.token().unwrap() {
+    if !secure_compare(auth_token, app_state.discord_bot.token().unwrap()) {
         return Err(StatusCode::UNAUTHORIZED);
     }
 
@@ -297,4 +301,42 @@ async fn register_commands(
         .await
         .map_err(ise)?;
     Ok(Json(json!(resp)))
+}
+
+#[cfg(test)]
+mod register_commands_tests {
+    use super::extract_auth_token;
+    use http::{HeaderMap, HeaderValue, StatusCode};
+
+    #[test]
+    fn missing_authorization_header_returns_unauthorized_instead_of_panicking() {
+        let header_map = HeaderMap::new();
+
+        let result = extract_auth_token(&header_map);
+
+        assert_eq!(result, Err(StatusCode::UNAUTHORIZED));
+    }
+
+    #[test]
+    fn present_authorization_header_is_extracted() {
+        let mut header_map = HeaderMap::new();
+        header_map.insert("Authorization", HeaderValue::from_static("Bot some-token"));
+
+        let result = extract_auth_token(&header_map);
+
+        assert_eq!(result, Ok("Bot some-token"));
+    }
+
+    #[test]
+    fn non_utf8_authorization_header_returns_bad_request() {
+        let mut header_map = HeaderMap::new();
+        header_map.insert(
+            "Authorization",
+            HeaderValue::from_bytes(&[0xff, 0xfe]).unwrap(),
+        );
+
+        let result = extract_auth_token(&header_map);
+
+        assert_eq!(result, Err(StatusCode::BAD_REQUEST));
+    }
 }
