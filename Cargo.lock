@@ -1565,6 +1565,7 @@ name = "gateway"
 version = "2.0.0"
 dependencies = [
  "reqwest",
+ "serde_json",
  "tokio",
  "tracing",
  "tracing-subscriber",
