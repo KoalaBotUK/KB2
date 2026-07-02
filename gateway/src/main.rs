@@ -10,8 +10,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     let token = env::var("DISCORD_BOT_TOKEN")?;
     let intents = Intents::GUILD_MESSAGES;
-    let mut shard = Shard::new(ShardId::ONE, token, intents);
-    let token = env::var("DISCORD_BOT_TOKEN")?;
+    let mut shard = Shard::new(ShardId::ONE, token.clone(), intents);
     let client = reqwest::Client::new();
     tracing::info!("created shard");
 
@@ -37,9 +36,17 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
                     match r.status() {
                         reqwest::StatusCode::OK => {
                             let headers = r.headers().clone();
-                            client.post(format!("https://discord.com/api/v10/interactions/{}/{}/callback",interaction.id, interaction.token))
-                                .json(&r.json::<InteractionResponse>().await.unwrap())
-                                .headers(headers).send().await.unwrap();
+                            match r.json::<InteractionResponse>().await {
+                                Ok(body) => {
+                                    let callback_url = format!("https://discord.com/api/v10/interactions/{}/{}/callback", interaction.id, interaction.token);
+                                    if let Err(e) = client.post(callback_url).json(&body).headers(headers).send().await {
+                                        tracing::error!(?e, "failed to post interaction callback");
+                                    }
+                                }
+                                Err(e) => {
+                                    tracing::error!(?e, "invalid interaction response body");
+                                }
+                            }
                         },
                         _ => {
                             tracing::error!(?r, "error sending interaction");
