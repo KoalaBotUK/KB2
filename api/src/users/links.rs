@@ -15,7 +15,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sha2::Sha256;
 use std::collections::BTreeMap;
-use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use twilight_model::id::Id;
 use twilight_model::id::marker::UserMarker;
@@ -162,20 +161,11 @@ async fn oidc_email(url: &str, token: String, app_state: &AppState) -> Result<St
 
 async fn delete_link(
     Path((user_id, link_address)): Path<(Id<UserMarker>, String)>,
-    Extension(discord_user): Extension<Arc<twilight_http::Client>>,
+    Extension(current_user): Extension<CurrentUser>,
     State(app_state): State<AppState>,
 ) -> Result<StatusCode, StatusCode> {
-    if user_id
-        != discord_user
-            .current_user()
-            .await
-            .unwrap()
-            .model()
-            .await
-            .unwrap()
-            .id
-    {
-        return Err(StatusCode::NOT_FOUND);
+    if current_user.id != user_id {
+        return Err(StatusCode::UNAUTHORIZED);
     }
 
     let mut user_model = User::from_db(user_id, &app_state.pg_pool)
