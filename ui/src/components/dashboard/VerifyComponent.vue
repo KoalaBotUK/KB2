@@ -40,7 +40,7 @@ async function updateGuild() {
 }
 
 async function addVerifyRole() {
-  if (!roleSelected || !modelPattern) {
+  if (!validAdd()) {
     alert("Please fill in all fields.");
     return;
   }
