@@ -30,7 +30,7 @@ export class OauthFlow {
 }
 
 export class OauthToken {
-  accessToken
+  _accessToken
   tokenType
   expiresIn
   refreshToken
@@ -44,8 +44,12 @@ export class OauthToken {
     return this.date + this.expiresIn * 1000 > Date.now()
   }
 
+  set accessToken(v) {
+    this._accessToken = v
+  }
+
   get accessToken() {
-    return this.isValid ? this.accessToken : null
+    return this.isValid ? this._accessToken : null
   }
 }
 
