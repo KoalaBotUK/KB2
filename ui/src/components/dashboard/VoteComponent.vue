@@ -151,7 +151,7 @@ function openResults(id) {
             {{ vote.open ? 'Open' : 'Closed' }}
           </td>
           <td>
-            {{ vote.options.reduce((a, b) => a + b.users.length, 0) }}
+            {{ vote.options.reduce((a, b) => a + (b.users?.length ?? 0), 0) }}
           </td>
           <td>
             <div class="dropdown">
@@ -254,7 +254,7 @@ function openResults(id) {
             <tbody>
             <tr v-for="option in guild.vote.votes.find(v => v.messageId === selectedVote).options">
               <td>{{ option.label }}</td>
-              <td>{{ option.users.length }}</td>
+              <td>{{ option.users?.length ?? 0 }}</td>
             </tr>
             </tbody>
           </table>
