@@ -25,13 +25,22 @@ pub(crate) async fn handle_component_interaction(
         guild_id,
         member,
         message,
+        user,
         ..
     } = interaction;
-    let message_id = message.unwrap().id;
-    let PartialMember { user, roles, .. } = member.unwrap();
-    let user_id = user.unwrap().id;
+    let message_id = message.ok_or(StatusCode::BAD_REQUEST)?.id;
+    let PartialMember {
+        user: member_user,
+        roles,
+        ..
+    } = member.ok_or(StatusCode::BAD_REQUEST)?;
+    let user_id = member_user
+        .or(user)
+        .ok_or(StatusCode::BAD_REQUEST)?
+        .id;
+    let guild_id = guild_id.ok_or(StatusCode::BAD_REQUEST)?;
 
-    let mut guild = Guild::from_db(guild_id.unwrap(), &app_state.pg_pool)
+    let mut guild = Guild::from_db(guild_id, &app_state.pg_pool)
         .await
         .unwrap();
 
