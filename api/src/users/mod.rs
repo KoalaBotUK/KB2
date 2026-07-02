@@ -18,16 +18,11 @@ use twilight_model::user::CurrentUser;
 
 pub fn router() -> axum::Router<AppState> {
     axum::Router::new()
-        .route("/", get(get_users))
         .route("/@me", get(get_users_me))
         .route("/{user_id}", get(get_users_id))
         .nest("/{user_id}/links", links::router())
         .nest("/{user_id}/link_guilds", link_guilds::router())
         .layer(CorsLayer::permissive())
-}
-
-async fn get_users() -> Json<Value> {
-    todo!()
 }
 
 async fn get_users_me(
