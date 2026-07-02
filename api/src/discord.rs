@@ -199,6 +199,35 @@ mod tests {
         assert!(found.is_none());
         assert_ne!(found, Some(other_guild));
     }
+
+    #[test]
+    fn token_cache_key_never_contains_the_raw_token() {
+        // Regression for #34: `cached()` keys were previously derived from
+        // the client's `{:?}` Debug output, which embeds the raw Discord
+        // token verbatim. The key must be a hash of the token, not the
+        // token (or any substring of it) itself.
+        let token = "super-secret-discord-bot-token-value";
+        let client = Client::new(token.to_string());
+
+        let key = token_cache_key(&client);
+
+        assert!(
+            !key.contains(token),
+            "cache key must not contain the raw token: {key}"
+        );
+        // Also guard against any obviously-sized substring of the token
+        // leaking into the key (e.g. a partial/truncated Debug format).
+        assert!(!key.contains(&token[..10]));
+    }
+
+    #[test]
+    fn token_cache_key_is_deterministic() {
+        let token = "another-token-value-for-determinism-check";
+        let client_a = Client::new(token.to_string());
+        let client_b = Client::new(token.to_string());
+
+        assert_eq!(token_cache_key(&client_a), token_cache_key(&client_b));
+    }
 }
 
 pub async fn add_guild_member_role(
