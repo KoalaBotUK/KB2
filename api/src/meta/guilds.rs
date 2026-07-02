@@ -94,7 +94,9 @@ async fn get_meta_guilds_id(
         return Err(StatusCode::NOT_FOUND);
     }
 
-    let u_guild = get_current_user_guild(guild_id, &discord_user).await?;
+    let u_guild = get_current_user_guild(guild_id, &discord_user)
+        .await?
+        .ok_or(StatusCode::NOT_FOUND)?;
     let guild = get_guild(guild_id, &app_state.discord_bot).await?;
     let channels = get_guild_channels(guild_id, &app_state.discord_bot).await?;
 
