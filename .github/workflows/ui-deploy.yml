@@ -5,7 +5,7 @@ on:
       - main
     paths:
       - ui/**
-      - ui-deploy.yml
+      - .github/workflows/ui-deploy.yml
     tags:
       - '*.*.*'
 permissions:
@@ -13,6 +13,8 @@ permissions:
 
 jobs:
   build-deploy:
+    # Ref -> environment mapping: pushes to main deploy to "dev";
+    # semver tag pushes (e.g. 1.2.3) deploy to "prod".
     environment: ${{ github.ref == 'refs/heads/main' && 'dev' || 'prod' }}
     name: Build & Deploy 🪣
     runs-on: ubuntu-latest
