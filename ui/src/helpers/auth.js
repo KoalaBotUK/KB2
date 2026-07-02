@@ -84,7 +84,7 @@ export class AuthorizationFlowPKCE extends OauthFlow {
   async authorize() {
     await this.generateCodeChallenge()
     this.save()
-    redirectTo(`${this.authorizeUrl}?response_type=code&client_id=${this.clientId}&code_challenge=${this.codeChallenge}&code_challenge_method=S256&scope=${this.scope.replace(' ', '+')}&redirect_uri=${encodeURIComponent(formatInternalRedirect(this.redirectPath))}${this.authorizeAdditionalParams}`);
+    redirectTo(`${this.authorizeUrl}?response_type=code&client_id=${this.clientId}&code_challenge=${this.codeChallenge}&code_challenge_method=S256&scope=${encodeURIComponent(this.scope)}&redirect_uri=${encodeURIComponent(formatInternalRedirect(this.redirectPath))}${this.authorizeAdditionalParams}`);
   }
 
   async callback() {
