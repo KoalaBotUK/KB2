@@ -44,14 +44,6 @@ async fn put_link_guilds_id(
         .await
         .unwrap();
     let audit_old_data = user.link_guilds.clone();
-    if user
-        .link_guilds
-        .iter()
-        .any(|g| g.guild_id == guild_id && !g.enabled)
-    {
-        // Already exists
-        return Ok(Json(json!(new_link_guild)));
-    }
     user.link_guilds.retain(|g| g.guild_id != guild_id);
     user.link_guilds.push(new_link_guild.clone());
     let audit_new_data = user.link_guilds.clone();
@@ -59,15 +51,18 @@ async fn put_link_guilds_id(
 
     let mut guild = Guild::from_db(guild_id, &app_state.pg_pool).await.unwrap();
 
-    if guild.verify.user_links.contains_key(&user.user_id) {
-        // Already exists
-        return Ok(Json(json!(new_link_guild)));
-    }
-
+    // Capture the previously stored links (if any) so we only assign roles
+    // that don't already match, instead of skipping role sync entirely
+    // when the user has linked this guild before.
+    let previous_links = guild.verify.user_links.get(&user.user_id).cloned();
     guild.verify.user_links.insert(user_id, user.links.clone());
 
     for verify_role in &mut guild.verify.roles {
-        if link_arr_match(&user.links, &verify_role.pattern) {
+        let matches = link_arr_match(&user.links, &verify_role.pattern);
+        let previously_matched = previous_links
+            .as_ref()
+            .is_some_and(|links| link_arr_match(links, &verify_role.pattern));
+        if matches && !previously_matched {
             add_guild_member_role(
                 guild_id,
                 user_id,
