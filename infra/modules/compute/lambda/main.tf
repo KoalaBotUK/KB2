@@ -124,6 +124,7 @@ resource "aws_lambda_function" "lambda_function" {
       DSQL_USER                            = var.dsql_user
       DSQL_ENDPOINT                        = var.dsql_endpoint
       SQS_URL                              = var.sqs_url
+      CORS_ALLOWED_ORIGIN                  = "https://${var.ui_hostname}"
     }
   }
 }

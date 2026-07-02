@@ -15,7 +15,6 @@ use lambda_http::aws_lambda_events::apigw::ApiGatewayProxyRequest;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::{HashMap, HashSet};
-use tower_http::cors::CorsLayer;
 use twilight_model::channel::message::{Component, EmojiReactionType};
 use twilight_model::id::Id;
 use twilight_model::id::marker::{ChannelMarker, GuildMarker, MessageMarker, RoleMarker};
@@ -26,7 +25,6 @@ pub fn router() -> axum::Router<AppState> {
         .route("/", post(post_votes))
         .route("/{message_id}", get(get_votes_id))
         .route("/{message_id}/close", post(post_votes_id_close))
-        .layer(CorsLayer::permissive())
 }
 
 #[derive(Serialize, Deserialize)]

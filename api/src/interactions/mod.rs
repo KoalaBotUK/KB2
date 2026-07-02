@@ -12,7 +12,6 @@ use http::{HeaderMap, StatusCode};
 use http_body_util::BodyExt;
 use once_cell::sync::Lazy;
 use serde_json::{Value, json};
-use tower_http::cors::CorsLayer;
 use twilight_model::application::command::CommandType;
 use twilight_model::application::interaction::{
     Interaction, InteractionContextType, InteractionData, InteractionType,
@@ -40,7 +39,6 @@ pub fn router() -> axum::Router<AppState> {
         .route_layer(middleware::from_fn(pubkey_middleware))
         .route_layer(middleware::from_fn(user_agent_response_middleware))
         .route("/register", post(register_commands))
-        .layer(CorsLayer::permissive())
 }
 
 pub async fn pubkey_middleware(request: Request, next: Next) -> Result<Response, StatusCode> {

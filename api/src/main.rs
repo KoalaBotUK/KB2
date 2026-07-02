@@ -2,7 +2,7 @@ use common::dsql::establish_connection;
 use aws_config::BehaviorVersion;
 use axum::body::Body;
 use axum::{http::StatusCode, routing::get, Json, Router};
-use http::Response;
+use http::{Method, Response};
 use lambda_http::{run, tracing, Error};
 use serde_json::{json, Value};
 use sqlx::{Pool, Postgres};
@@ -92,6 +92,20 @@ async fn main() -> Result<(), Error> {
 
     // guilds::tasks::update_guilds(&app_state.discord_bot, &app_state.pg_pool).await;
     setup(app_state.discord_bot.clone());
+
+    // Only allow requests from the first-party UI origin(s). This API trusts the
+    // `Authorization` header for auth, so a permissive `*` origin would let any
+    // website script requests against it using a token it has obtained.
+    let cors = CorsLayer::new()
+        .allow_origin(
+            std::env::var("CORS_ALLOWED_ORIGIN")
+                .expect("env variable `CORS_ALLOWED_ORIGIN` should be set")
+                .parse::<http::HeaderValue>()
+                .expect("CORS_ALLOWED_ORIGIN must be a valid header value (e.g. https://koalabot.uk)"),
+        )
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
+        .allow_headers([http::header::AUTHORIZATION, http::header::CONTENT_TYPE]);
+
     let app = Router::new()
         .nest("/users", users::router())
         .nest("/guilds", guilds::router())
@@ -102,7 +116,7 @@ async fn main() -> Result<(), Error> {
         .with_state(app_state)
         .route("/health", get(health_check))
         .route("/bot", get(get_bot_redirect))
-        .layer(CorsLayer::permissive());
+        .layer(cors);
 
     if std::env::var("RUN_LOCAL").is_err() {
         run(app).await
