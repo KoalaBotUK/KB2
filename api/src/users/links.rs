@@ -126,8 +126,8 @@ async fn post_link(
         guild
             .verify
             .user_links
-            .get_mut(&user_id)
-            .unwrap()
+            .entry(user_id)
+            .or_default()
             .push(new_link.clone());
         guild.save(&app_state.pg_pool).await;
     }
