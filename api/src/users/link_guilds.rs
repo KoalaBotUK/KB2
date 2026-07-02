@@ -31,7 +31,7 @@ async fn put_link_guilds_id(
     Extension(discord_user): Extension<Arc<twilight_http::Client>>,
     State(app_state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
-    if current_user.id != user_id || !is_client_guild_member(guild_id, &discord_user).await {
+    if current_user.id != user_id || !is_client_guild_member(guild_id, &discord_user).await? {
         return Err(StatusCode::UNAUTHORIZED);
     }
 
@@ -66,7 +66,7 @@ async fn put_link_guilds_id(
 
     guild.verify.user_links.insert(user_id, user.links.clone());
 
-    for verify_role in &mut guild.verify.roles {
+    for verify_role in &guild.verify.roles {
         if link_arr_match(&user.links, &verify_role.pattern) {
             add_guild_member_role(
                 guild_id,
@@ -75,9 +75,12 @@ async fn put_link_guilds_id(
                 &app_state.discord_bot,
             )
             .await?;
-            verify_role.members += 1;
         }
     }
+    // Derive `members` from `user_links` (now updated above) rather than
+    // hand-incrementing it, so this stays consistent with every other
+    // mutation site (link add/remove, role add/remove, recon).
+    guild.verify.recompute_role_members();
 
     guild.save(&app_state.pg_pool).await?;
 
@@ -94,7 +97,7 @@ async fn delete_link_guilds_id(
     Extension(discord_user): Extension<Arc<twilight_http::Client>>,
     State(app_state): State<AppState>,
 ) -> Result<StatusCode, StatusCode> {
-    if current_user.id != user_id || !is_client_guild_member(guild_id, &discord_user).await {
+    if current_user.id != user_id || !is_client_guild_member(guild_id, &discord_user).await? {
         return Err(StatusCode::UNAUTHORIZED);
     }
 
@@ -106,21 +109,24 @@ async fn delete_link_guilds_id(
 
     let mut guild = Guild::from_db(guild_id, &app_state.pg_pool).await.unwrap();
 
-    for role in &mut guild.verify.roles {
+    for role in &guild.verify.roles {
         if link_arr_match(&user.links, &role.pattern) {
             remove_guild_member_role(guild_id, user_id, role.role_id, &app_state.discord_bot)
                 .await?;
-            if role.members > 0 {
-                role.members -= 1;
-            }
         }
     }
     guild.verify.user_links.remove(&user_id);
+    // Recompute instead of the old `if role.members > 0 { role.members -= 1 }`
+    // guard, which was only needed because the counter could otherwise drift.
+    guild.verify.recompute_role_members();
 
     user.save(&app_state.pg_pool).await?;
     guild.save(&app_state.pg_pool).await?;
     Ok(StatusCode::NO_CONTENT)
 }
-async fn is_client_guild_member(guild_id: Id<GuildMarker>, client: &twilight_http::Client) -> bool {
-    get_current_user_guild(guild_id, client).await.is_ok()
+async fn is_client_guild_member(
+    guild_id: Id<GuildMarker>,
+    client: &twilight_http::Client,
+) -> Result<bool, StatusCode> {
+    Ok(get_current_user_guild(guild_id, client).await?.is_some())
 }
