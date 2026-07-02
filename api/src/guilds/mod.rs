@@ -94,7 +94,9 @@ async fn post_guilds_id(
     Extension(current_user): Extension<CurrentUser>,
     State(app_state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
-    is_client_admin_guild(guild_id, &current_user, &app_state.discord_bot).await?;
+    if !is_client_admin_guild(guild_id, &current_user, &app_state.discord_bot).await? {
+        return Err(StatusCode::FORBIDDEN);
+    }
     let guild = Guild::from_db(guild_id, &app_state.pg_pool)
         .await
         .unwrap_or(Guild {
