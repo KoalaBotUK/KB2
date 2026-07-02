@@ -5,7 +5,7 @@ edition.workspace = true
 
 [dependencies]
 lambda_http = { workspace = true }
-tokio = { workspace = true, features = ["macros"] }
+tokio = { workspace = true, features = ["macros", "time"] }
 tower-http = { workspace = true, features = ["cors", "auth"] }
 axum = { workspace = true }
 http = { workspace = true }
