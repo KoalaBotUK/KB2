@@ -31,6 +31,8 @@ jobs:
         uses: jaxxstorm/action-install-gh-release@v1
         with:
           repo: cargo-lambda/cargo-lambda
+      - name: Install Zig
+        run: npm install -g @ziglang/cli
       - name: Install dependencies
         run: cargo install sqlx-cli
       - name: Build

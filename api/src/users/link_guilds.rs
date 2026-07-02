@@ -31,7 +31,7 @@ async fn put_link_guilds_id(
     Extension(discord_user): Extension<Arc<twilight_http::Client>>,
     State(app_state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
-    if current_user.id != user_id || !is_client_guild_member(guild_id, &discord_user).await {
+    if current_user.id != user_id || !is_client_guild_member(guild_id, &discord_user).await? {
         return Err(StatusCode::UNAUTHORIZED);
     }
 
@@ -97,7 +97,7 @@ async fn delete_link_guilds_id(
     Extension(discord_user): Extension<Arc<twilight_http::Client>>,
     State(app_state): State<AppState>,
 ) -> Result<StatusCode, StatusCode> {
-    if current_user.id != user_id || !is_client_guild_member(guild_id, &discord_user).await {
+    if current_user.id != user_id || !is_client_guild_member(guild_id, &discord_user).await? {
         return Err(StatusCode::UNAUTHORIZED);
     }
 
@@ -124,6 +124,9 @@ async fn delete_link_guilds_id(
     guild.save(&app_state.pg_pool).await;
     Ok(StatusCode::NO_CONTENT)
 }
-async fn is_client_guild_member(guild_id: Id<GuildMarker>, client: &twilight_http::Client) -> bool {
-    get_current_user_guild(guild_id, client).await.is_ok()
+async fn is_client_guild_member(
+    guild_id: Id<GuildMarker>,
+    client: &twilight_http::Client,
+) -> Result<bool, StatusCode> {
+    Ok(get_current_user_guild(guild_id, client).await?.is_some())
 }
