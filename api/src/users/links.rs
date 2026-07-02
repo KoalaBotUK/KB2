@@ -15,7 +15,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sha2::Sha256;
 use std::collections::BTreeMap;
-use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use twilight_model::id::Id;
 use twilight_model::id::marker::UserMarker;
@@ -131,7 +130,7 @@ async fn post_link(
         let mut guild = Guild::from_db(link_guild.guild_id, &app_state.pg_pool)
             .await
             .unwrap();
-        for role in &mut guild.verify.roles {
+        for role in &guild.verify.roles {
             if link_match(&new_link, &role.pattern) {
                 add_guild_member_role(
                     guild.guild_id,
@@ -140,7 +139,6 @@ async fn post_link(
                     &app_state.discord_bot,
                 )
                 .await?;
-                role.members += 1;
             }
         }
         guild
@@ -149,6 +147,11 @@ async fn post_link(
             .get_mut(&user_id)
             .unwrap()
             .push(new_link.clone());
+        // Recompute from `user_links` instead of incrementing `role.members`
+        // by hand: a remove-then-re-add of the same address (see the
+        // `retain` above) would otherwise inflate the count every time the
+        // user re-links an address they already had.
+        guild.verify.recompute_role_members();
         guild.save(&app_state.pg_pool).await;
     }
     user_model.links.push(new_link.clone());
@@ -180,23 +183,32 @@ async fn oidc_email(url: &str, token: String, app_state: &AppState) -> Result<St
     }
 }
 
+/// Authorizes a `delete_link` request: the middleware-provided current user
+/// must match the `user_id` path segment being modified. Extracted as a pure
+/// function (instead of inlined in the handler) so the authz decision can be
+/// unit tested without standing up an axum request or a Discord client.
+///
+/// Regression coverage for koalabotuk/kb2#54: `delete_link` used to make its
+/// own uncached, double-`.unwrap()`ed `current_user()` Discord API call for
+/// this check instead of using the `Extension<CurrentUser>` already injected
+/// by `auth_middleware`, which could panic on a transient Discord error and
+/// returned the wrong status code (`NOT_FOUND`) on mismatch.
+fn check_delete_link_authorized(
+    current_user_id: Id<UserMarker>,
+    target_user_id: Id<UserMarker>,
+) -> Result<(), StatusCode> {
+    if current_user_id != target_user_id {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+    Ok(())
+}
+
 async fn delete_link(
     Path((user_id, link_address)): Path<(Id<UserMarker>, String)>,
-    Extension(discord_user): Extension<Arc<twilight_http::Client>>,
+    Extension(current_user): Extension<CurrentUser>,
     State(app_state): State<AppState>,
 ) -> Result<StatusCode, StatusCode> {
-    if user_id
-        != discord_user
-            .current_user()
-            .await
-            .unwrap()
-            .model()
-            .await
-            .unwrap()
-            .id
-    {
-        return Err(StatusCode::NOT_FOUND);
-    }
+    check_delete_link_authorized(current_user.id, user_id)?;
 
     let mut user_model = User::from_db(user_id, &app_state.pg_pool)
         .await
@@ -226,7 +238,7 @@ async fn delete_link(
             .verify
             .user_links
             .insert(user_id, active_only_links.clone());
-        for role in &mut guild.verify.roles {
+        for role in &guild.verify.roles {
             if !link_arr_match(
                 guild.verify.user_links.get(&user_id).unwrap(),
                 &role.pattern,
@@ -239,11 +251,12 @@ async fn delete_link(
                     &app_state.discord_bot,
                 )
                 .await?;
-                if role.members > 0 {
-                    role.members -= 1;
-                }
             }
         }
+        // `user_links` was already updated above; derive `members` from it
+        // instead of the old `if role.members > 0 { role.members -= 1 }`
+        // guard, which only existed because the counter was untrustworthy.
+        guild.verify.recompute_role_members();
         guild.save(&app_state.pg_pool).await;
     }
     existing_link.active = false;
@@ -365,5 +378,27 @@ mod tests {
             token.verify_with_key(&key).expect("verification succeeds");
         let exp: Option<u64> = verified.get("exp").and_then(|e| e.parse().ok());
         assert_eq!(exp, None, "missing exp should parse to None, not panic");
+    }
+
+    #[test]
+    fn check_delete_link_authorized_allows_matching_ids() {
+        let id = Id::<UserMarker>::new(228541431483072513);
+
+        assert_eq!(check_delete_link_authorized(id, id), Ok(()));
+    }
+
+    #[test]
+    fn check_delete_link_authorized_rejects_mismatched_ids_with_unauthorized() {
+        // Regression test for koalabotuk/kb2#54: a request whose
+        // middleware-provided current user does not match the target
+        // `user_id` must be rejected with UNAUTHORIZED, not NOT_FOUND (the
+        // old behaviour) and must not panic (the old uncached, double
+        // `.unwrap()`ed Discord call could panic on a transient error).
+        let current_user_id = Id::<UserMarker>::new(111111111111111111);
+        let target_user_id = Id::<UserMarker>::new(222222222222222222);
+
+        let result = check_delete_link_authorized(current_user_id, target_user_id);
+
+        assert_eq!(result, Err(StatusCode::UNAUTHORIZED));
     }
 }
