@@ -14,3 +14,7 @@ variable "discord_bot_token" {
 variable "discord_public_key" {
   type = string
 }
+
+variable "email_link_signing_key" {
+  type = string
+}

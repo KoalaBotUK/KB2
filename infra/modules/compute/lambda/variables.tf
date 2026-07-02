@@ -10,6 +10,10 @@ variable "discord_public_key" {
   type = string
 }
 
+variable "email_link_signing_key" {
+  type = string
+}
+
 variable "dsql_user" {
   type = string
 }
