@@ -8,6 +8,7 @@ use axum::extract::{Path, State};
 use axum::routing::{post, put};
 use axum::{Extension, Json};
 use http::StatusCode;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::sync::Arc;
@@ -31,6 +32,17 @@ struct PutRoleRequest {
     pub pattern: String,
 }
 
+/// Validates that a verify-role pattern compiles as a regex. Invalid
+/// patterns must never be persisted: once stored, every code path that
+/// matches links against the guild's roles would otherwise need to handle
+/// (or, before this fix, panic on) an uncompilable pattern.
+fn validate_verify_pattern(pattern: &str) -> Result<(), StatusCode> {
+    if Regex::new(pattern).is_err() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    Ok(())
+}
+
 async fn put_roles_id(
     Path((guild_id, role_id)): Path<(Id<GuildMarker>, Id<RoleMarker>)>,
     Extension(current_user): Extension<CurrentUser>,
@@ -40,6 +52,8 @@ async fn put_roles_id(
     if !is_client_admin_guild(guild_id, &current_user, &app_state.discord_bot).await? {
         return Err(StatusCode::FORBIDDEN);
     }
+
+    validate_verify_pattern(&put_role_request.pattern)?;
 
     let mut guild = Guild::from_db(guild_id, &app_state.pg_pool).await.unwrap();
 
@@ -171,4 +185,24 @@ async fn post_recon(
     guild.save(&app_state.pg_pool).await;
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn invalid_pattern_is_rejected_at_creation_time() {
+        // `(` is not a valid regex — this must be rejected up front with a
+        // clean 400 instead of being persisted and panicking later.
+        assert_eq!(
+            validate_verify_pattern("("),
+            Err(StatusCode::BAD_REQUEST)
+        );
+    }
+
+    #[test]
+    fn valid_pattern_is_accepted() {
+        assert_eq!(validate_verify_pattern(r"^https://example\.com/.*$"), Ok(()));
+    }
 }
