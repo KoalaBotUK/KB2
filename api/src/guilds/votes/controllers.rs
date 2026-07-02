@@ -1,7 +1,7 @@
-use crate::discord::{create_message, ise, update_message};
+use crate::discord::{create_message, get_guild_channels, ise, update_message};
 use crate::guilds::models::Guild;
 use crate::guilds::votes::models::{RoleListType, VoteOption, VoteVote};
-use crate::guilds::votes::utils::{VoteOptionComponent, group_to_rows};
+use crate::guilds::votes::utils::{VoteOptionComponent, channel_belongs_to_guild, group_to_rows};
 use crate::{AppState, utils};
 use aws_sdk_scheduler::types::{FlexibleTimeWindow, FlexibleTimeWindowMode, Target};
 use axum::extract::{Path, State};
@@ -66,6 +66,12 @@ async fn post_votes(
 ) -> Result<Json<Value>, StatusCode> {
     if !utils::is_client_admin_guild(guild_id, &current_user, &app_state.discord_bot).await? {
         return Err(StatusCode::FORBIDDEN);
+    }
+
+    let guild_channels = get_guild_channels(guild_id, &app_state.discord_bot).await?;
+    let guild_channel_ids: Vec<_> = guild_channels.iter().map(|c| c.id).collect();
+    if !channel_belongs_to_guild(vote_req.channel_id, &guild_channel_ids) {
+        return Err(StatusCode::BAD_REQUEST);
     }
 
     let message = create_message(
