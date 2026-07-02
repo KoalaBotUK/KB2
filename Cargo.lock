@@ -942,6 +942,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "tokio",
+ "tracing",
  "twilight-model",
 ]
 
