@@ -1,9 +1,6 @@
 import axios from "axios";
-import {User} from "./user.js";
 
 const VITE_KB_API_URL = import.meta.env.VITE_KB_API_URL
-
-let user = User.loadCache();
 
 export class Health {
   status

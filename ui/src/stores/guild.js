@@ -3,8 +3,6 @@ import {User} from "./user.js";
 
 const VITE_KB_API_URL = import.meta.env.VITE_KB_API_URL
 
-let user = User.loadCache();
-
 export class VerifyRole {
   roleId
   roleName
@@ -193,6 +191,7 @@ export class Guild {
   }
 
   static async loadGuild(guildId) {
+    let user = User.loadCache();
     let r = await axios.post(`${VITE_KB_API_URL}/guilds/${guildId}`, {}, {
       headers: {
         'Authorization': 'Discord ' + user.token.accessToken
@@ -203,6 +202,7 @@ export class Guild {
   }
 
   static async loadGuilds() {
+    let user = User.loadCache();
     let r = await axios.post(`${VITE_KB_API_URL}/guilds`, {}, {
       headers: {
         'Authorization': 'Discord ' + user.token.accessToken
