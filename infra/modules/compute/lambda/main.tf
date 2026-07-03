@@ -121,6 +121,7 @@ resource "aws_lambda_function" "lambda_function" {
       DEPLOYMENT_ENV                       = var.deployment_env
       DISCORD_BOT_TOKEN                    = var.discord_bot_token
       DISCORD_PUBLIC_KEY                   = var.discord_public_key
+      EMAIL_LINK_SIGNING_KEY               = var.email_link_signing_key
       DSQL_USER                            = var.dsql_user
       DSQL_ENDPOINT                        = var.dsql_endpoint
       SQS_URL                              = var.sqs_url

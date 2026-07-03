@@ -45,6 +45,7 @@ module "lambda" {
   deployment_env = var.deployment_env
   discord_bot_token = var.discord_bot_token
   discord_public_key = var.discord_public_key
+  email_link_signing_key = var.email_link_signing_key
   dsql_user = "admin"
   dsql_endpoint = module.dsql.dsql_endpoint
   dsql_arn = module.dsql.dsql_arn
