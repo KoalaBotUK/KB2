@@ -124,8 +124,8 @@ async fn post_link(
         guild
             .verify
             .user_links
-            .get_mut(&user_id)
-            .unwrap()
+            .entry(user_id)
+            .or_default()
             .push(new_link.clone());
         // Recompute from `user_links` instead of incrementing `role.members`
         // by hand: a remove-then-re-add of the same address (see the
