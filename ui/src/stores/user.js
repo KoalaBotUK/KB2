@@ -77,7 +77,7 @@ export class User {
     })
     return new User(
       r.data['user_id'],
-      r.data['links'].map(l => new Link(['link_address'], l['linked_at'], l['active'])),
+      r.data['links'].map(l => new Link(l['link_address'], l['linked_at'], l['active'])),
       r.data['link_guilds'].map(LinkGuild.fromJson),
       token
     )

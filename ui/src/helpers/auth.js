@@ -13,12 +13,11 @@ export class OauthFlow {
   }
 
   static load() {
-    let deserialized = JSON.parse(localStorage.getItem('authFlow'))
-    if (deserialized === undefined || deserialized === null) {
+    const raw = localStorage.getItem('authFlow')
+    if (raw === null) {
       return null
-    } else {
-      return Object.assign(new this.constructor, deserialized)
     }
+    return Object.assign(new this(), JSON.parse(raw))
   }
 
   async authorize() {
@@ -31,7 +30,7 @@ export class OauthFlow {
 }
 
 export class OauthToken {
-  accessToken
+  _accessToken
   tokenType
   expiresIn
   refreshToken
@@ -45,8 +44,12 @@ export class OauthToken {
     return this.date + this.expiresIn * 1000 > Date.now()
   }
 
+  set accessToken(v) {
+    this._accessToken = v
+  }
+
   get accessToken() {
-    return this.isValid ? this.accessToken : null
+    return this.isValid ? this._accessToken : null
   }
 }
 
@@ -69,9 +72,13 @@ export class AuthorizationFlowPKCE extends OauthFlow {
   }
 
   async generateCodeChallenge() {
-    this.codeVerifier = Array(43 + 1)
-      .join()
-      .replace(/(.|$)/g, (match) => ((match.length ? Math.random() : '').toString(36).charAt(2 + (match.length ? Math.floor(Math.random() * 4) : 0))));
+    // Generate a cryptographically random code_verifier per RFC 7636 (43-128 chars,
+    // unreserved character set). 32 random bytes base64url-encoded yields 43 chars.
+    let randomBytes = crypto.getRandomValues(new Uint8Array(32))
+    this.codeVerifier = btoa(String.fromCharCode(...randomBytes))
+      .replace(/=/g, '') // Remove padding characters
+      .replace(/\+/g, '-') // Replace + with -
+      .replace(/\//g, '_'); // Replace / with _
 
     let hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(this.codeVerifier))
 
@@ -118,15 +125,6 @@ export class AuthorizationFlowPKCE extends OauthFlow {
   save() {
     localStorage.setItem('authFlow', JSON.stringify(this))
   }
-
-  static load() {
-    let deserialized = JSON.parse(localStorage.getItem('authFlow'))
-    if (deserialized === undefined || deserialized === null) {
-      return null
-    } else {
-      return Object.assign(new AuthorizationFlowPKCE, deserialized)
-    }
-  }
 }
 
 export class ImplicitFlow extends OauthFlow {
@@ -162,14 +160,5 @@ export class ImplicitFlow extends OauthFlow {
 
   save() {
     localStorage.setItem('authFlow', JSON.stringify(this))
-  }
-
-  static load() {
-    let deserialized = JSON.parse(localStorage.getItem('authFlow'))
-    if (deserialized === undefined || deserialized === null) {
-      return null
-    } else {
-      return Object.assign(new ImplicitFlow, deserialized)
-    }
   }
 }

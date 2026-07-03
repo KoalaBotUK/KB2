@@ -1,6 +1,7 @@
 use cached::proc_macro::cached;
 use http::StatusCode;
 use lambda_http::tracing::{error, warn};
+use sha2::{Digest, Sha256};
 use std::time::Duration;
 use tokio::time::sleep;
 use twilight_http::api_error::ApiError;
@@ -64,10 +65,23 @@ pub fn as_http_err(e: Error) -> StatusCode {
     }
 }
 
+/// Derives a cache-key namespace for a given client from a hash of its
+/// token, rather than the raw token itself. This keeps the live secret out
+/// of the process-global `cached` map while still keying cached responses
+/// per-client. `unwrap_or_default` avoids panicking for a tokenless client
+/// (the key simply becomes non-unique in that case).
+fn token_cache_key(client: &Client) -> String {
+    format!(
+        "{:x}",
+        Sha256::digest(client.token().unwrap_or_default().as_bytes())
+    )
+}
+
 #[cached(
     time = 180,
+    size = 1000,
     key = "String",
-    convert = r##"{ format!("{:?}", client.token().unwrap()) }"##
+    convert = r##"{ token_cache_key(client) }"##
 )]
 pub async fn get_current_user_guilds(client: &Client) -> Result<Vec<CurrentUserGuild>, StatusCode> {
     retry_on_rl(|| async { client.current_user_guilds().await })
@@ -100,8 +114,9 @@ fn select_current_user_guild(
 
 #[cached(
     time = 180,
+    size = 1000,
     key = "String",
-    convert = r##"{ format!("{guild_id}{:?}", client.token().unwrap()) }"##
+    convert = r##"{ format!("{guild_id}:{}", token_cache_key(client)) }"##
 )]
 pub async fn get_current_user_guild(
     guild_id: Id<GuildMarker>,
@@ -186,6 +201,35 @@ mod tests {
         assert!(found.is_none());
         assert_ne!(found, Some(other_guild));
     }
+
+    #[test]
+    fn token_cache_key_never_contains_the_raw_token() {
+        // Regression for #34: `cached()` keys were previously derived from
+        // the client's `{:?}` Debug output, which embeds the raw Discord
+        // token verbatim. The key must be a hash of the token, not the
+        // token (or any substring of it) itself.
+        let token = "super-secret-discord-bot-token-value";
+        let client = Client::new(token.to_string());
+
+        let key = token_cache_key(&client);
+
+        assert!(
+            !key.contains(token),
+            "cache key must not contain the raw token: {key}"
+        );
+        // Also guard against any obviously-sized substring of the token
+        // leaking into the key (e.g. a partial/truncated Debug format).
+        assert!(!key.contains(&token[..10]));
+    }
+
+    #[test]
+    fn token_cache_key_is_deterministic() {
+        let token = "another-token-value-for-determinism-check";
+        let client_a = Client::new(token.to_string());
+        let client_b = Client::new(token.to_string());
+
+        assert_eq!(token_cache_key(&client_a), token_cache_key(&client_b));
+    }
 }
 
 pub async fn add_guild_member_role(
@@ -222,8 +266,9 @@ pub async fn remove_guild_member_role(
 
 #[cached(
     time = 3600,
+    size = 1000,
     key = "String",
-    convert = r##"{ format!("{:?}", client.token().unwrap()) }"##
+    convert = r##"{ token_cache_key(client) }"##
 )]
 pub async fn get_current_user(client: &Client) -> Result<CurrentUser, StatusCode> {
     retry_on_rl(|| async { client.current_user().await })
@@ -236,8 +281,9 @@ pub async fn get_current_user(client: &Client) -> Result<CurrentUser, StatusCode
 
 #[cached(
     time = 3600,
+    size = 1000,
     key = "String",
-    convert = r##"{ format!("{user_id}{:?}", client.token().unwrap()) }"##
+    convert = r##"{ format!("{user_id}:{}", token_cache_key(client)) }"##
 )]
 pub async fn get_user(user_id: Id<UserMarker>, client: &Client) -> Result<User, StatusCode> {
     retry_on_rl(|| async { client.user(user_id).await })
@@ -250,8 +296,9 @@ pub async fn get_user(user_id: Id<UserMarker>, client: &Client) -> Result<User, 
 
 #[cached(
     time = 60,
+    size = 1000,
     key = "String",
-    convert = r##"{ format!("{guild_id}{:?}", client.token().unwrap()) }"##
+    convert = r##"{ format!("{guild_id}:{}", token_cache_key(client)) }"##
 )]
 pub async fn get_guild(guild_id: Id<GuildMarker>, client: &Client) -> Result<Guild, StatusCode> {
     retry_on_rl(|| async { client.guild(guild_id).await })
@@ -264,8 +311,9 @@ pub async fn get_guild(guild_id: Id<GuildMarker>, client: &Client) -> Result<Gui
 
 #[cached(
     time = 60,
+    size = 1000,
     key = "String",
-    convert = r##"{ format!("{guild_id}{:?}", client.token().unwrap()) }"##
+    convert = r##"{ format!("{guild_id}:{}", token_cache_key(client)) }"##
 )]
 pub async fn get_guild_channels(
     guild_id: Id<GuildMarker>,
@@ -281,8 +329,9 @@ pub async fn get_guild_channels(
 
 #[cached(
     time = 60,
+    size = 1000,
     key = "String",
-    convert = r##"{ format!("{guild_id}{user_id}{:?}", client.token().unwrap()) }"##
+    convert = r##"{ format!("{guild_id}:{user_id}:{}", token_cache_key(client)) }"##
 )]
 pub async fn get_guild_member(
     guild_id: Id<GuildMarker>,
@@ -299,8 +348,9 @@ pub async fn get_guild_member(
 
 #[cached(
     time = 60,
+    size = 1000,
     key = "String",
-    convert = r##"{ format!("{guild_id}{role_id}{:?}", client.token().unwrap()) }"##
+    convert = r##"{ format!("{guild_id}:{role_id}:{}", token_cache_key(client)) }"##
 )]
 pub async fn get_guild_role(
     guild_id: Id<GuildMarker>,
