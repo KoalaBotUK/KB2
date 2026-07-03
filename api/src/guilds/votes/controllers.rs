@@ -1,7 +1,7 @@
-use crate::discord::{create_message, ise, update_message};
+use crate::discord::{create_message, get_guild_channels, ise, update_message};
 use crate::guilds::models::Guild;
 use crate::guilds::votes::models::{RoleListType, VoteOption, VoteVote};
-use crate::guilds::votes::utils::{VoteOptionComponent, group_to_rows};
+use crate::guilds::votes::utils::{VoteOptionComponent, channel_belongs_to_guild, group_to_rows};
 use crate::{AppState, utils};
 use aws_sdk_scheduler::types::{FlexibleTimeWindow, FlexibleTimeWindowMode, Target};
 use axum::extract::{Path, State};
@@ -15,6 +15,7 @@ use lambda_http::aws_lambda_events::apigw::ApiGatewayProxyRequest;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use twilight_model::channel::message::{Component, EmojiReactionType};
 use twilight_model::id::Id;
@@ -26,7 +27,6 @@ pub fn router() -> axum::Router<AppState> {
         .route("/", post(post_votes))
         .route("/{message_id}", get(get_votes_id))
         .route("/{message_id}/close", post(post_votes_id_close))
-        .layer(CorsLayer::permissive())
 }
 
 #[derive(Serialize, Deserialize)]
@@ -68,6 +68,12 @@ async fn post_votes(
         return Err(StatusCode::FORBIDDEN);
     }
 
+    let guild_channels = get_guild_channels(guild_id, &app_state.discord_bot).await?;
+    let guild_channel_ids: Vec<_> = guild_channels.iter().map(|c| c.id).collect();
+    if !channel_belongs_to_guild(vote_req.channel_id, &guild_channel_ids) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
     let message = create_message(
         vote_req.channel_id,
         Some(&format!("# {}\n{}\n", vote_req.title, vote_req.description)),
@@ -100,16 +106,22 @@ async fn post_votes(
         is_multi_select: vote_req.is_multi_select,
     };
     guild.vote.votes.push(new_vote.clone());
-    guild.save(&app_state.pg_pool).await;
+    guild.save(&app_state.pg_pool).await?;
 
-    if vote_req.close_at.is_some() {
+    if let Some(close_at) = vote_req.close_at {
         let mut headers = HeaderMap::new();
         headers.insert(CONTENT_TYPE, "application/json".parse().unwrap());
         headers.insert(
             AUTHORIZATION,
-            format!("Discord {}", app_state.discord_bot.token().unwrap())
-                .parse()
-                .unwrap(),
+            // The scheduled callback must authenticate as the bot: the `Discord`
+            // auth scheme builds a `Bearer` client and explicitly rejects bots,
+            // so it can never succeed here.
+            format!(
+                "Bot {}",
+                std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set")
+            )
+            .parse()
+            .unwrap(),
         );
 
         let payload = ApiGatewayProxyRequest {
@@ -130,9 +142,16 @@ async fn post_votes(
             ..Default::default()
         };
 
+        // `context.identity` is only populated for Cognito-identity invocations
+        // (None behind API Gateway/function URLs) and, even when present, is not
+        // an IAM role ARN. The EventBridge Scheduler execution role is instead
+        // supplied via configuration.
+        let scheduler_role_arn =
+            std::env::var("SCHEDULER_ROLE_ARN").expect("SCHEDULER_ROLE_ARN must be set");
+
         let target = Target::builder()
             .arn(context.invoked_function_arn)
-            .role_arn(context.identity.unwrap().identity_id)
+            .role_arn(scheduler_role_arn)
             .input(json!({"payload": payload, "context": Context::default()}).to_string())
             .build()
             .map_err(ise)?;
@@ -140,8 +159,8 @@ async fn post_votes(
         let _result = app_state
             .scheduler
             .create_schedule()
-            .name(format!("KB2 Vote Close {}", message.id))
-            .schedule_expression(format!("at({})", vote_req.close_at.unwrap()))
+            .name(vote_close_schedule_name(message.id))
+            .schedule_expression(vote_close_schedule_expression(close_at))
             .target(target)
             .flexible_time_window(
                 FlexibleTimeWindow::builder()
@@ -157,6 +176,24 @@ async fn post_votes(
     Ok(Json(json!(new_vote)))
 }
 
+/// Locates a vote by message id within a guild's votes, without panicking
+/// when the message id isn't present.
+fn find_vote(votes: &[VoteVote], message_id: Id<MessageMarker>) -> Option<&VoteVote> {
+    votes.iter().find(|v| v.message_id == message_id)
+}
+
+/// EventBridge Scheduler schedule names must match `[0-9a-zA-Z\-_.]{1,64}`.
+/// Spaces (as in the original `"KB2 Vote Close {id}"`) are invalid.
+fn vote_close_schedule_name(message_id: Id<MessageMarker>) -> String {
+    format!("kb2-vote-close-{}", message_id)
+}
+
+/// EventBridge Scheduler's `at()` expression requires `yyyy-mm-ddThh:mm:ss`.
+/// `DateTime`'s `Display` impl (e.g. `2026-07-02 12:00:00 UTC`) is not valid.
+fn vote_close_schedule_expression(close_at: DateTime<Utc>) -> String {
+    format!("at({})", close_at.format("%Y-%m-%dT%H:%M:%S"))
+}
+
 async fn get_votes_id(
     Path((guild_id, message_id)): Path<(Id<GuildMarker>, Id<MessageMarker>)>,
     Extension(current_user): Extension<CurrentUser>,
@@ -167,24 +204,17 @@ async fn get_votes_id(
     }
 
     let guild = Guild::from_db(guild_id, &app_state.pg_pool).await.unwrap();
-    let vote: &VoteVote = guild
-        .vote
-        .votes
-        .iter()
-        .find(|v| v.message_id == message_id)
-        .unwrap();
+    let vote = find_vote(&guild.vote.votes, message_id).ok_or(StatusCode::NOT_FOUND)?;
     Ok(Json(json!(vote)))
 }
 
-async fn post_votes_id_close(
-    Path((guild_id, message_id)): Path<(Id<GuildMarker>, Id<MessageMarker>)>,
-    Extension(current_user): Extension<CurrentUser>,
-    State(app_state): State<AppState>,
-) -> Result<Json<Value>, StatusCode> {
-    if !utils::is_client_admin_guild(guild_id, &current_user, &app_state.discord_bot).await? {
-        return Err(StatusCode::FORBIDDEN);
-    }
-
+/// Closes a vote and updates the Discord message. Shared by both the
+/// admin-initiated close route and the EventBridge Scheduler callback.
+async fn close_vote(
+    guild_id: Id<GuildMarker>,
+    message_id: Id<MessageMarker>,
+    app_state: &AppState,
+) -> Result<VoteVote, StatusCode> {
     let mut guild = Guild::from_db(guild_id, &app_state.pg_pool).await.unwrap();
     let vote: &mut VoteVote = match guild
         .vote
@@ -196,7 +226,7 @@ async fn post_votes_id_close(
         None => return Err(StatusCode::NOT_FOUND),
     };
     vote.open = false;
-    guild.save(&app_state.pg_pool).await;
+    guild.save(&app_state.pg_pool).await?;
 
     let vote: &VoteVote = guild
         .vote
@@ -230,5 +260,122 @@ async fn post_votes_id_close(
     )
     .await?;
 
+    Ok(vote.clone())
+}
+
+async fn post_votes_id_close(
+    Path((guild_id, message_id)): Path<(Id<GuildMarker>, Id<MessageMarker>)>,
+    Extension(discord_client): Extension<Arc<twilight_http::Client>>,
+    current_user: Option<Extension<CurrentUser>>,
+    State(app_state): State<AppState>,
+) -> Result<Json<Value>, StatusCode> {
+    // This route is hit two ways: by an admin closing a vote early (`Discord`
+    // auth scheme, with a `CurrentUser` extension inserted by auth_middleware),
+    // and by the EventBridge Scheduler callback closing it automatically
+    // (`Bot` auth scheme, which never inserts a `CurrentUser`). Follow the
+    // `post_recon` pattern for the latter: compare the authenticated client's
+    // token to the bot's own token rather than requiring `Extension<CurrentUser>`.
+    let is_bot_callback = discord_client.token() == app_state.discord_bot.token();
+    if !is_bot_callback {
+        let Extension(current_user) = current_user.ok_or(StatusCode::UNAUTHORIZED)?;
+        if !utils::is_client_admin_guild(guild_id, &current_user, &app_state.discord_bot).await? {
+            return Err(StatusCode::FORBIDDEN);
+        }
+    }
+
+    let vote = close_vote(guild_id, message_id, &app_state).await?;
+
     Ok(Json(json!(vote)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::TimeZone;
+
+    fn sample_vote(message_id: u64) -> VoteVote {
+        VoteVote {
+            message_id: Id::new(message_id),
+            title: "title".to_string(),
+            description: "description".to_string(),
+            options: vec![],
+            channel_id: Id::new(1),
+            close_at: None,
+            open: true,
+            role_list: HashSet::new(),
+            role_list_type: RoleListType::Blacklist,
+            is_multi_select: true,
+        }
+    }
+
+    #[test]
+    fn find_vote_returns_none_for_missing_message_id() {
+        let votes = vec![sample_vote(1), sample_vote(2)];
+
+        assert!(find_vote(&votes, Id::new(999)).is_none());
+    }
+
+    #[test]
+    fn find_vote_returns_some_for_existing_message_id() {
+        let votes = vec![sample_vote(1), sample_vote(2)];
+
+        let found = find_vote(&votes, Id::new(2)).expect("vote should be found");
+        assert_eq!(found.message_id, Id::new(2));
+    }
+
+    /// Regression test for issue #26: get_votes_id used to `.unwrap()` the
+    /// result of `find`, which panics (and surfaces as a 500) when the
+    /// message_id isn't a known vote. This asserts the handler's lookup
+    /// path now converts a missing vote into a NOT_FOUND result instead
+    /// of panicking.
+    #[test]
+    fn missing_vote_maps_to_404_instead_of_panicking() {
+        let votes = vec![sample_vote(1)];
+
+        let result: Result<&VoteVote, StatusCode> =
+            find_vote(&votes, Id::new(404)).ok_or(StatusCode::NOT_FOUND);
+
+        assert_eq!(result.err(), Some(StatusCode::NOT_FOUND));
+    }
+
+    // EventBridge Scheduler schedule names must match `[0-9a-zA-Z\-_.]{1,64}`.
+    fn is_valid_schedule_name(name: &str) -> bool {
+        !name.is_empty()
+            && name.len() <= 64
+            && name
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+    }
+
+    #[test]
+    fn schedule_name_contains_no_spaces_and_uses_message_id() {
+        let message_id: Id<MessageMarker> = Id::new(1234567890123456789);
+        let name = vote_close_schedule_name(message_id);
+
+        assert_eq!(name, "kb2-vote-close-1234567890123456789");
+        assert!(
+            is_valid_schedule_name(&name),
+            "schedule name {name:?} does not match EventBridge Scheduler's allowed pattern"
+        );
+    }
+
+    #[test]
+    fn schedule_expression_uses_at_format_without_timezone_suffix() {
+        let close_at = Utc.with_ymd_and_hms(2026, 7, 2, 12, 0, 0).unwrap();
+
+        let expr = vote_close_schedule_expression(close_at);
+
+        // Must be `at(yyyy-mm-ddThh:mm:ss)`, not `DateTime`'s
+        // `Display` output (`2026-07-02 12:00:00 UTC`).
+        assert_eq!(expr, "at(2026-07-02T12:00:00)");
+    }
+
+    #[test]
+    fn schedule_expression_zero_pads_single_digit_components() {
+        let close_at = Utc.with_ymd_and_hms(2026, 1, 5, 3, 4, 5).unwrap();
+
+        let expr = vote_close_schedule_expression(close_at);
+
+        assert_eq!(expr, "at(2026-01-05T03:04:05)");
+    }
 }

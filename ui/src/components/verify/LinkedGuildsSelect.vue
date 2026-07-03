@@ -18,17 +18,24 @@ let loadingGuilds = ref([])
 async function toggle_guild(guildId) {
   loadingGuilds.value.push(guildId)
   let linkedBool = isLinked(guildId)
+  let snapshot = [...props.user.linkGuilds]
   props.user.linkGuilds = props.user.linkGuilds.filter(lg => lg.guildId !== guildId);
 
-  if (linkedBool) {
-    await deleteLinkGuild(guildId)
-  } else {
-    await putLinkGuild(guildId)
-    props.user.linkGuilds.push(new LinkGuild(guildId, true));
+  try {
+    if (linkedBool) {
+      await deleteLinkGuild(guildId)
+    } else {
+      await putLinkGuild(guildId)
+      props.user.linkGuilds.push(new LinkGuild(guildId, true));
+    }
+    props.user.saveCache()
+  } catch (err) {
+    props.user.linkGuilds = snapshot
+    console.log(err)
+    window.alert(err.response?.data ?? 'Failed to update server link')
+  } finally {
+    loadingGuilds.value = loadingGuilds.value.filter(guild => guild !== guildId)
   }
-  props.user.saveCache()
-
-  loadingGuilds.value = loadingGuilds.value.filter(guild => guild !== guildId)
 }
 
 function isLinked(guildId) {

@@ -124,6 +124,7 @@ resource "aws_lambda_function" "lambda_function" {
       DSQL_USER                            = var.dsql_user
       DSQL_ENDPOINT                        = var.dsql_endpoint
       SQS_URL                              = var.sqs_url
+      CORS_ALLOWED_ORIGIN                  = "https://${var.ui_hostname}"
     }
   }
 }
@@ -209,4 +210,9 @@ resource "aws_lambda_function" "lambda_consumer" {
 resource "aws_lambda_event_source_mapping" "example_mapping" {
   event_source_arn = var.sqs_arn
   function_name    = aws_lambda_function.lambda_consumer.function_name
+
+  # Let the consumer report individual failed messages (batch_item_failures)
+  # instead of the whole batch being retried/redelivered when a single
+  # message fails to process (e.g. malformed body/JSON).
+  function_response_types = ["ReportBatchItemFailures"]
 }

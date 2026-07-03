@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import NotFoundView from "../pages/NotFoundView.vue";
 import DiscordAuthCallback from "../pages/auth/DiscordAuthCallback.vue";
 import VerifyMicrosoftCallback from "../pages/verify/VerifyMicrosoftCallback.vue";
@@ -31,11 +31,16 @@ window.addEventListener('hashchange', () => {
   currentPath.value = window.location.pathname
 })
 
-const currentView = computed(() => {
+onMounted(() => {
   Health.loadHealth().then(() => console.log("Backend is Healthy"))
-  for (const path in routes) {
-    if (new RegExp(path).test(currentPath.value)) {
-      return routes[path]
+})
+
+const compiledRoutes = Object.entries(routes).map(([path, component]) => [new RegExp(path), component])
+
+const currentView = computed(() => {
+  for (const [regex, component] of compiledRoutes) {
+    if (regex.test(currentPath.value)) {
+      return component
     }
   }
   return NotFoundView

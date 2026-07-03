@@ -7,7 +7,8 @@ const user = User.loadCache()
 export async function linkEmail(organization, token, overwrite=false) {
   await axios.post(`${VITE_KB_API_URL}/users/${user.userId}/links`, {
       'origin': organization,
-      'token': token
+      'token': token,
+      'overwrite': overwrite
     },
     {
       headers: {

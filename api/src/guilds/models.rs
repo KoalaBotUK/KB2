@@ -1,5 +1,7 @@
+use crate::discord::ise;
 use crate::guilds::verify::models::Verify;
 use crate::guilds::votes::models::Vote;
+use http::StatusCode;
 use lambda_http::tracing::{error};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -82,17 +84,44 @@ impl Guild {
         }
     }
 
-    pub async fn save(&self, pg_pool: &Pool<Postgres>) {
-        match sqlx::query("INSERT INTO guilds (id, verify, vote) VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET verify = $2, vote = $3, updated_at = CURRENT_TIMESTAMP")
+    pub async fn save(&self, pg_pool: &Pool<Postgres>) -> Result<(), StatusCode> {
+        sqlx::query("INSERT INTO guilds (id, verify, vote) VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET verify = $2, vote = $3, updated_at = CURRENT_TIMESTAMP")
             .bind(BigDecimal::from(self.guild_id.into_nonzero().get()))
-            .bind(serde_json::to_string(&self.verify).unwrap())
-            .bind(serde_json::to_string(&self.vote).unwrap())
+            .bind(serde_json::to_string(&self.verify).map_err(ise)?)
+            .bind(serde_json::to_string(&self.vote).map_err(ise)?)
             .execute(pg_pool)
-            .await {
-            Ok(_) => (),
-            Err(e) => {
-                error!("Error saving user to DB: {}", e);
-            }
-        }
+            .await
+            .map_err(ise)?;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Regression test for issue #21: `Guild::save` must return a `Result`
+    /// that surfaces DB errors to the caller instead of swallowing them and
+    /// reporting success. We point a lazily-connecting pool at a port that
+    /// nothing is listening on, so the first query fails fast with a
+    /// connection error, exercising the exact `sqlx::Error` -> `StatusCode`
+    /// mapping path used in production. This does not require a live
+    /// Postgres server, but a real DB integration test would additionally
+    /// be valuable in CI to cover the success path end-to-end.
+    #[tokio::test]
+    async fn save_propagates_db_errors_instead_of_swallowing_them() {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://baduser:badpass@127.0.0.1:1/nonexistent_db")
+            .expect("connect_lazy should not eagerly connect");
+
+        let guild = Guild::default();
+        let result = guild.save(&pool).await;
+
+        assert_eq!(
+            result,
+            Err(StatusCode::INTERNAL_SERVER_ERROR),
+            "save() must return an Err(StatusCode) when the underlying DB write fails, \
+             not silently succeed"
+        );
     }
 }

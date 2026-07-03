@@ -15,7 +15,6 @@ use std::ops::{Add, Sub};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::{Instant, sleep};
-use tower_http::cors::CorsLayer;
 use twilight_http::Client;
 use twilight_model::channel::Channel;
 use twilight_model::guild::{Permissions, Role};
@@ -28,7 +27,6 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(get_meta_guilds))
         .route("/{guild_id}", get(get_meta_guilds_id))
-        .layer(CorsLayer::permissive())
 }
 
 pub fn setup(discord_bot: Arc<Client>) {
@@ -96,7 +94,9 @@ async fn get_meta_guilds_id(
         return Err(StatusCode::NOT_FOUND);
     }
 
-    let u_guild = get_current_user_guild(guild_id, &discord_user).await?;
+    let u_guild = get_current_user_guild(guild_id, &discord_user)
+        .await?
+        .ok_or(StatusCode::NOT_FOUND)?;
     let guild = get_guild(guild_id, &app_state.discord_bot).await?;
     let channels = get_guild_channels(guild_id, &app_state.discord_bot).await?;
 
