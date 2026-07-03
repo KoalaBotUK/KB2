@@ -13,7 +13,8 @@ let skeleton = true
         <button class="btn btn-primary btn-sm justify-end" v-if="!skeleton">Add</button>
       </div>
       <div class="divider my-0"></div>
-      <table class="table" v-if="!skeleton">
+      <div class="overflow-x-auto" v-if="!skeleton">
+      <table class="table">
         <thead>
         <tr>
           <th>Channel</th>
@@ -76,6 +77,7 @@ let skeleton = true
         </tr>
         </tbody>
       </table>
+      </div>
       <div class="skeleton h-48 text-center font-bold p-20" v-if="skeleton"> Coming Soon </div>
     </div>
   </div>

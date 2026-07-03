@@ -129,6 +129,7 @@ function openResults(id) {
         <button class="btn btn-primary btn-sm justify-end" @click="modalActiveRef = 1">Create</button>
       </div>
       <div class="divider my-0"></div>
+      <div class="overflow-x-auto">
       <table class="table">
         <thead>
         <tr>
@@ -177,12 +178,13 @@ function openResults(id) {
         </tr>
         </tbody>
       </table>
+      </div>
     </div>
 
 
     <Teleport to="#modal">
       <div class="modal" :class="modalActiveRef === 1 ? 'modal-open' : ''">
-        <div class="modal-box w-96 bg-base-300 flex flex-col" ref="modalBox">
+        <div class="modal-box w-11/12 max-w-96 bg-base-300 flex flex-col" ref="modalBox">
           <div class="flex flex-row justify-between">
             <h3 class="text-lg font-bold">Create Vote</h3>
           </div>
@@ -240,7 +242,7 @@ function openResults(id) {
 
 
       <div class="modal" :class="modalActiveRef === 2 ? 'modal-open' : ''" v-if="selectedVote">
-        <div class="modal-box w-96 bg-base-300 flex flex-col" ref="modalBox">
+        <div class="modal-box w-11/12 max-w-96 bg-base-300 flex flex-col" ref="modalBox">
           <div class="flex flex-row justify-between">
             <h3 class="text-lg font-bold">Results</h3>
           </div>
