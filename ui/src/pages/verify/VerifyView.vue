@@ -32,9 +32,9 @@ onMounted(async () => {
     <div class="card lg:card-side w-auto bg-base-100 shadow-xl">
       <figure>
         <img
-            class="object-cover lg:w-80 lg:h-full"
+            class="object-cover w-full h-48 lg:w-80 lg:h-full"
             src="https://images.unsplash.com/photo-1519003300449-424ad0405076?q=80&w=2198&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-            alt="Movie"/> <!-- fixme: responsive -->
+            alt="Movie"/>
       </figure>
       <div class="card-body flex flex-col justify-items-center">
         <h1 class="card-title text-xl font-bold self-center">KoalaBot Verify</h1>

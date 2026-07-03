@@ -54,7 +54,7 @@ let extensions = new Map([
 
   <Teleport to="#modal">
     <div class="modal" :class="selected ? 'modal-open' : ''" v-if='selected' >
-      <div class="modal-box w-96 bg-base-300 flex flex-col" ref="modalBox">
+      <div class="modal-box w-11/12 max-w-96 bg-base-300 flex flex-col" ref="modalBox">
         <div class="card-body">
           <div class="card-title">
             {{selected}}

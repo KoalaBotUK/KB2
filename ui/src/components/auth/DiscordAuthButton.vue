@@ -64,7 +64,7 @@ function logout() {
 
   <Teleport to="#modal">
     <div class="modal" :class="modalActiveRef ? 'modal-open' : ''" v-if="isUserLoggedIn(props.user)" >
-      <div class="modal-box w-96 bg-base-300 flex flex-col" ref="modalBox">
+      <div class="modal-box w-11/12 max-w-96 bg-base-300 flex flex-col" ref="modalBox">
         <div class="flex flex-row justify-between">
           <h3 class="text-lg font-bold">Logged in as {{ props.userMeta ? props.userMeta.globalName : '' }}</h3>
 

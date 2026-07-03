@@ -32,7 +32,7 @@ onClickOutside(modalBox, () => {
 
   <Teleport to="#modal">
     <div class="modal" :class="modalActiveRef ? 'modal-open' : ''" v-if="$props.user">
-      <div class="modal-box w-96 bg-base-300" ref="modalBox">
+      <div class="modal-box w-11/12 max-w-96 bg-base-300" ref="modalBox">
         <h3 class="text-lg font-bold">Link Account</h3>
         <div class="modal-action">
           <div class="flex flex-col h-auto w-full overflow-y-auto items-center">

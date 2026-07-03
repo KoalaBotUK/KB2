@@ -24,7 +24,7 @@ watchEffect(() => {
 <template>
   <Teleport to="#modal">
     <div class="modal" :class="storedActiveEvent ? 'modal-open' : ''" >
-      <div class="modal-box w-96 bg-base-300 flex flex-col" ref="modalBox">
+      <div class="modal-box w-11/12 max-w-96 bg-base-300 flex flex-col" ref="modalBox">
         <div class="flex flex-row justify-between">
           <h3 class="text-lg font-bold mb-5">{{ title }}</h3>
         </div>

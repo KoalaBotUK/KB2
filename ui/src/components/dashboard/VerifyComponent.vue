@@ -94,6 +94,7 @@ function validAdd() {
         <button class="btn btn-primary btn-sm justify-end" @click="modalActiveRef = true">Add</button>
       </div>
       <div class="divider my-0"></div>
+      <div class="overflow-x-auto">
       <table class="table">
         <thead>
         <tr>
@@ -133,11 +134,12 @@ function validAdd() {
         </tr>
         </tbody>
       </table>
+      </div>
     </div>
 
   <Teleport to="#modal">
     <div class="modal" :class="modalActiveRef ? 'modal-open' : ''" v-if="userRef">
-      <div class="modal-box w-96 bg-base-300 flex flex-col" ref="modalBox">
+      <div class="modal-box w-11/12 max-w-96 bg-base-300 flex flex-col" ref="modalBox">
         <div class="flex flex-row justify-between">
           <h3 class="text-lg font-bold">Add Verified Role</h3>
         </div>
