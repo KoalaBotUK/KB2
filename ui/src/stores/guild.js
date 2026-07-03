@@ -82,7 +82,10 @@ export class VoteOption {
     let voteOption = new VoteOption()
     voteOption.emoji = json['emoji']
     voteOption.label = json['label']
-    voteOption.users = json['users']
+    // 'users' is serialized from a Rust HashSet and should always be a JSON
+    // array, but normalize defensively in case the wire shape ever changes
+    // or the field is missing on older records.
+    voteOption.users = Array.isArray(json['users']) ? json['users'] : []
     return voteOption
   }
 }
