@@ -27,7 +27,6 @@ pub fn router() -> axum::Router<AppState> {
         .route("/", post(post_votes))
         .route("/{message_id}", get(get_votes_id))
         .route("/{message_id}/close", post(post_votes_id_close))
-        .layer(CorsLayer::permissive())
 }
 
 #[derive(Serialize, Deserialize)]

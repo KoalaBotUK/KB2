@@ -12,7 +12,6 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::sync::Arc;
-use tower_http::cors::CorsLayer;
 use twilight_model::id::Id;
 use twilight_model::id::marker::{GuildMarker, RoleMarker};
 use twilight_model::user::CurrentUser;
@@ -24,7 +23,6 @@ pub fn router() -> axum::Router<AppState> {
             "/roles/{role_id}",
             put(put_roles_id).delete(delete_roles_id),
         )
-        .layer(CorsLayer::permissive())
 }
 
 #[derive(Serialize, Deserialize)]

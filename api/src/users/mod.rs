@@ -11,7 +11,6 @@ use axum::routing::get;
 use axum::{Extension, Json};
 use http::StatusCode;
 use serde_json::{Value, json};
-use tower_http::cors::CorsLayer;
 use twilight_model::id::Id;
 use twilight_model::id::marker::UserMarker;
 use twilight_model::user::CurrentUser;
@@ -22,7 +21,6 @@ pub fn router() -> axum::Router<AppState> {
         .route("/{user_id}", get(get_users_id))
         .nest("/{user_id}/links", links::router())
         .nest("/{user_id}/link_guilds", link_guilds::router())
-        .layer(CorsLayer::permissive())
 }
 
 async fn get_users_me(

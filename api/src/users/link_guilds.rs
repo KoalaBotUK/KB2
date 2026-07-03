@@ -9,7 +9,6 @@ use axum::{Extension, Json};
 use http::StatusCode;
 use serde_json::{Value, json};
 use std::sync::Arc;
-use tower_http::cors::CorsLayer;
 use twilight_model::id::Id;
 use twilight_model::id::marker::{GuildMarker, UserMarker};
 use twilight_model::user::CurrentUser;
@@ -22,7 +21,6 @@ pub fn router() -> axum::Router<AppState> {
             "/{guild_id}",
             put(put_link_guilds_id).delete(delete_link_guilds_id),
         )
-        .layer(CorsLayer::permissive())
 }
 
 async fn put_link_guilds_id(

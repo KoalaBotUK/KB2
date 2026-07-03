@@ -10,6 +10,11 @@ variable "discord_public_key" {
   type = string
 }
 
+variable "ui_hostname" {
+  type        = string
+  description = "The hostname for the UI, e.g., 'koalabot.uk'. Used to restrict CORS on the API to the first-party UI origin."
+}
+
 variable "dsql_user" {
   type = string
 }

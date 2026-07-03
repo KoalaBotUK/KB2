@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sha2::Sha256;
 use std::collections::BTreeMap;
+use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use twilight_model::id::Id;
 use twilight_model::id::marker::UserMarker;
@@ -25,7 +26,6 @@ pub fn router() -> axum::Router<AppState> {
         .route("/", post(post_link))
         .route("/send-email", post(post_send_email))
         .route("/{link_address}", delete(delete_link))
-        .layer(CorsLayer::permissive())
 }
 
 #[derive(Clone, Serialize, Deserialize)]
