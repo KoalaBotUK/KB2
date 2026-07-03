@@ -124,18 +124,18 @@ async function sync_guilds_kb() {
   <div class="flex flex-col h-full">
     <header class="w-full">
       <div class="navbar shadow m-5 w-auto bg-base-200">
-        <div class="navbar-start">
-          <div class="dropdown">
+        <div class="navbar-start min-w-0">
+          <div class="dropdown min-w-0">
             <div tabindex="0" role="button" class="btn btn-sm btn-primary" v-if="!currentGuildId">
               Select Server
             </div>
-            <div tabindex="0" role="button" class="card-title btn btn-sm btn-ghost" v-if="currentGuildId">
-              <div class="avatar">
+            <div tabindex="0" role="button" class="btn btn-sm btn-ghost max-w-40 sm:max-w-60" v-if="currentGuildId">
+              <div class="avatar shrink-0">
                 <div class="w-6 rounded-xl">
                   <img :src="`https://cdn.discordapp.com/icons/${currentGuildId}/${guildMetaMap.get(currentGuildId).icon}.webp`" v-if="guildMetaMap.get(currentGuildId) && guildMetaMap.get(currentGuildId).icon"/>
                 </div>
               </div>
-              {{ guildMetaMap.get(currentGuildId).name }}
+              <span class="truncate font-semibold">{{ guildMetaMap.get(currentGuildId).name }}</span>
             </div>
             <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-1 p-2 shadow-sm">
               <li v-if="!guildsLoaded">
@@ -146,7 +146,7 @@ async function sync_guilds_kb() {
               <li v-for="[gid, guild] in guildMetaMap">
                 <a :class="(gid === currentGuildId && 'menu-active')" @click="setCurrentGuild(guild.id)">
                 <div class="w-6 rounded-xl"><img :src="`https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.webp`" v-if="guild.icon"/>
-                </div> {{ guild.name }}</a>
+                </div> <span class="truncate">{{ guild.name }}</span></a>
               </li>
               <li class="bg-primary text-primary-content">
                 <a class="justify-between" :href="INVITE_URL">
@@ -156,12 +156,12 @@ async function sync_guilds_kb() {
             </ul>
           </div>
         </div>
-        <div class="navbar-center">
+        <div class="navbar-center hidden sm:flex">
           <a href="/">
             <KoalaMonoIcon class="h-10 w-10 fill-base-content"/>
           </a>
         </div>
-        <div class="navbar-end px-10">
+        <div class="navbar-end px-2 sm:px-10">
           <DiscordAuthButton long-text="false" class="" :user="user" :user-meta="userMeta" @logout="reload"></DiscordAuthButton>
         </div>
       </div>
