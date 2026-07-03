@@ -45,7 +45,7 @@ async fn put_link_guilds_id(
     user.link_guilds.retain(|g| g.guild_id != guild_id);
     user.link_guilds.push(new_link_guild.clone());
     let audit_new_data = user.link_guilds.clone();
-    user.save(&app_state.pg_pool).await;
+    user.save(&app_state.pg_pool).await?;
 
     let mut guild = Guild::from_db(guild_id, &app_state.pg_pool).await.unwrap();
 
@@ -71,8 +71,8 @@ async fn put_link_guilds_id(
     // mutation site (link add/remove, role add/remove, recon).
     guild.verify.recompute_role_members();
 
-    guild.save(&app_state.pg_pool).await;
-    
+    guild.save(&app_state.pg_pool).await?;
+
     // write audit
     audit(AuditMessage::new("update_link_guilds".to_string(), user_id, Some(guild_id),
                              Some(audit_old_data), Some(audit_new_data)), &app_state.sqs).await;
@@ -129,8 +129,8 @@ async fn delete_link_guilds_id(
     // guard, which was only needed because the counter could otherwise drift.
     guild.verify.recompute_role_members();
 
-    user.save(&app_state.pg_pool).await;
-    guild.save(&app_state.pg_pool).await;
+    user.save(&app_state.pg_pool).await?;
+    guild.save(&app_state.pg_pool).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 async fn is_client_guild_member(

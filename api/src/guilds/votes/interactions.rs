@@ -134,7 +134,7 @@ pub(crate) async fn handle_component_interaction(
             responses.push(format!("You have added a vote for {o}."));
         }
     }
-    guild.save(&app_state.pg_pool).await;
+    guild.save(&app_state.pg_pool).await?;
 
     Ok(Json(json!(InteractionResponse {
         kind: InteractionResponseType::ChannelMessageWithSource,

@@ -123,7 +123,7 @@ async fn get_guilds_id(
                 guild_id,
                 ..Default::default()
             };
-            new_guild.save(&app_state.pg_pool).await;
+            new_guild.save(&app_state.pg_pool).await?;
             new_guild
         }
     })))

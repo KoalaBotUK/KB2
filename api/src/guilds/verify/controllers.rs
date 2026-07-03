@@ -79,7 +79,7 @@ async fn put_roles_id(
     // `members` is derived from `user_links`, not hand-incremented, so it
     // can never drift out of sync with the other role/link handlers.
     guild.verify.recompute_role_members();
-    guild.save(&app_state.pg_pool).await;
+    guild.save(&app_state.pg_pool).await?;
 
     Ok(Json(json!(
         find_role(&guild.verify.roles, role_id).ok_or(StatusCode::NOT_FOUND)?
@@ -105,7 +105,7 @@ async fn delete_roles_id(
 
     remove_existing_role(&mut guild, role_id, &app_state).await?;
 
-    guild.save(&app_state.pg_pool).await;
+    guild.save(&app_state.pg_pool).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -181,7 +181,7 @@ async fn post_recon(
     // recon uses exactly the same counting logic as put_roles_id/add/remove,
     // instead of a manual counter that can disagree with them.
     guild.verify.recompute_role_members();
-    guild.save(&app_state.pg_pool).await;
+    guild.save(&app_state.pg_pool).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

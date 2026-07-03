@@ -132,10 +132,10 @@ async fn post_link(
         // `retain` above) would otherwise inflate the count every time the
         // user re-links an address they already had.
         guild.verify.recompute_role_members();
-        guild.save(&app_state.pg_pool).await;
+        guild.save(&app_state.pg_pool).await?;
     }
     user_model.links.push(new_link.clone());
-    user_model.save(&app_state.pg_pool).await;
+    user_model.save(&app_state.pg_pool).await?;
     Ok(Json(json!(new_link)))
 }
 
@@ -237,11 +237,11 @@ async fn delete_link(
         // instead of the old `if role.members > 0 { role.members -= 1 }`
         // guard, which only existed because the counter was untrustworthy.
         guild.verify.recompute_role_members();
-        guild.save(&app_state.pg_pool).await;
+        guild.save(&app_state.pg_pool).await?;
     }
     existing_link.active = false;
     user_model.links.push(existing_link);
-    user_model.save(&app_state.pg_pool).await;
+    user_model.save(&app_state.pg_pool).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 

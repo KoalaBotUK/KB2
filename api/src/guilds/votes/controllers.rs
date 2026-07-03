@@ -106,7 +106,7 @@ async fn post_votes(
         is_multi_select: vote_req.is_multi_select,
     };
     guild.vote.votes.push(new_vote.clone());
-    guild.save(&app_state.pg_pool).await;
+    guild.save(&app_state.pg_pool).await?;
 
     if let Some(close_at) = vote_req.close_at {
         let mut headers = HeaderMap::new();
@@ -226,7 +226,7 @@ async fn close_vote(
         None => return Err(StatusCode::NOT_FOUND),
     };
     vote.open = false;
-    guild.save(&app_state.pg_pool).await;
+    guild.save(&app_state.pg_pool).await?;
 
     let vote: &VoteVote = guild
         .vote
