@@ -82,13 +82,14 @@ async fn put_roles_id(
     guild.save(&app_state.pg_pool).await;
 
     Ok(Json(json!(
-        guild
-            .verify
-            .roles
-            .iter()
-            .find(|r| r.role_id == role_id)
-            .unwrap()
+        find_role(&guild.verify.roles, role_id).ok_or(StatusCode::NOT_FOUND)?
     )))
+}
+
+/// Locates a verify role by role id, without panicking when the role id
+/// isn't present.
+fn find_role(roles: &[VerifyRole], role_id: Id<RoleMarker>) -> Option<&VerifyRole> {
+    roles.iter().find(|r| r.role_id == role_id)
 }
 
 async fn delete_roles_id(
@@ -188,6 +189,44 @@ async fn post_recon(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn sample_role(role_id: u64) -> VerifyRole {
+        VerifyRole {
+            role_id: Id::new(role_id),
+            pattern: "pattern".to_string(),
+            members: 0,
+        }
+    }
+
+    #[test]
+    fn find_role_returns_none_for_missing_role_id() {
+        let roles = vec![sample_role(1), sample_role(2)];
+
+        assert!(find_role(&roles, Id::new(999)).is_none());
+    }
+
+    #[test]
+    fn find_role_returns_some_for_existing_role_id() {
+        let roles = vec![sample_role(1), sample_role(2)];
+
+        let found = find_role(&roles, Id::new(2)).expect("role should be found");
+        assert_eq!(found.role_id, Id::new(2));
+    }
+
+    /// Regression test for issue #26: put_roles_id used to `.unwrap()` the
+    /// result of `find` when re-reading back the just-pushed role, which
+    /// panics (and surfaces as a 500) if the role isn't present. This
+    /// asserts the handler's lookup path now converts a missing role into
+    /// a NOT_FOUND result instead of panicking.
+    #[test]
+    fn missing_role_maps_to_404_instead_of_panicking() {
+        let roles = vec![sample_role(1)];
+
+        let result: Result<&VerifyRole, StatusCode> =
+            find_role(&roles, Id::new(404)).ok_or(StatusCode::NOT_FOUND);
+
+        assert_eq!(result.err(), Some(StatusCode::NOT_FOUND));
+    }
 
     #[test]
     fn invalid_pattern_is_rejected_at_creation_time() {
