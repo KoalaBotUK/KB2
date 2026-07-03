@@ -8,7 +8,12 @@ import { parseComponentTemplate } from "../../testUtils/templateDom.js";
 //   oversized `card-title` font, roughly doubling the header's height.
 // - navbar-end had a flat `px-10` (80px) of horizontal padding, which eats
 //   a large chunk of a ~375-414px viewport and crowds everything else.
-// - The center logo used a fixed size that doesn't shrink to make room.
+// - The center logo doesn't reserve its own space in the navbar (DaisyUI's
+//   navbar-start/navbar-end both stretch to fill the remaining width), so
+//   on narrow screens it visually collides with the account button next to
+//   it. It's decorative only (the koala branding is already in the browser
+//   tab and the page footer), so it's hidden below the sm breakpoint rather
+//   than fought over.
 //
 // DashBaseView has heavy onMounted data-loading side effects, so rather
 // than fully mounting it we parse its raw <template> to assert on the
@@ -38,13 +43,11 @@ describe("DashBaseView mobile responsiveness", () => {
     expect(navbarEnd.classList.contains("sm:px-10")).toBe(true);
   });
 
-  it("shrinks the center logo on narrow viewports", () => {
+  it("hides the decorative center logo on narrow viewports so it can't collide with the account button", () => {
     const dom = parseComponentTemplate(rawSource);
-    // Vue SFC custom component tags (KoalaMonoIcon) are lower-cased by the
-    // HTML parser used here, so just grab the element inside navbar-center.
-    const logoEl = dom.querySelector(".navbar-center a > *");
-    expect(logoEl).toBeTruthy();
-    expect(logoEl.className).toMatch(/h-8/);
-    expect(logoEl.className).toMatch(/sm:h-10/);
+    const navbarCenter = dom.querySelector(".navbar-center");
+    expect(navbarCenter).toBeTruthy();
+    expect(navbarCenter.classList.contains("hidden")).toBe(true);
+    expect(navbarCenter.classList.contains("sm:flex")).toBe(true);
   });
 });

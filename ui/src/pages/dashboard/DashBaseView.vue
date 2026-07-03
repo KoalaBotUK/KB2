@@ -156,9 +156,9 @@ async function sync_guilds_kb() {
             </ul>
           </div>
         </div>
-        <div class="navbar-center shrink-0">
+        <div class="navbar-center hidden sm:flex">
           <a href="/">
-            <KoalaMonoIcon class="h-8 w-8 sm:h-10 sm:w-10 fill-base-content"/>
+            <KoalaMonoIcon class="h-10 w-10 fill-base-content"/>
           </a>
         </div>
         <div class="navbar-end px-2 sm:px-10">
