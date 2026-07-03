@@ -39,15 +39,23 @@ async fn put_link_guilds_id(
     };
 
     let mut user = User::from_db(user_id, &app_state.pg_pool)
-        .await
-        .unwrap();
+        .await?
+        .unwrap_or_else(|| User {
+            user_id,
+            ..Default::default()
+        });
     let audit_old_data = user.link_guilds.clone();
     user.link_guilds.retain(|g| g.guild_id != guild_id);
     user.link_guilds.push(new_link_guild.clone());
     let audit_new_data = user.link_guilds.clone();
     user.save(&app_state.pg_pool).await?;
 
-    let mut guild = Guild::from_db(guild_id, &app_state.pg_pool).await.unwrap();
+    let mut guild = Guild::from_db(guild_id, &app_state.pg_pool)
+        .await?
+        .unwrap_or_else(|| Guild {
+            guild_id,
+            ..Default::default()
+        });
 
     // Capture the previously stored links (if any) so we only assign roles
     // that don't already match, instead of skipping role sync entirely
@@ -111,12 +119,20 @@ async fn delete_link_guilds_id(
     }
 
     let mut user = User::from_db(user_id, &app_state.pg_pool)
-        .await
-        .unwrap();
+        .await?
+        .unwrap_or_else(|| User {
+            user_id,
+            ..Default::default()
+        });
 
     user.link_guilds.retain(|g| g.guild_id != guild_id);
 
-    let mut guild = Guild::from_db(guild_id, &app_state.pg_pool).await.unwrap();
+    let mut guild = Guild::from_db(guild_id, &app_state.pg_pool)
+        .await?
+        .unwrap_or_else(|| Guild {
+            guild_id,
+            ..Default::default()
+        });
 
     for role in &guild.verify.roles {
         if link_arr_match(&user.links, &role.pattern) {

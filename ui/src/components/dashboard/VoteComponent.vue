@@ -14,7 +14,7 @@ let modelTitle = defineModel('modelTitle');
 let modelDescription = defineModel('modelDescription');
 let modelChannel = defineModel('modelChannel');
 let modelMultiSelect = defineModel('modelMultiSelect');
-let modelBlacklist = defineModel('modelBlacklist');
+let modelBlacklist = defineModel('modelBlacklist', {default: true});
 let optionsArr = ref([])
 let nextOptionNum = ref(0);
 let roleArr = ref([])
@@ -215,8 +215,8 @@ function openResults(id) {
             <legend class="fieldset-legend">Role List</legend>
             <div class="join join-vertical">
             <div class="join-item join join-col w-full flex">
-              <input class="btn join-item grow" type="radio" name="roleListType" aria-label="Blacklist" v-model="modelBlacklist" checked/>
-              <input class="btn join-item grow" type="radio" name="roleListType" aria-label="Whitelist"/>
+              <input class="btn join-item grow" type="radio" name="roleListType" aria-label="Blacklist" :value="true" v-model="modelBlacklist"/>
+              <input class="btn join-item grow" type="radio" name="roleListType" aria-label="Whitelist" :value="false" v-model="modelBlacklist"/>
             </div>
             <div class="join-item join join-col w-full flex" v-for="roleModel in roleArr">
               <RoleSelect class="join-item grow" :guild-meta="guildMeta" v-model="roleModel[1]"></RoleSelect>
