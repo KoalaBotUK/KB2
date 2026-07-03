@@ -26,6 +26,7 @@ regex = { workspace = true }
 cached = { workspace = true, features = ["async"] }
 hmac = { workspace = true }
 sha2 = { workspace = true }
+subtle = { workspace = true }
 jwt = { workspace = true }
 sqlx = { workspace = true, features = [ "runtime-tokio", "tls-rustls" , "postgres", "uuid", "bigdecimal"] }
 bigdecimal = { workspace = true }

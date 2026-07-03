@@ -1,4 +1,5 @@
 use crate::discord::get_current_user;
+use crate::utils::secure_compare;
 use axum::extract::Request;
 use axum::http::{HeaderMap, StatusCode};
 use axum::middleware::Next;
@@ -63,9 +64,9 @@ pub async fn auth_middleware(
             Ok(next.run(request).await)
         }
         "Bot" => {
-            if credentials
-                != std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set")
-            {
+            let expected_token =
+                std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set");
+            if !secure_compare(credentials, &expected_token) {
                 return Err(StatusCode::UNAUTHORIZED);
             }
             let client = Client::new(format!("Bot {credentials}"));

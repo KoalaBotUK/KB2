@@ -1,10 +1,20 @@
 use crate::discord::{get_current_user_guilds, get_guild, get_guild_member};
 use http::StatusCode;
+use subtle::ConstantTimeEq;
 use twilight_http::Client;
 use twilight_model::guild::Permissions;
 use twilight_model::id::Id;
 use twilight_model::id::marker::GuildMarker;
 use twilight_model::user::{CurrentUser, CurrentUserGuild};
+
+/// Compare two secrets (e.g. bot tokens) in constant time.
+///
+/// Using `==` on strings/bytes short-circuits on the first mismatched byte,
+/// which leaks timing information that can be used to recover a secret
+/// byte-by-byte. This compares the full contents in constant time instead.
+pub fn secure_compare(a: &str, b: &str) -> bool {
+    a.as_bytes().ct_eq(b.as_bytes()).into()
+}
 
 pub async fn member_guilds(
     discord_user: &Client,
@@ -65,4 +75,34 @@ pub async fn admin_guilds(
 
 pub fn is_admin(guild: &CurrentUserGuild) -> bool {
     guild.owner || guild.permissions & Permissions::ADMINISTRATOR == Permissions::ADMINISTRATOR
+}
+
+#[cfg(test)]
+mod secure_compare_tests {
+    use super::secure_compare;
+
+    #[test]
+    fn matching_secrets_are_accepted() {
+        assert!(secure_compare("super-secret-token", "super-secret-token"));
+    }
+
+    #[test]
+    fn non_matching_secrets_are_rejected() {
+        assert!(!secure_compare("super-secret-token", "not-the-token"));
+    }
+
+    #[test]
+    fn secrets_of_different_length_are_rejected() {
+        assert!(!secure_compare("short", "a-much-longer-secret"));
+    }
+
+    #[test]
+    fn empty_strings_are_equal() {
+        assert!(secure_compare("", ""));
+    }
+
+    #[test]
+    fn case_sensitive_comparison() {
+        assert!(!secure_compare("Token", "token"));
+    }
 }

@@ -3,7 +3,7 @@ use crate::discord::{add_guild_member_role, remove_guild_member_role};
 use crate::guilds::models::Guild;
 use crate::guilds::verify::models::{Verify, VerifyRole};
 use crate::users::utils::link_arr_match;
-use crate::utils::is_client_admin_guild;
+use crate::utils::{is_client_admin_guild, secure_compare};
 use axum::extract::{Path, State};
 use axum::routing::{post, put};
 use axum::{Extension, Json};
@@ -143,7 +143,11 @@ async fn post_recon(
     Extension(discord_user): Extension<Arc<twilight_http::Client>>,
     State(app_state): State<AppState>,
 ) -> Result<StatusCode, StatusCode> {
-    if discord_user.token() != app_state.discord_bot.token() {
+    let tokens_match = match (discord_user.token(), app_state.discord_bot.token()) {
+        (Some(a), Some(b)) => secure_compare(a, b),
+        _ => false,
+    };
+    if !tokens_match {
         return Err(StatusCode::FORBIDDEN);
     }
 

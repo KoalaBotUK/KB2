@@ -33,6 +33,7 @@ regex = "1.11.2"
 cached = { version = "0.56.0", features = ["async"] }
 hmac = "0.12.1"
 sha2 = "0.10.9"
+subtle = "2.6.1"
 jwt = "0.16.0"
 sqlx = { version = "0.8", features = [ "runtime-tokio", "tls-rustls" , "postgres", "uuid", "bigdecimal"] }
 aws-sdk-dsql = "1.1"
