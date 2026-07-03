@@ -3,7 +3,7 @@ use crate::discord::{add_guild_member_role, remove_guild_member_role};
 use crate::guilds::models::Guild;
 use crate::guilds::verify::models::{Verify, VerifyRole};
 use crate::users::utils::link_arr_match;
-use crate::utils::is_client_admin_guild;
+use crate::utils::{is_client_admin_guild, secure_compare};
 use axum::extract::{Path, State};
 use axum::routing::{post, put};
 use axum::{Extension, Json};
@@ -12,7 +12,6 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::sync::Arc;
-use tower_http::cors::CorsLayer;
 use twilight_model::id::Id;
 use twilight_model::id::marker::{GuildMarker, RoleMarker};
 use twilight_model::user::CurrentUser;
@@ -24,7 +23,6 @@ pub fn router() -> axum::Router<AppState> {
             "/roles/{role_id}",
             put(put_roles_id).delete(delete_roles_id),
         )
-        .layer(CorsLayer::permissive())
 }
 
 #[derive(Serialize, Deserialize)]
@@ -86,16 +84,17 @@ async fn put_roles_id(
     // `members` is derived from `user_links`, not hand-incremented, so it
     // can never drift out of sync with the other role/link handlers.
     guild.verify.recompute_role_members();
-    guild.save(&app_state.pg_pool).await;
+    guild.save(&app_state.pg_pool).await?;
 
     Ok(Json(json!(
-        guild
-            .verify
-            .roles
-            .iter()
-            .find(|r| r.role_id == role_id)
-            .unwrap()
+        find_role(&guild.verify.roles, role_id).ok_or(StatusCode::NOT_FOUND)?
     )))
+}
+
+/// Locates a verify role by role id, without panicking when the role id
+/// isn't present.
+fn find_role(roles: &[VerifyRole], role_id: Id<RoleMarker>) -> Option<&VerifyRole> {
+    roles.iter().find(|r| r.role_id == role_id)
 }
 
 async fn delete_roles_id(
@@ -116,7 +115,7 @@ async fn delete_roles_id(
 
     remove_existing_role(&mut guild, role_id, &app_state).await?;
 
-    guild.save(&app_state.pg_pool).await;
+    guild.save(&app_state.pg_pool).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -154,7 +153,11 @@ async fn post_recon(
     Extension(discord_user): Extension<Arc<twilight_http::Client>>,
     State(app_state): State<AppState>,
 ) -> Result<StatusCode, StatusCode> {
-    if discord_user.token() != app_state.discord_bot.token() {
+    let tokens_match = match (discord_user.token(), app_state.discord_bot.token()) {
+        (Some(a), Some(b)) => secure_compare(a, b),
+        _ => false,
+    };
+    if !tokens_match {
         return Err(StatusCode::FORBIDDEN);
     }
 
@@ -197,7 +200,7 @@ async fn post_recon(
     // recon uses exactly the same counting logic as put_roles_id/add/remove,
     // instead of a manual counter that can disagree with them.
     guild.verify.recompute_role_members();
-    guild.save(&app_state.pg_pool).await;
+    guild.save(&app_state.pg_pool).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -205,6 +208,44 @@ async fn post_recon(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn sample_role(role_id: u64) -> VerifyRole {
+        VerifyRole {
+            role_id: Id::new(role_id),
+            pattern: "pattern".to_string(),
+            members: 0,
+        }
+    }
+
+    #[test]
+    fn find_role_returns_none_for_missing_role_id() {
+        let roles = vec![sample_role(1), sample_role(2)];
+
+        assert!(find_role(&roles, Id::new(999)).is_none());
+    }
+
+    #[test]
+    fn find_role_returns_some_for_existing_role_id() {
+        let roles = vec![sample_role(1), sample_role(2)];
+
+        let found = find_role(&roles, Id::new(2)).expect("role should be found");
+        assert_eq!(found.role_id, Id::new(2));
+    }
+
+    /// Regression test for issue #26: put_roles_id used to `.unwrap()` the
+    /// result of `find` when re-reading back the just-pushed role, which
+    /// panics (and surfaces as a 500) if the role isn't present. This
+    /// asserts the handler's lookup path now converts a missing role into
+    /// a NOT_FOUND result instead of panicking.
+    #[test]
+    fn missing_role_maps_to_404_instead_of_panicking() {
+        let roles = vec![sample_role(1)];
+
+        let result: Result<&VerifyRole, StatusCode> =
+            find_role(&roles, Id::new(404)).ok_or(StatusCode::NOT_FOUND);
+
+        assert_eq!(result.err(), Some(StatusCode::NOT_FOUND));
+    }
 
     #[test]
     fn invalid_pattern_is_rejected_at_creation_time() {
