@@ -35,6 +35,11 @@ module "sqs" {
   deployment_env = var.deployment_env
 }
 
+module "s3" {
+  source = "./modules/data/s3"
+  deployment_env = var.deployment_env
+}
+
 module "lambda" {
   source         = "./modules/compute/lambda"
   deployment_env = var.deployment_env
@@ -46,11 +51,7 @@ module "lambda" {
   dsql_arn = module.dsql.dsql_arn
   sqs_arn = module.sqs.queue_arn
   sqs_url = module.sqs.queue_url
-}
-
-module "s3" {
-  source = "./modules/data/s3"
-  deployment_env = var.deployment_env
+  ui_hostname = module.s3.ui_hostname
 }
 
 module "api" {

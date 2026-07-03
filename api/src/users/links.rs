@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sha2::Sha256;
 use std::collections::BTreeMap;
+use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use twilight_model::id::Id;
 use twilight_model::id::marker::UserMarker;
@@ -25,7 +26,6 @@ pub fn router() -> axum::Router<AppState> {
         .route("/", post(post_link))
         .route("/send-email", post(post_send_email))
         .route("/{link_address}", delete(delete_link))
-        .layer(CorsLayer::permissive())
 }
 
 /// Builds the HMAC key used to sign/verify email-verification link JWTs.
@@ -144,18 +144,18 @@ async fn post_link(
         guild
             .verify
             .user_links
-            .get_mut(&user_id)
-            .unwrap()
+            .entry(user_id)
+            .or_default()
             .push(new_link.clone());
         // Recompute from `user_links` instead of incrementing `role.members`
         // by hand: a remove-then-re-add of the same address (see the
         // `retain` above) would otherwise inflate the count every time the
         // user re-links an address they already had.
         guild.verify.recompute_role_members();
-        guild.save(&app_state.pg_pool).await;
+        guild.save(&app_state.pg_pool).await?;
     }
     user_model.links.push(new_link.clone());
-    user_model.save(&app_state.pg_pool).await;
+    user_model.save(&app_state.pg_pool).await?;
     Ok(Json(json!(new_link)))
 }
 
@@ -257,11 +257,11 @@ async fn delete_link(
         // instead of the old `if role.members > 0 { role.members -= 1 }`
         // guard, which only existed because the counter was untrustworthy.
         guild.verify.recompute_role_members();
-        guild.save(&app_state.pg_pool).await;
+        guild.save(&app_state.pg_pool).await?;
     }
     existing_link.active = false;
     user_model.links.push(existing_link);
-    user_model.save(&app_state.pg_pool).await;
+    user_model.save(&app_state.pg_pool).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 

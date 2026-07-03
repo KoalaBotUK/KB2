@@ -12,3 +12,4 @@ aws-sdk-dsql = { workspace = true }
 sqlx = { workspace = true, features = [ "runtime-tokio", "tls-rustls" , "postgres", "uuid", "bigdecimal"] }
 tokio = { workspace = true }
 anyhow = { workspace = true }
+tracing = { workspace = true }
