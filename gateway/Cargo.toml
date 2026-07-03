@@ -10,3 +10,4 @@ twilight-model = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 reqwest = { workspace = true, features = ["json"] }
+serde_json = { workspace = true }
