@@ -29,8 +29,9 @@
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.16",
     "@vitejs/plugin-vue": "^5.2.1",
-    "jsdom": "^26.0.0",
+    "@vue/test-utils": "^2.4.6",
+    "jsdom": "^25.0.1",
     "vite": "^6.2.0",
-    "vitest": "^3.0.9"
+    "vitest": "^3.0.5"
   }
 }

@@ -37,28 +37,47 @@ impl Default for User {
     }
 }
 
+/// Parses the `links` and `link_guilds` JSON columns of a `users` row.
+///
+/// Extracted from the row-hydration code so it can be exercised in unit
+/// tests without a live database connection. Malformed/legacy JSON returns
+/// a `500` instead of panicking the handler (see issue #20).
+fn parse_links(
+    links_json: &str,
+    link_guilds_json: &str,
+) -> Result<(Vec<Link>, Vec<LinkGuild>), StatusCode> {
+    let links = serde_json::from_str(links_json).map_err(ise)?;
+    let link_guilds = serde_json::from_str(link_guilds_json).map_err(ise)?;
+    Ok((links, link_guilds))
+}
+
 impl User {
-    pub async fn from_db(user_id: Id<UserMarker>, pg_pool: &Pool<Postgres>) -> Option<User> {
-        match sqlx::query("SELECT id, links, link_guilds FROM users WHERE id = $1")
-        .bind(BigDecimal::from(user_id.into_nonzero().get()))
-        .fetch_optional(pg_pool)
-        .await {
-            Ok(Some(row)) => {
-                Some(User{
-                    user_id,
-                    links: serde_json::from_str(row.get::<&str, _>("links")).unwrap(),
-                    link_guilds: serde_json::from_str(row.get::<&str, _>("link_guilds")).unwrap(),
-                })
-            },
-            Ok(None) => Some(User{
+    /// Fetches a user from the DB.
+    ///
+    /// Returns `Ok(None)` if the user simply doesn't have a row yet, and
+    /// `Err(StatusCode)` only on an actual DB/deserialization failure, so
+    /// callers can tell "not found" apart from "the DB blipped" instead of
+    /// unwrapping both cases into a panic.
+    pub async fn from_db(
+        user_id: Id<UserMarker>,
+        pg_pool: &Pool<Postgres>,
+    ) -> Result<Option<User>, StatusCode> {
+        let row = sqlx::query("SELECT id, links, link_guilds FROM users WHERE id = $1")
+            .bind(BigDecimal::from(user_id.into_nonzero().get()))
+            .fetch_optional(pg_pool)
+            .await
+            .map_err(ise)?;
+
+        row.map(|row| {
+            let (links, link_guilds) =
+                parse_links(row.get::<&str, _>("links"), row.get::<&str, _>("link_guilds"))?;
+            Ok(User {
                 user_id,
-                ..Default::default()
-            }),
-            Err(e) => {
-                error!("Error fetching user from DB: {}", e);
-                None
-            }
-        }
+                links,
+                link_guilds,
+            })
+        })
+        .transpose()
     }
 
     pub async fn save(&self, pg_pool: &Pool<Postgres>) -> Result<(), StatusCode> {
@@ -100,5 +119,50 @@ mod tests {
             "save() must return an Err(StatusCode) when the underlying DB write fails, \
              not silently succeed"
         );
+    }
+
+    fn valid_links_json() -> String {
+        serde_json::to_string(&Vec::<Link>::new()).unwrap()
+    }
+
+    fn valid_link_guilds_json() -> String {
+        serde_json::to_string(&Vec::<LinkGuild>::new()).unwrap()
+    }
+
+    #[test]
+    fn parse_links_succeeds_on_well_formed_json() {
+        let result = parse_links(&valid_links_json(), &valid_link_guilds_json());
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn parse_links_returns_500_instead_of_panicking_on_malformed_links_json() {
+        // Regression test for issue #20: previously this hydration path used
+        // `.unwrap()`, so a single malformed/legacy row would panic every
+        // handler that touched the user, forever. It must now return a
+        // clean 500 instead.
+        let result = parse_links("not-json", &valid_link_guilds_json());
+        assert!(matches!(result, Err(StatusCode::INTERNAL_SERVER_ERROR)));
+    }
+
+    #[test]
+    fn parse_links_returns_500_instead_of_panicking_on_malformed_link_guilds_json() {
+        let result = parse_links(&valid_links_json(), "not-json");
+        assert!(matches!(result, Err(StatusCode::INTERNAL_SERVER_ERROR)));
+    }
+
+    #[test]
+    fn row_present_maps_to_some_row_missing_maps_to_none() {
+        // Mirrors the `row.map(..).transpose()` control flow used in
+        // `User::from_db`: a present row must produce `Ok(Some(_))`, and a
+        // genuinely missing row must produce `Ok(None)` -- NOT an error.
+        // Only a real DB/deserialization failure should produce `Err(_)`.
+        let present_row: Option<&str> = Some("row-data");
+        let result: Result<Option<&str>, StatusCode> = present_row.map(Ok).transpose();
+        assert_eq!(result, Ok(Some("row-data")));
+
+        let missing_row: Option<&str> = None;
+        let result: Result<Option<&str>, StatusCode> = missing_row.map(Ok).transpose();
+        assert_eq!(result, Ok(None));
     }
 }

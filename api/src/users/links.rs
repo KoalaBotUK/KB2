@@ -101,15 +101,21 @@ async fn post_link(
         active: true,
     };
     let mut user_model = User::from_db(user_id, &app_state.pg_pool)
-        .await
-        .unwrap();
+        .await?
+        .unwrap_or_else(|| User {
+            user_id,
+            ..Default::default()
+        });
     user_model
         .links
         .retain(|l| l.link_address != new_link.link_address);
     for link_guild in &user_model.link_guilds {
         let mut guild = Guild::from_db(link_guild.guild_id, &app_state.pg_pool)
-            .await
-            .unwrap();
+            .await?
+            .unwrap_or_else(|| Guild {
+                guild_id: link_guild.guild_id,
+                ..Default::default()
+            });
         for role in &guild.verify.roles {
             if link_match(&new_link, &role.pattern) {
                 add_guild_member_role(
@@ -191,8 +197,11 @@ async fn delete_link(
     check_delete_link_authorized(current_user.id, user_id)?;
 
     let mut user_model = User::from_db(user_id, &app_state.pg_pool)
-        .await
-        .unwrap();
+        .await?
+        .unwrap_or_else(|| User {
+            user_id,
+            ..Default::default()
+        });
     let pos = user_model
         .links
         .iter()
@@ -212,8 +221,11 @@ async fn delete_link(
         .collect();
     for guild in &user_model.link_guilds {
         let mut guild = Guild::from_db(guild.guild_id, &app_state.pg_pool)
-            .await
-            .unwrap();
+            .await?
+            .unwrap_or_else(|| Guild {
+                guild_id: guild.guild_id,
+                ..Default::default()
+            });
         guild
             .verify
             .user_links

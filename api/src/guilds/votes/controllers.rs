@@ -84,7 +84,12 @@ async fn post_votes(
     )
     .await?;
 
-    let mut guild = Guild::from_db(guild_id, &app_state.pg_pool).await.unwrap();
+    let mut guild = Guild::from_db(guild_id, &app_state.pg_pool)
+        .await?
+        .unwrap_or_else(|| Guild {
+            guild_id,
+            ..Default::default()
+        });
     let new_vote = VoteVote {
         message_id: message.id,
         title: vote_req.title.clone(),
@@ -203,7 +208,12 @@ async fn get_votes_id(
         return Err(StatusCode::FORBIDDEN);
     }
 
-    let guild = Guild::from_db(guild_id, &app_state.pg_pool).await.unwrap();
+    let guild = Guild::from_db(guild_id, &app_state.pg_pool)
+        .await?
+        .unwrap_or_else(|| Guild {
+            guild_id,
+            ..Default::default()
+        });
     let vote = find_vote(&guild.vote.votes, message_id).ok_or(StatusCode::NOT_FOUND)?;
     Ok(Json(json!(vote)))
 }
@@ -215,7 +225,12 @@ async fn close_vote(
     message_id: Id<MessageMarker>,
     app_state: &AppState,
 ) -> Result<VoteVote, StatusCode> {
-    let mut guild = Guild::from_db(guild_id, &app_state.pg_pool).await.unwrap();
+    let mut guild = Guild::from_db(guild_id, &app_state.pg_pool)
+        .await?
+        .unwrap_or_else(|| Guild {
+            guild_id,
+            ..Default::default()
+        });
     let vote: &mut VoteVote = match guild
         .vote
         .votes
