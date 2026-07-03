@@ -5,7 +5,6 @@ use axum::routing::get;
 use axum::{Extension, Json, Router};
 use http::StatusCode;
 use serde_json::{Value, json};
-use tower_http::cors::CorsLayer;
 use twilight_model::id::Id;
 use twilight_model::id::marker::UserMarker;
 use twilight_model::user::CurrentUser;
@@ -14,7 +13,6 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/@me", get(get_meta_users_me))
         .route("/{user_id}", get(get_meta_users_id))
-        .layer(CorsLayer::permissive())
 }
 
 pub async fn get_meta_users_me(

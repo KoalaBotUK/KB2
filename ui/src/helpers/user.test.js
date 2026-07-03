@@ -62,4 +62,36 @@ describe("linkEmail", () => {
 
     expect(loadCacheSpy).toHaveBeenCalledTimes(2);
   });
+
+  // Regression tests for issue #47: the `overwrite` param was previously
+  // silently dropped from the request body sent to the API.
+  it("sends overwrite: true in the POST body when overwrite=true", async () => {
+    vi.spyOn(User, "loadCache").mockReturnValue({
+      userId: "test-user-id",
+      token: { accessToken: "test-access-token" },
+    });
+
+    await linkEmail("some-organization", "some-token", true);
+
+    expect(axios.post).toHaveBeenCalledTimes(1);
+    const [, body] = axios.post.mock.calls[0];
+    expect(body).toHaveProperty("overwrite", true);
+    expect(body).toMatchObject({
+      origin: "some-organization",
+      token: "some-token",
+      overwrite: true,
+    });
+  });
+
+  it("defaults overwrite to false when the argument is omitted", async () => {
+    vi.spyOn(User, "loadCache").mockReturnValue({
+      userId: "test-user-id",
+      token: { accessToken: "test-access-token" },
+    });
+
+    await linkEmail("some-organization", "some-token");
+
+    const [, body] = axios.post.mock.calls[0];
+    expect(body).toHaveProperty("overwrite", false);
+  });
 });

@@ -164,13 +164,11 @@ export class Guild {
   guildId
   verify
   vote
-  userLinks
 
-  constructor(guildId, verify, vote, userLinks) {
+  constructor(guildId, verify, vote) {
     this.guildId = guildId
     this.verify = verify
     this.vote = vote
-    this.userLinks = userLinks
   }
 
   toJson() {
@@ -208,14 +206,5 @@ export class Guild {
       }
     });
     return r.data.map(g => Guild.fromJson(g))
-  }
-
-  async save() {
-    let user = User.loadCache();
-    await axios.put(`${VITE_KB_API_URL}/guilds/${this.guildId}`, this.toJson(), {
-      headers: {
-        'Authorization': 'Discord ' + user.token.accessToken
-      }
-    });
   }
 }
