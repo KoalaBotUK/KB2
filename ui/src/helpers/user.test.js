@@ -1,50 +1,97 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import axios from 'axios'
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import axios from "axios";
+import { User } from "../stores/user.js";
+import { linkEmail } from "./user.js";
 
-vi.mock('axios')
+// Regression test for issue #48: "Store modules capture stale user at import
+// time via module-level User.loadCache() snapshot".
+//
+// Before the fix, `let user = User.loadCache()` sat at module scope, so the
+// value returned by `User.loadCache()` at the moment the module was first
+// imported was captured once and reused forever - later changes to the
+// cached user (re-login, token refresh, logout/login as someone else) were
+// silently ignored by every call into the module. The fix moved the
+// `User.loadCache()` call inside each function body so it is read fresh on
+// every invocation.
+//
+// This test drives `linkEmail` twice within a single test, changing what
+// `User.loadCache()` returns between the two calls, and asserts that the
+// *second* call picks up the *new* value rather than the one returned by
+// the first call.
 
-// linkEmail reads the cached user (id + access token) at import time via
-// User.loadCache(). Stub the store module so the test doesn't depend on
-// localStorage/jsdom - we only care about what linkEmail sends to axios.
-vi.mock('../stores/user.js', () => ({
-  User: {
-    loadCache: () => ({
-      userId: 'test-user-id',
-      token: { accessToken: 'test-access-token' }
-    })
-  }
-}))
+vi.mock("axios");
 
-const { linkEmail } = await import('./user.js')
-
-describe('linkEmail', () => {
+describe("linkEmail", () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.restoreAllMocks();
+    axios.post.mockResolvedValue({ data: {} });
+  });
 
-  it('sends overwrite: true in the POST body when overwrite=true', async () => {
-    axios.post.mockResolvedValue({ data: {} })
+  it("reads User.loadCache() fresh on every call instead of a stale snapshot", async () => {
+    const userA = { userId: "user-a", token: { accessToken: "token-a" } };
+    const userB = { userId: "user-b", token: { accessToken: "token-b" } };
 
-    await linkEmail('some-organization', 'some-token', true)
+    const loadCacheSpy = vi.spyOn(User, "loadCache");
 
-    expect(axios.post).toHaveBeenCalledTimes(1)
-    const [, body] = axios.post.mock.calls[0]
-    // Regression check for issue #47: the overwrite param was previously
-    // silently dropped from the request body.
-    expect(body).toHaveProperty('overwrite', true)
+    loadCacheSpy.mockReturnValueOnce(userA);
+    await linkEmail("google", "tok1");
+
+    expect(axios.post).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining(`/users/${userA.userId}/links`),
+      expect.objectContaining({ origin: "google", token: "tok1" }),
+      expect.objectContaining({
+        headers: { Authorization: `Discord ${userA.token.accessToken}` },
+      }),
+    );
+
+    // Simulate the cached user changing between calls (e.g. a fresh
+    // login). If `User.loadCache()` were only read once at import time,
+    // this second call would still behave as if `userA` were current.
+    loadCacheSpy.mockReturnValueOnce(userB);
+    await linkEmail("google", "tok2");
+
+    expect(axios.post).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining(`/users/${userB.userId}/links`),
+      expect.objectContaining({ origin: "google", token: "tok2" }),
+      expect.objectContaining({
+        headers: { Authorization: `Discord ${userB.token.accessToken}` },
+      }),
+    );
+
+    expect(loadCacheSpy).toHaveBeenCalledTimes(2);
+  });
+
+  // Regression tests for issue #47: the `overwrite` param was previously
+  // silently dropped from the request body sent to the API.
+  it("sends overwrite: true in the POST body when overwrite=true", async () => {
+    vi.spyOn(User, "loadCache").mockReturnValue({
+      userId: "test-user-id",
+      token: { accessToken: "test-access-token" },
+    });
+
+    await linkEmail("some-organization", "some-token", true);
+
+    expect(axios.post).toHaveBeenCalledTimes(1);
+    const [, body] = axios.post.mock.calls[0];
+    expect(body).toHaveProperty("overwrite", true);
     expect(body).toMatchObject({
-      origin: 'some-organization',
-      token: 'some-token',
-      overwrite: true
-    })
-  })
+      origin: "some-organization",
+      token: "some-token",
+      overwrite: true,
+    });
+  });
 
-  it('defaults overwrite to false when the argument is omitted', async () => {
-    axios.post.mockResolvedValue({ data: {} })
+  it("defaults overwrite to false when the argument is omitted", async () => {
+    vi.spyOn(User, "loadCache").mockReturnValue({
+      userId: "test-user-id",
+      token: { accessToken: "test-access-token" },
+    });
 
-    await linkEmail('some-organization', 'some-token')
+    await linkEmail("some-organization", "some-token");
 
-    const [, body] = axios.post.mock.calls[0]
-    expect(body).toHaveProperty('overwrite', false)
-  })
-})
+    const [, body] = axios.post.mock.calls[0];
+    expect(body).toHaveProperty("overwrite", false);
+  });
+});
