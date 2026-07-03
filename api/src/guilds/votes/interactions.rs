@@ -82,8 +82,11 @@ pub(crate) async fn handle_component_interaction(
     } = extract_vote_interaction_fields(guild_id, member, message.map(|m| m.id), user)?;
 
     let mut guild = Guild::from_db(guild_id, &app_state.pg_pool)
-        .await
-        .unwrap();
+        .await?
+        .unwrap_or_else(|| Guild {
+            guild_id,
+            ..Default::default()
+        });
 
     let VoteVote {
         options,
