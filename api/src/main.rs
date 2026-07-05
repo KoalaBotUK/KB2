@@ -90,9 +90,6 @@ async fn main() -> Result<(), Error> {
         reqwest: Arc::new(reqwest::Client::new()),
     };
 
-    // guilds::tasks::update_guilds(&app_state.discord_bot, &app_state.pg_pool).await;
-    setup(app_state.discord_bot.clone());
-
     // Only allow requests from the first-party UI origin(s). This API trusts the
     // `Authorization` header for auth, so a permissive `*` origin would let any
     // website script requests against it using a token it has obtained.
@@ -121,10 +118,6 @@ async fn main() -> Result<(), Error> {
     } else {
         run_local(app).await
     }
-}
-
-fn setup(discord_bot: Arc<twilight_http::Client>) {
-    meta::setup(discord_bot);
 }
 
 /// Parses the `CORS_ALLOWED_ORIGIN` environment variable into a header value
