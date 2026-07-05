@@ -1,20 +1,14 @@
 use crate::AppState;
-use crate::discord::{
-    get_current_user_guild, get_current_user_guilds_prime_cache, get_guild, get_guild_channels,
-    get_guild_prime_cache,
-};
+use crate::discord::{get_current_user_guild, get_guild, get_guild_channels};
 use crate::utils::member_guilds;
 use axum::extract::{Path, State};
 use axum::routing::get;
 use axum::{Extension, Json, Router};
 use http::StatusCode;
-use lambda_http::tracing::{debug, error, info, warn};
+use lambda_http::tracing::warn;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use std::ops::{Add, Sub};
 use std::sync::Arc;
-use std::time::Duration;
-use tokio::time::{Instant, sleep};
 use twilight_http::Client;
 use twilight_model::channel::Channel;
 use twilight_model::guild::{Permissions, Role};
@@ -27,13 +21,6 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(get_meta_guilds))
         .route("/{guild_id}", get(get_meta_guilds_id))
-}
-
-pub fn setup(discord_bot: Arc<Client>) {
-    info!("Spawning meta cache refresh task");
-    if false {
-        tokio::spawn(refresh_meta_cache(discord_bot));
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -109,29 +96,4 @@ async fn get_meta_guilds_id(
         roles: guild.roles,
         channels
     })))
-}
-
-async fn refresh_meta_cache(discord_bot: Arc<Client>) {
-    loop {
-        debug!("Refreshing meta cache");
-        let time = Instant::now();
-        match get_current_user_guilds_prime_cache(&discord_bot).await {
-            Ok(guilds) => {
-                debug!("Refreshing meta cache: {}", guilds.len());
-                for guild in guilds {
-                    let _ = get_guild_prime_cache(guild.id, &discord_bot).await;
-                }
-            }
-            Err(e) => {
-                error!("refresh_meta_cache error: {:#?}", e);
-            }
-        }
-        debug!(
-            "{:?} {:?} Waiting {} seconds",
-            time,
-            Instant::now(),
-            (time.sub(Instant::now()).add(Duration::from_secs(50))).as_secs()
-        );
-        sleep((time.sub(Instant::now())).add(Duration::from_secs(50))).await;
-    }
 }
