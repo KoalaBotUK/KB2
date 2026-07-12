@@ -1,6 +1,7 @@
 # Verify Role Reconciliation — Low Level Design
 
-Status: **Proposed** · Companion to [`verify_recon_architecture.md`](./verify_recon_architecture.md)
+Status: **Proposed** · Companion to
+[`high-level-architecture/verify-role-reconciliation.md`](../high-level-architecture/verify-role-reconciliation.md)
 (high-level design & decision record). This document specifies the implementation: schemas,
 module layout, code, message contracts, infra diffs, tuning constants, and the failure matrix.
 
