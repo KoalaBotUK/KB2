@@ -100,6 +100,21 @@ impl Guild {
     }
 
     pub async fn save(&self, pg_pool: &Pool<Postgres>) -> Result<(), StatusCode> {
+        // Legacy blobs still carry per-user links in `verify.user_links`.
+        // `Verify` no longer serializes that field, so the blob written below
+        // will drop it — seed the rows into `guild_user_links` FIRST so no
+        // links are lost. `ON CONFLICT DO NOTHING` keeps rows the new
+        // single-row handlers have already written (they are always fresher
+        // than the blob). No-op for post-migration guilds (empty map).
+        if !self.verify.user_links.is_empty() {
+            common::verify::GuildUserLink::seed_from_blob(
+                self.guild_id,
+                &self.verify.user_links,
+                pg_pool,
+            )
+            .await
+            .map_err(ise)?;
+        }
         sqlx::query("INSERT INTO guilds (id, verify, vote) VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET verify = $2, vote = $3, updated_at = CURRENT_TIMESTAMP")
             .bind(BigDecimal::from(self.guild_id.into_nonzero().get()))
             .bind(serde_json::to_string(&self.verify).map_err(ise)?)

@@ -23,3 +23,13 @@ export async function deleteVerifyRole(guildId, roleId, accessToken) {
     }
   )
 }
+
+export async function getVerifyJob(guildId, accessToken) {
+  return await axios.get(`${VITE_KB_API_URL}/guilds/${guildId}/verify/job`,
+    {
+      headers: {
+        'Authorization': 'Discord ' + accessToken
+      }
+    }
+  )
+}

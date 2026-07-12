@@ -1,26 +1,26 @@
 use crate::AppState;
-use crate::discord::{add_guild_member_role, get_current_user_guild, remove_guild_member_role};
+use crate::audit::audit;
+use crate::discord::{add_guild_member_role, get_current_user_guild, ise, remove_guild_member_role};
 use crate::guilds::models::Guild;
 use crate::users::models::{Link, LinkGuild, User};
 use crate::users::utils::link_arr_match;
 use axum::extract::{Path, State};
 use axum::routing::put;
 use axum::{Extension, Json};
+use common::audit::AuditMessage;
+use common::verify::{GuildUserLink, effective_links};
 use http::StatusCode;
 use serde_json::{Value, json};
 use std::sync::Arc;
 use twilight_model::id::Id;
 use twilight_model::id::marker::{GuildMarker, UserMarker};
 use twilight_model::user::CurrentUser;
-use common::audit::AuditMessage;
-use crate::audit::audit;
 
 pub fn router() -> axum::Router<AppState> {
-    axum::Router::new()
-        .route(
-            "/{guild_id}",
-            put(put_link_guilds_id).delete(delete_link_guilds_id),
-        )
+    axum::Router::new().route(
+        "/{guild_id}",
+        put(put_link_guilds_id).delete(delete_link_guilds_id),
+    )
 }
 
 async fn put_link_guilds_id(
@@ -57,13 +57,20 @@ async fn put_link_guilds_id(
             ..Default::default()
         });
 
-    // Capture the previously stored links (if any) so we only assign roles
-    // that don't already match, instead of skipping role sync entirely
-    // when the user has linked this guild before.
-    let previous_links = guild.verify.user_links.get(&user.user_id).cloned();
-    guild.verify.user_links.insert(user_id, user.links.clone());
+    // Previously stored links (normalized row, or the legacy blob entry for
+    // unmigrated guilds) so we only assign roles that don't already match —
+    // re-enabling an already-linked guild stays idempotent.
+    let previous_links =
+        effective_links(&guild.verify, guild_id, user_id, &app_state.pg_pool)
+            .await
+            .map_err(ise)?;
+    // Single-row write, replacing the old whole-blob read-modify-write.
+    GuildUserLink::upsert(guild_id, user_id, &user.links, &app_state.pg_pool)
+        .await
+        .map_err(ise)?;
 
-    for verify_role in &guild.verify.roles {
+    let roles = guild.verify.roles.clone();
+    for verify_role in &roles {
         if role_newly_qualifies(&user.links, previous_links.as_deref(), &verify_role.pattern) {
             add_guild_member_role(
                 guild_id,
@@ -72,19 +79,27 @@ async fn put_link_guilds_id(
                 &app_state.discord_bot,
             )
             .await?;
+            // This path knows exactly when a user newly qualifies, so the
+            // count is a ±1 delta — no full recompute, no O(guild) memory.
+            guild.verify.bump_members(verify_role.role_id, 1);
         }
     }
-    // Derive `members` from `user_links` (now updated above) rather than
-    // hand-incrementing it, so this stays consistent with every other
-    // mutation site (link add/remove, role add/remove, recon).
-    guild.verify.recompute_role_members();
 
     guild.save(&app_state.pg_pool).await?;
 
     // write audit
-    audit(AuditMessage::new("update_link_guilds".to_string(), user_id, Some(guild_id),
-                             Some(audit_old_data), Some(audit_new_data)), &app_state.sqs).await;
-    
+    audit(
+        AuditMessage::new(
+            "update_link_guilds".to_string(),
+            user_id,
+            Some(guild_id),
+            Some(audit_old_data),
+            Some(audit_new_data),
+        ),
+        &app_state.sqs,
+    )
+    .await;
+
     Ok(Json(json!(new_link_guild)))
 }
 
@@ -103,8 +118,7 @@ fn role_newly_qualifies(
     pattern: &str,
 ) -> bool {
     let matches = link_arr_match(current_links, pattern);
-    let previously_matched =
-        previous_links.is_some_and(|links| link_arr_match(links, pattern));
+    let previously_matched = previous_links.is_some_and(|links| link_arr_match(links, pattern));
     matches && !previously_matched
 }
 
@@ -134,16 +148,24 @@ async fn delete_link_guilds_id(
             ..Default::default()
         });
 
-    for role in &guild.verify.roles {
-        if link_arr_match(&user.links, &role.pattern) {
+    // What the user actually had linked in this guild (row or legacy blob):
+    // this decides which roles to strip and which counts to decrement.
+    let stored_links = effective_links(&guild.verify, guild_id, user_id, &app_state.pg_pool)
+        .await
+        .map_err(ise)?
+        .unwrap_or_default();
+
+    let roles = guild.verify.roles.clone();
+    for role in &roles {
+        if link_arr_match(&stored_links, &role.pattern) {
             remove_guild_member_role(guild_id, user_id, role.role_id, &app_state.discord_bot)
                 .await?;
+            guild.verify.bump_members(role.role_id, -1);
         }
     }
-    guild.verify.user_links.remove(&user_id);
-    // Recompute instead of the old `if role.members > 0 { role.members -= 1 }`
-    // guard, which was only needed because the counter could otherwise drift.
-    guild.verify.recompute_role_members();
+    GuildUserLink::remove(guild_id, user_id, &app_state.pg_pool)
+        .await
+        .map_err(ise)?;
 
     user.save(&app_state.pg_pool).await?;
     guild.save(&app_state.pg_pool).await?;

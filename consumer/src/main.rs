@@ -1,15 +1,20 @@
 mod audit;
+mod verify;
+
+use std::sync::Arc;
 
 use aws_lambda_events::event::sqs::{SqsBatchResponse, SqsEvent};
 use aws_sdk_dsql::config::BehaviorVersion;
-use lambda_runtime::{run, service_fn, Error, LambdaEvent};
+use common::dsql::establish_connection;
+use lambda_runtime::{Error, LambdaEvent, run, service_fn};
 use sqlx::{Pool, Postgres};
 use tracing::{error, info};
-use common::dsql::establish_connection;
 
 #[derive(Clone)]
 pub struct AppState {
     pub pg_pool: Pool<Postgres>,
+    pub sqs: aws_sdk_sqs::Client,
+    pub discord_bot: Arc<twilight_http::Client>,
 }
 
 async fn function_handler(event: LambdaEvent<SqsEvent>, state: &AppState) -> Result<SqsBatchResponse, Error> {
@@ -27,6 +32,14 @@ async fn function_handler(event: LambdaEvent<SqsEvent>, state: &AppState) -> Res
                             // batch can still succeed, instead of panicking and
                             // causing the whole batch to be redelivered forever.
                             error!("Failed to process audit message {}: {}", message_id, e);
+                            response.add_failure(message_id);
+                        }
+                    }
+                    Some(common::verify::RECON_MESSAGE_KIND) => {
+                        if let Err(e) = verify::consume(message.clone(), state).await {
+                            // Redelivery resumes from the job's checkpoint; the
+                            // lease will have expired by the time it arrives.
+                            error!("Failed to process verify_recon message {}: {}", message_id, e);
                             response.add_failure(message_id);
                         }
                     }
@@ -64,8 +77,16 @@ async fn main() -> Result<(), Error> {
     )
         .await?;
 
+    let discord_bot = Arc::new(
+        twilight_http::Client::builder()
+            .token(std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set"))
+            .build(),
+    );
+
     let state = AppState {
         pg_pool: pool,
+        sqs: aws_sdk_sqs::Client::new(&config),
+        discord_bot,
     };
 
     run(service_fn(|event: LambdaEvent<SqsEvent>| {

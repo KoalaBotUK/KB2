@@ -1,18 +1,23 @@
 <script setup>
 
-import {ref, defineModel} from "vue";
+import {ref, defineModel, onUnmounted} from "vue";
 import {User} from "../../stores/user.js";
-import {Guild, VerifyRole} from "../../stores/guild.js";
+import {Guild, VerifyRole, VerifyJob} from "../../stores/guild.js";
 import {GuildMeta} from "../../stores/meta.js";
 import {INVITE_URL} from "../../helpers/redirect.js";
 import RoleTag from "../discord/RoleTag.vue";
 import RoleSelect from "../discord/RoleSelect.vue";
-import {deleteVerifyRole, putVerifyRole} from "../../helpers/verify.js";
+import {deleteVerifyRole, getVerifyJob, putVerifyRole} from "../../helpers/verify.js";
 
 let roleSelected = ref(null);
 let modelPattern = defineModel('modelPattern');
 let modalActiveRef = ref(false);
 let selectedType = ref('domain');
+// Role changes reconcile asynchronously (the API returns 202 + a job
+// snapshot): jobRef drives the "Syncing roles…" progress bar while the
+// backend fans the Discord role calls out at rate-limit pace.
+let jobRef = ref(null);
+let pollTimer = null;
 
 let props = defineProps(
     {
@@ -39,6 +44,32 @@ async function updateGuild() {
   emits('update');
 }
 
+// Tracks a reconciliation job: schedules the next status poll while the job
+// is active, refreshes the guild (member counts) once it succeeds. Poll
+// cadence backs off for big-guild jobs that run for minutes/hours.
+function trackJob(job) {
+  jobRef.value = job;
+  clearTimeout(pollTimer);
+  if (!job || !job.isActive()) {
+    if (job && job.status === 'succeeded') {
+      emits('update');
+    }
+    return;
+  }
+  const delay = job.total > 2000 ? 15000 : 2000;
+  pollTimer = setTimeout(async () => {
+    try {
+      const resp = await getVerifyJob(props.guild.guildId, userRef.value.token.accessToken);
+      trackJob(VerifyJob.fromJson(resp.data));
+    } catch (e) {
+      // Transient poll failure: keep the bar, try again on the same cadence.
+      trackJob(jobRef.value);
+    }
+  }, delay);
+}
+
+onUnmounted(() => clearTimeout(pollTimer));
+
 async function addVerifyRole() {
   if (!validAdd()) {
     alert("Please fill in all fields.");
@@ -54,9 +85,14 @@ async function addVerifyRole() {
   if (!props.guild.verify.roles) {
     props.guild.verify.roles = []
   }
+  // 202 Accepted: { role, job } — the role is desired state, the job tracks
+  // the asynchronous Discord fan-out.
   let putResp = await putVerifyRole(props.guild.guildId, roleId, pattern, userRef.value.token.accessToken)
   props.guild.verify.roles = props.guild.verify.roles.filter(r => r.roleId !== roleId)
-  props.guild.verify.roles.push(VerifyRole.fromJson(putResp.data));
+  props.guild.verify.roles.push(VerifyRole.fromJson(putResp.data.role));
+  if (putResp.data.job) {
+    trackJob(VerifyJob.fromJson(putResp.data.job));
+  }
 
   // Reset form fields
   roleSelected.value = null;
@@ -65,8 +101,12 @@ async function addVerifyRole() {
 }
 
 async function removeVerifyRole(role) {
-  await deleteVerifyRole(props.guild.guildId, role.roleId, userRef.value.token.accessToken);
+  // 202 Accepted: { job } — or 204 when the role wasn't configured.
+  let deleteResp = await deleteVerifyRole(props.guild.guildId, role.roleId, userRef.value.token.accessToken);
   props.guild.verify.roles = props.guild.verify.roles.filter(r => r.roleId !== role.roleId);
+  if (deleteResp.status === 202 && deleteResp.data && deleteResp.data.job) {
+    trackJob(VerifyJob.fromJson(deleteResp.data.job));
+  }
 }
 
 function validRole() {
@@ -94,6 +134,17 @@ function validAdd() {
         <button class="btn btn-primary btn-sm justify-end" @click="modalActiveRef = true">Add</button>
       </div>
       <div class="divider my-0"></div>
+      <div v-if="jobRef && jobRef.status !== 'succeeded'" class="px-2 pb-2" data-testid="verify-job-progress">
+        <template v-if="jobRef.isActive()">
+          <progress class="progress progress-primary w-full"
+                    :value="jobRef.processed" :max="Math.max(jobRef.total, 1)"/>
+          <span class="text-sm">
+            Syncing roles… {{ jobRef.processed.toLocaleString() }} / {{ jobRef.total.toLocaleString() }}
+            <span v-if="jobRef.errors" class="text-warning">({{ jobRef.errors.toLocaleString() }} skipped)</span>
+          </span>
+        </template>
+        <span v-else class="text-sm text-error">Role sync failed — try again or run a recon.</span>
+      </div>
       <div class="overflow-x-auto">
       <table class="table">
         <thead>

@@ -11,6 +11,8 @@ tracing-subscriber = { workspace = true }
 tracing = { workspace = true }
 serde = { workspace = true }
 twilight-model = { workspace = true }
+twilight-http = { workspace = true }
+aws-sdk-sqs = { workspace = true }
 uuid = { workspace = true }
 sqlx = { workspace = true, features = [ "runtime-tokio", "tls-rustls" , "postgres", "uuid", "bigdecimal"] }
 aws-sdk-dsql = { workspace = true }
