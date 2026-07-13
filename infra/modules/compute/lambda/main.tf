@@ -174,8 +174,13 @@ resource "aws_iam_role_policy_attachment" "consumer_dsql_dbconnect_attach" {
 
 data "aws_iam_policy_document" "lambda_consumer_sqs_policy" {
   statement {
-    effect    = "Allow"
-    actions   = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes", ]
+    effect = "Allow"
+    actions = [
+      "sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes",
+      # The verify reconciliation worker re-enqueues its own continuation
+      # tokens (with DelaySeconds carrying any 429 backoff).
+      "sqs:SendMessage",
+    ]
     resources = [var.sqs_arn]
   }
 }
@@ -192,7 +197,9 @@ resource "aws_lambda_function" "lambda_consumer" {
   role          = aws_iam_role.lambda_consumer_role.arn
   handler       = "main"
   filename      = data.archive_file.empty_zip.output_path
-  timeout       = 10
+  # Must exceed the verify worker's 60s work budget plus one full batch
+  # overrun and the final checkpoint + continuation send.
+  timeout       = 120
 
   runtime = "provided.al2023"
 
@@ -204,6 +211,9 @@ resource "aws_lambda_function" "lambda_consumer" {
       DEPLOYMENT_ENV                       = var.deployment_env
       DSQL_USER                            = var.dsql_user
       DSQL_ENDPOINT                        = var.dsql_endpoint
+      # Verify reconciliation worker: continuation sends + Discord role calls.
+      SQS_URL                              = var.sqs_url
+      DISCORD_BOT_TOKEN                    = var.discord_bot_token
     }
   }
 }

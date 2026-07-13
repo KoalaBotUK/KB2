@@ -5,6 +5,12 @@ resource "aws_sqs_queue" "dlq" {
 resource "aws_sqs_queue" "default" {
   name                      = "kb2-queue-${var.deployment_env}"
   receive_wait_time_seconds = 10
+  # >= 6x the consumer Lambda timeout (120s), per AWS event-source-mapping
+  # guidance, and > the verify worker's 240s job lease so a redelivered
+  # message always finds a crashed invocation's lease already expired.
+  # Trade-off: a *failed* audit message now waits up to 12 min before
+  # redelivery (successes are unaffected).
+  visibility_timeout_seconds = 720
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.dlq.arn
     maxReceiveCount     = 4

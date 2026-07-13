@@ -7,12 +7,9 @@ use sqlx::types::BigDecimal;
 use twilight_model::id::Id;
 use twilight_model::id::marker::{GuildMarker, UserMarker};
 
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
-pub struct Link {
-    pub link_address: String,
-    pub linked_at: u64,
-    pub active: bool,
-}
+// `Link` now lives in `common::verify` (the consumer crate's reconciliation
+// worker needs it too); re-exported so existing paths keep working.
+pub use common::verify::Link;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LinkGuild {

@@ -1,45 +1,10 @@
-mod audit;
+use std::sync::Arc;
 
-use aws_lambda_events::event::sqs::{SqsBatchResponse, SqsEvent};
+use aws_lambda_events::event::sqs::SqsEvent;
 use aws_sdk_dsql::config::BehaviorVersion;
-use lambda_runtime::{run, service_fn, Error, LambdaEvent};
-use sqlx::{Pool, Postgres};
-use tracing::{error, info};
 use common::dsql::establish_connection;
-
-#[derive(Clone)]
-pub struct AppState {
-    pub pg_pool: Pool<Postgres>,
-}
-
-async fn function_handler(event: LambdaEvent<SqsEvent>, state: &AppState) -> Result<SqsBatchResponse, Error> {
-    let mut response = SqsBatchResponse::default();
-
-    for message in event.payload.records {
-        let message_id = message.message_id.clone().unwrap_or_default();
-        info!("Message body: {:?}", message.body);
-        match message.message_attributes.get("kind") {
-            Some(attr) => {
-                match attr.string_value.as_deref() {
-                    Some("audit") => {
-                        if let Err(e) = audit::consume(message.clone(), state).await {
-                            // Report only this message as failed so the rest of the
-                            // batch can still succeed, instead of panicking and
-                            // causing the whole batch to be redelivered forever.
-                            error!("Failed to process audit message {}: {}", message_id, e);
-                            response.add_failure(message_id);
-                        }
-                    }
-                    _ => error!("Unknown message type: {}; body: {}", attr.string_value.as_deref().unwrap_or_default(), message.body.as_deref().unwrap_or_default())
-                }
-
-            }
-            _ => error!("Unknown message kind; body: {}", message.body.as_deref().unwrap_or_default())
-        }
-    }
-
-    Ok(response)
-}
+use consumer::{AppState, function_handler};
+use lambda_runtime::{Error, LambdaEvent, run, service_fn};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -64,8 +29,16 @@ async fn main() -> Result<(), Error> {
     )
         .await?;
 
+    let discord_bot = Arc::new(
+        twilight_http::Client::builder()
+            .token(std::env::var("DISCORD_BOT_TOKEN").expect("DISCORD_BOT_TOKEN must be set"))
+            .build(),
+    );
+
     let state = AppState {
         pg_pool: pool,
+        sqs: aws_sdk_sqs::Client::new(&config),
+        discord_bot,
     };
 
     run(service_fn(|event: LambdaEvent<SqsEvent>| {

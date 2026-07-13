@@ -5,6 +5,7 @@ use crate::users::email::send_verify_email;
 use crate::users::models::{Link, User};
 use crate::users::utils::{link_arr_match, link_match};
 use axum::extract::{Path, State};
+use common::verify::{GuildUserLink, effective_links};
 use axum::routing::{delete, post};
 use axum::{Extension, Json};
 use hmac::{Hmac, Mac};
@@ -136,7 +137,20 @@ async fn post_link(
                 guild_id: link_guild.guild_id,
                 ..Default::default()
             });
-        for role in &guild.verify.roles {
+        // Previously stored links for this guild (normalized row, or the
+        // legacy blob entry for unmigrated guilds): decides whether a role
+        // add is *newly* qualifying (count delta) or a harmless re-add.
+        let previous = effective_links(&guild.verify, guild.guild_id, user_id, &app_state.pg_pool)
+            .await
+            .map_err(ise)?;
+        // A remove-then-re-add of the same address must not accumulate
+        // duplicates in the stored row (mirrors the `retain` above).
+        let mut current = previous.clone().unwrap_or_default();
+        current.retain(|l| l.link_address != new_link.link_address);
+        current.push(new_link.clone());
+
+        let roles = guild.verify.roles.clone();
+        for role in &roles {
             if link_match(&new_link, &role.pattern) {
                 add_guild_member_role(
                     guild.guild_id,
@@ -145,19 +159,21 @@ async fn post_link(
                     &app_state.discord_bot,
                 )
                 .await?;
+                // Count only when the user *newly* qualifies: re-linking an
+                // address they already had must not inflate the count (the
+                // bug recompute_role_members used to paper over).
+                if !previous
+                    .as_deref()
+                    .is_some_and(|p| link_arr_match(p, &role.pattern))
+                {
+                    guild.verify.bump_members(role.role_id, 1);
+                }
             }
         }
-        guild
-            .verify
-            .user_links
-            .entry(user_id)
-            .or_default()
-            .push(new_link.clone());
-        // Recompute from `user_links` instead of incrementing `role.members`
-        // by hand: a remove-then-re-add of the same address (see the
-        // `retain` above) would otherwise inflate the count every time the
-        // user re-links an address they already had.
-        guild.verify.recompute_role_members();
+        // Single-row write, replacing the old whole-blob read-modify-write.
+        GuildUserLink::upsert(guild.guild_id, user_id, &current, &app_state.pg_pool)
+            .await
+            .map_err(ise)?;
         guild.save(&app_state.pg_pool).await?;
     }
     user_model.links.push(new_link.clone());
@@ -187,6 +203,15 @@ async fn oidc_email(url: &str, token: String, app_state: &AppState) -> Result<St
     } else {
         Err(StatusCode::UNAUTHORIZED)
     }
+}
+
+/// Decides whether unlinking dropped the user below a role's threshold: the
+/// role must be stripped (and its count decremented) only when the user's
+/// *previously stored* links matched the pattern but their *remaining*
+/// active links no longer do. Removing one of several matching addresses
+/// keeps the role; removing an address that never matched touches nothing.
+fn role_no_longer_qualifies(previous_links: &[Link], current_links: &[Link], pattern: &str) -> bool {
+    link_arr_match(previous_links, pattern) && !link_arr_match(current_links, pattern)
 }
 
 /// Authorizes a `delete_link` request: the middleware-provided current user
@@ -246,16 +271,16 @@ async fn delete_link(
                 guild_id: guild.guild_id,
                 ..Default::default()
             });
-        guild
-            .verify
-            .user_links
-            .insert(user_id, active_only_links.clone());
-        for role in &guild.verify.roles {
-            if !link_arr_match(
-                guild.verify.user_links.get(&user_id).unwrap(),
-                &role.pattern,
-            ) && link_match(&existing_link, &role.pattern)
-            {
+        // What the user had stored in this guild before the unlink
+        // (normalized row, or the legacy blob entry for unmigrated guilds).
+        let previous = effective_links(&guild.verify, guild.guild_id, user_id, &app_state.pg_pool)
+            .await
+            .map_err(ise)?
+            .unwrap_or_default();
+
+        let roles = guild.verify.roles.clone();
+        for role in &roles {
+            if role_no_longer_qualifies(&previous, &active_only_links, &role.pattern) {
                 remove_guild_member_role(
                     guild.guild_id,
                     user_id,
@@ -263,12 +288,16 @@ async fn delete_link(
                     &app_state.discord_bot,
                 )
                 .await?;
+                // Saturating ±1 delta — can never underflow like the old
+                // `if role.members > 0 { role.members -= 1 }` guard existed
+                // to protect against.
+                guild.verify.bump_members(role.role_id, -1);
             }
         }
-        // `user_links` was already updated above; derive `members` from it
-        // instead of the old `if role.members > 0 { role.members -= 1 }`
-        // guard, which only existed because the counter was untrustworthy.
-        guild.verify.recompute_role_members();
+        // Single-row write, replacing the old whole-blob read-modify-write.
+        GuildUserLink::upsert(guild.guild_id, user_id, &active_only_links, &app_state.pg_pool)
+            .await
+            .map_err(ise)?;
         guild.save(&app_state.pg_pool).await?;
     }
     existing_link.active = false;
@@ -390,6 +419,52 @@ mod tests {
             token.verify_with_key(&key).expect("verification succeeds");
         let exp: Option<u64> = verified.get("exp").and_then(|e| e.parse().ok());
         assert_eq!(exp, None, "missing exp should parse to None, not panic");
+    }
+
+    fn active_link(address: &str) -> Link {
+        Link {
+            link_address: address.to_string(),
+            linked_at: 0,
+            active: true,
+        }
+    }
+
+    #[test]
+    fn role_no_longer_qualifies_when_last_matching_link_is_removed() {
+        let previous = vec![active_link("a@example.com")];
+        let current: Vec<Link> = vec![];
+
+        assert!(role_no_longer_qualifies(
+            &previous,
+            &current,
+            r"@example\.com$"
+        ));
+    }
+
+    #[test]
+    fn role_still_qualifies_when_another_matching_link_remains() {
+        // Removing ONE of two matching addresses must keep the role and the
+        // count — the user still qualifies via the other address.
+        let previous = vec![active_link("a@example.com"), active_link("b@example.com")];
+        let current = vec![active_link("b@example.com")];
+
+        assert!(!role_no_longer_qualifies(
+            &previous,
+            &current,
+            r"@example\.com$"
+        ));
+    }
+
+    #[test]
+    fn role_untouched_when_removed_link_never_matched() {
+        let previous = vec![active_link("a@other.com")];
+        let current: Vec<Link> = vec![];
+
+        assert!(!role_no_longer_qualifies(
+            &previous,
+            &current,
+            r"@example\.com$"
+        ));
     }
 
     #[test]

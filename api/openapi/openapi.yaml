@@ -307,6 +307,139 @@ paths:
         - discord_auth:
             - identify
             - guilds
+  /guilds/{guild_id}/verify/roles/{role_id}:
+    put:
+      tags:
+        - guilds
+      summary: Creates or replaces a verify role.
+      description: |-
+        Persists the role's pattern (desired state) and starts an asynchronous
+        reconciliation job that fans the Discord role changes out at
+        rate-limit pace. Returns immediately; poll the job endpoint for
+        progress.
+      operationId: PutVerifyRole
+      parameters:
+        - name: guild_id
+          in: path
+          schema:
+            $ref: '#/components/schemas/DiscordSnowflake'
+          required: true
+        - name: role_id
+          in: path
+          schema:
+            $ref: '#/components/schemas/DiscordSnowflake'
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pattern:
+                  type: string
+                  example: '@example.com$'
+      responses:
+        '202':
+          description: Accepted — roles will propagate asynchronously.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  role:
+                    $ref: '#/components/schemas/VerifyRole'
+                  job:
+                    $ref: '#/components/schemas/VerifyJob'
+        '400':
+          description: Pattern is not a valid regex.
+          content: { }
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - discord_auth:
+            - identify
+            - guilds
+    delete:
+      tags:
+        - guilds
+      summary: Deletes a verify role.
+      description: |-
+        Removes the role from desired state and starts an asynchronous
+        reconciliation job that strips it from matching members.
+      operationId: DeleteVerifyRole
+      parameters:
+        - name: guild_id
+          in: path
+          schema:
+            $ref: '#/components/schemas/DiscordSnowflake'
+          required: true
+        - name: role_id
+          in: path
+          schema:
+            $ref: '#/components/schemas/DiscordSnowflake'
+          required: true
+      responses:
+        '202':
+          description: Accepted — removals will propagate asynchronously.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job:
+                    $ref: '#/components/schemas/VerifyJob'
+        '204':
+          description: Role was not configured; nothing to reconcile.
+          content: { }
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - discord_auth:
+            - identify
+            - guilds
+  /guilds/{guild_id}/verify/job:
+    get:
+      tags:
+        - guilds
+      summary: Current/most-recent verify reconciliation job.
+      description: |-
+        Dashboard polling endpoint: status and progress of the guild's verify
+        reconciliation job.
+      operationId: GetVerifyJob
+      parameters:
+        - name: guild_id
+          in: path
+          schema:
+            $ref: '#/components/schemas/DiscordSnowflake'
+          required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyJob'
+        '404':
+          description: No reconciliation job has ever run for this guild.
+          content: { }
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - discord_auth:
+            - identify
+            - guilds
 components:
   parameters:
     PageParameter:
@@ -399,6 +532,39 @@ components:
         pattern:
           type: string
           example: '@example.com$'
+        members:
+          type: integer
+          description: Members currently matched by this role's pattern
+          example: 1280
+
+    VerifyJob:
+      type: object
+      description: |-
+        Progress of a guild's asynchronous verify reconciliation job. One job
+        exists per guild; config changes supersede it in place (the
+        generation increments and the scan restarts against the newest
+        desired state).
+      properties:
+        guild_id:
+          $ref: '#/components/schemas/DiscordSnowflake'
+        generation:
+          type: integer
+          format: int64
+          example: 7
+        status:
+          type: string
+          enum: [pending, running, succeeded, failed]
+        total:
+          type: integer
+          description: Linked members to scan
+          example: 50000
+        processed:
+          type: integer
+          example: 12400
+        errors:
+          type: integer
+          description: Members skipped (left the guild, role deleted, hierarchy)
+          example: 3
 
 
     Verify:

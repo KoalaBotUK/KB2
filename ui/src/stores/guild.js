@@ -35,6 +35,33 @@ export class VerifyRole {
   }
 }
 
+export class VerifyJob {
+  status
+  total
+  processed
+  errors
+
+  constructor(status, total, processed, errors) {
+    this.status = status
+    this.total = total
+    this.processed = processed
+    this.errors = errors
+  }
+
+  static fromJson(json) {
+    let job = new VerifyJob()
+    job.status = json['status']
+    job.total = json['total']
+    job.processed = json['processed']
+    job.errors = json['errors']
+    return job
+  }
+
+  isActive() {
+    return this.status === 'pending' || this.status === 'running'
+  }
+}
+
 export class Verify {
   roles
   userLinks
