@@ -1,6 +1,6 @@
 # Verify Role Reconciliation — Low Level Design
 
-Status: **Proposed** · Companion to
+Status: **Implemented** · Companion to
 [`high-level-architecture/verify-role-reconciliation.md`](../high-level-architecture/verify-role-reconciliation.md)
 (high-level design & decision record). This document specifies the implementation: schemas,
 module layout, code, message contracts, infra diffs, tuning constants, and the failure matrix.
@@ -770,23 +770,45 @@ Throughput check at the design target: 50k rows / 100-row batches = 500 invocati
 
 ---
 
-## 9. Testing plan
+## 9. Testing plan (implemented — see `scripts/verify-recon-tests.sh`)
 
-- **Unit (common):** `ReconScope::merge` algebra (all-sticky, add/remove displacement,
-  removal survives `all`); `ReconMessage` round-trip; keyset pagination SQL shape;
-  checkpoint-returns-false-on-generation-bump (via the same conditional-update pattern
-  already unit-tested for `Guild::save` error propagation).
-- **Unit (consumer):** `reconcile_user` against fixture links/roles — matrix of
-  {scope.all, scoped add, removal} × {match, no-match, multi-link dedupe}; 429
-  classification (inline vs backoff); 403/404 ⇒ Skip.
-- **Unit (api):** handlers return 202 + job snapshot; pattern-replace folds a removal op
-  into scope; enqueue failure ⇒ 500 (not silent).
-- **Integration (local, `RUN_LOCAL`):** end-to-end add-role on a seeded 1k-row
-  `guild_user_links` against a mocked Discord client; assert call count, final `counts`,
-  `succeeded` status, and that a mid-run supersede restarts the cursor.
-- **Load sanity (dev env):** synthetic 50k-row guild with a stubbed Discord base URL;
-  verify chain completes, one lease holder at a time (assert via `lease_until` sampling),
-  progress monotonic.
+- **Unit (common):** `ReconScope::merge` algebra (all-sticky, per-role
+  latest-op-wins, removal survives `all`, add-after-removal escalates to sync);
+  `ReconMessage`/scope round-trips; legacy blob deserializes but `user_links` never
+  serializes; `bump_members` saturating deltas; `JobStatus` parsing.
+- **Unit (consumer):** `reconcile_user` against a scripted mock gateway — matrix of
+  {all, add-only, sync, removal, merged removal+all} × {match, no-match, multi-link
+  dedupe, invalid pattern}; failure classification (Skip counted and continues,
+  RateLimited interrupts the user for idempotent retry, Fatal propagates).
+- **Unit (api):** `put_role_scope` (new role ⇒ add-only; pattern replace ⇒ sync;
+  idempotent re-PUT ⇒ no strip); pattern validation; `role_newly_qualifies` /
+  `role_no_longer_qualifies` count-delta guards.
+- **Unit (ui):** 202 handling renders the progress bar, polling backs off for big
+  guilds and emits a guild refresh on success, unmount stops polling, 204 tracks no job.
+- **Integration (`consumer/tests/integration.rs`, real Postgres):** full chain
+  completes and folds member counts; scoped add is O(matchers); stale tokens and live
+  leases rejected; supersede mid-chain restarts cursor with merged scope; crashed
+  invocation recovers after lease expiry; long 429 defers with its retry_after and the
+  limited user is retried exactly once; short 429 absorbed inline; legacy blob seeded
+  on first job; empty guild completes in one slice.
+- **Performance (`consumer/tests/perf.rs`, 50k members, release build):** scan floor
+  (0% matchers, zero Discord calls), full sync through the real `TwilightRoles` client
+  against an in-process HTTP stub (ratelimiter disabled), and 10% partial-match count
+  exactness.
+
+### Measured results (Postgres 16, fsync off, 4-vCPU container, 2026-07-12)
+
+| Scenario | Result |
+|---|---|
+| Seed 50k `guild_user_links` rows | 0.6 s |
+| Scan floor: 50k members, 0% match, 5s work budgets | **5.1 s** (~9,800 members/s) across 2 slices |
+| Full sync: 50k members, 100% match, HTTP round-trip per member | **14.9 s** (~3,350 role calls/s) across 3 slices |
+| Partial match: 50k members, 10% match | 5.2 s, counts exact (5,000) |
+
+The full-sync pipeline sustains ~450× Discord's ~7.5 req/s per-guild role bucket, so
+the rate limit — not the worker — is the bottleneck by three orders of magnitude: at
+Discord pace a 50k full sync takes ~111 min, of which worker overhead is **~0.2%**.
+The perf suite asserts ≥10× headroom as a regression guard.
 
 ## 10. Implementation order
 

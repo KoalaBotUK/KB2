@@ -1,6 +1,6 @@
 # Verify Role Reconciliation Architecture
 
-Status: **Proposed** · Scope: `api`, `consumer`, `common`, `infra`, `ui` · Design target: guilds with up to **50,000 linked members**
+Status: **Implemented** · Scope: `api`, `consumer`, `common`, `infra`, `ui` · Design target: guilds with up to **50,000 linked members**
 
 Implementation companion:
 [`low-level-architecture/verify-role-reconciliation.md`](../low-level-architecture/verify-role-reconciliation.md)

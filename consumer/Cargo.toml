@@ -20,3 +20,6 @@ serde_json = { workspace = true }
 common = { path = "../common", version = "2.0.0" }
 aws-config = { workspace = true }
 anyhow = { workspace = true, features = ["backtrace"] }
+[dev-dependencies]
+axum = { workspace = true }
+http = { workspace = true }
