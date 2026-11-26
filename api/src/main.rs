@@ -102,7 +102,8 @@ async fn main() -> Result<(), Error> {
                 .expect("invalid CORS configuration"),
         )
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
-        .allow_headers([http::header::AUTHORIZATION, http::header::CONTENT_TYPE]);
+        .allow_headers([http::header::AUTHORIZATION, http::header::CONTENT_TYPE])
+        .expose_headers([middleware::REQUEST_ID_HEADER]);
 
     let app = Router::new()
         .nest("/users", users::router())

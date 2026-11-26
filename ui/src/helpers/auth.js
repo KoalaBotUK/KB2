@@ -1,8 +1,6 @@
 import axios from "axios";
 import {formatInternalRedirect, redirectTo} from "./redirect.js";
 
-const KB_API_URL = import.meta.env.VITE_KB_API_URL;
-
 export class OauthFlow {
   clientId
   redirectPath
@@ -53,6 +51,26 @@ export class OauthToken {
   }
 }
 
+export class TokenExchangeError extends Error {
+  constructor(reason, status) {
+    super('OAuth token exchange failed')
+    this.reason = reason
+    this.status = status
+  }
+}
+
+export function requestFailureReason(error) {
+  if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') return 'timeout'
+  if (error?.code === 'ERR_NETWORK') return 'network_error'
+  if (error?.response) return 'http_error'
+  return 'unexpected_error'
+}
+
+const tokenErrorCodes = new Set([
+  'invalid_grant', 'invalid_request', 'invalid_client', 'invalid_scope',
+  'unauthorized_client', 'interaction_required', 'temporarily_unavailable',
+])
+
 export class AuthorizationFlowPKCE extends OauthFlow {
   authorizeUrl
   authorizeAdditionalParams
@@ -95,11 +113,15 @@ export class AuthorizationFlowPKCE extends OauthFlow {
   }
 
   async callback() {
-    let urlParams = new URLSearchParams(window.location.search);
+    const code = new URLSearchParams(window.location.search).get('code')
+    if (!code) throw new TokenExchangeError('missing_code')
+    if (!this.codeVerifier) throw new TokenExchangeError('missing_verifier')
+
+    let res
     try {
-      let res = await axios.post(this.tokenUrl, {
+      res = await axios.post(this.tokenUrl, {
           grant_type: 'authorization_code',
-          code: urlParams.get('code'),
+          code,
           redirect_uri: formatInternalRedirect(this.redirectPath),
           scope: this.scope,
           code_verifier: this.codeVerifier,
@@ -107,23 +129,21 @@ export class AuthorizationFlowPKCE extends OauthFlow {
         },
         {
           headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          timeout: 15_000,
         })
-      this.token = new OauthToken()
-      this.token.accessToken = res.data['access_token']
-      this.token.tokenType = res.data['token_type']
-      this.token.expiresIn = res.data['expires_in']
-      this.token.refreshToken = res.data['refresh_token']
-      this.token.scope = res.data['scope']
-      this.token.date = Date.now()
     } catch (err) {
-      console.error("Error when getting token", err)
-      this.token = "ERROR"
-
+      const providerError = err?.response?.data?.error
+      const reason = tokenErrorCodes.has(providerError) ? providerError : requestFailureReason(err)
+      throw new TokenExchangeError(reason, err?.response?.status)
     }
-  }
 
-  save() {
-    localStorage.setItem('authFlow', JSON.stringify(this))
+    this.token = new OauthToken()
+    this.token.accessToken = res.data?.access_token
+    this.token.tokenType = res.data?.token_type
+    this.token.expiresIn = res.data?.expires_in
+    this.token.refreshToken = res.data?.refresh_token
+    this.token.scope = res.data?.scope
+    this.token.date = Date.now()
   }
 }
 
@@ -156,9 +176,5 @@ export class ImplicitFlow extends OauthFlow {
     this.token.refreshToken = urlParams.get('refresh_token')
     this.token.scope = urlParams.get('scope')
     this.token.date = Date.now()
-  }
-
-  save() {
-    localStorage.setItem('authFlow', JSON.stringify(this))
   }
 }

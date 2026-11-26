@@ -1,6 +1,5 @@
 use crate::discord::ise;
 use http::StatusCode;
-use lambda_http::tracing::error;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres, Row};
 use sqlx::types::BigDecimal;
@@ -46,8 +45,9 @@ fn parse_links(
     links_json: &str,
     link_guilds_json: &str,
 ) -> Result<(Vec<Link>, Vec<LinkGuild>), StatusCode> {
-    let links = serde_json::from_str(links_json).map_err(ise)?;
-    let link_guilds = serde_json::from_str(link_guilds_json).map_err(ise)?;
+    let links = serde_json::from_str(links_json).map_err(|_| ise("Could not decode user links"))?;
+    let link_guilds = serde_json::from_str(link_guilds_json)
+        .map_err(|_| ise("Could not decode user linked guilds"))?;
     Ok((links, link_guilds))
 }
 
@@ -66,11 +66,13 @@ impl User {
             .bind(BigDecimal::from(user_id.into_nonzero().get()))
             .fetch_optional(pg_pool)
             .await
-            .map_err(ise)?;
+            .map_err(|_| ise("Could not read user from database"))?;
 
         row.map(|row| {
-            let (links, link_guilds) =
-                parse_links(row.get::<&str, _>("links"), row.get::<&str, _>("link_guilds"))?;
+            let links_json = row.try_get("links").map_err(|_| ise("Invalid user links column"))?;
+            let link_guilds_json = row.try_get("link_guilds")
+                .map_err(|_| ise("Invalid user linked guilds column"))?;
+            let (links, link_guilds) = parse_links(links_json, link_guilds_json)?;
             Ok(User {
                 user_id,
                 links,
@@ -83,11 +85,11 @@ impl User {
     pub async fn save(&self, pg_pool: &Pool<Postgres>) -> Result<(), StatusCode> {
         sqlx::query("INSERT INTO users (id, links, link_guilds) VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET links = $2, link_guilds = $3, updated_at = CURRENT_TIMESTAMP")
         .bind(BigDecimal::from(self.user_id.into_nonzero().get()))
-        .bind(serde_json::to_string(&self.links).map_err(ise)?)
-        .bind(serde_json::to_string(&self.link_guilds).map_err(ise)?)
+        .bind(serde_json::to_string(&self.links).map_err(|_| ise("Could not encode user links"))?)
+        .bind(serde_json::to_string(&self.link_guilds).map_err(|_| ise("Could not encode user linked guilds"))?)
         .execute(pg_pool)
         .await
-        .map_err(ise)?;
+        .map_err(|_| ise("Could not save user to database"))?;
         Ok(())
     }
 }

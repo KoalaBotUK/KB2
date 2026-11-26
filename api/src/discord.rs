@@ -57,11 +57,18 @@ where
 
 pub fn as_http_err(e: Error) -> StatusCode {
     match e.kind() {
-        ErrorType::Response { status, error, .. } => {
-            error!("Discord Api Error: {} {:?}", status, error);
-            StatusCode::from_u16(status.get()).map_err(ise).unwrap()
+        ErrorType::Response { status, .. } => {
+            error!(status = status.get(), "Discord API request failed");
+            StatusCode::from_u16(status.get()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR)
         }
-        _ => ise(e),
+        ErrorType::RequestTimedOut => {
+            error!("Discord API request timed out");
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
+        _ => {
+            error!("Discord API request failed without an HTTP response");
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
     }
 }
 
@@ -276,7 +283,7 @@ pub async fn get_current_user(client: &Client) -> Result<CurrentUser, StatusCode
         .map_err(as_http_err)?
         .model()
         .await
-        .map_err(ise)
+        .map_err(|_| ise("Could not decode Discord current user"))
 }
 
 #[cached(

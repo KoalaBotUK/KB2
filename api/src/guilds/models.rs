@@ -2,7 +2,6 @@ use crate::discord::ise;
 use crate::guilds::verify::models::Verify;
 use crate::guilds::votes::models::Vote;
 use http::StatusCode;
-use lambda_http::tracing::{error};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use bigdecimal::{BigDecimal, ToPrimitive};
@@ -37,8 +36,8 @@ impl Default for Guild {
 /// tests without a live database connection. Malformed/legacy JSON returns
 /// a `500` instead of panicking the handler (see issue #20).
 fn parse_verify_vote(verify_json: &str, vote_json: &str) -> Result<(Verify, Vote), StatusCode> {
-    let verify = serde_json::from_str(verify_json).map_err(ise)?;
-    let vote = serde_json::from_str(vote_json).map_err(ise)?;
+    let verify = serde_json::from_str(verify_json).map_err(|_| ise("Could not decode guild verification"))?;
+    let vote = serde_json::from_str(vote_json).map_err(|_| ise("Could not decode guild votes"))?;
     Ok((verify, vote))
 }
 
@@ -57,11 +56,12 @@ impl Guild {
             .bind(BigDecimal::from(guild_id.into_nonzero().get()))
             .fetch_optional(pg_pool)
             .await
-            .map_err(ise)?;
+            .map_err(|_| ise("Could not read guild from database"))?;
 
         row.map(|row| {
-            let (verify, vote) =
-                parse_verify_vote(row.get::<&str, _>("verify"), row.get::<&str, _>("vote"))?;
+            let verify_json = row.try_get("verify").map_err(|_| ise("Invalid guild verification column"))?;
+            let vote_json = row.try_get("vote").map_err(|_| ise("Invalid guild votes column"))?;
+            let (verify, vote) = parse_verify_vote(verify_json, vote_json)?;
             Ok(Guild {
                 guild_id,
                 verify,
@@ -102,11 +102,11 @@ impl Guild {
     pub async fn save(&self, pg_pool: &Pool<Postgres>) -> Result<(), StatusCode> {
         sqlx::query("INSERT INTO guilds (id, verify, vote) VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET verify = $2, vote = $3, updated_at = CURRENT_TIMESTAMP")
             .bind(BigDecimal::from(self.guild_id.into_nonzero().get()))
-            .bind(serde_json::to_string(&self.verify).map_err(ise)?)
-            .bind(serde_json::to_string(&self.vote).map_err(ise)?)
+            .bind(serde_json::to_string(&self.verify).map_err(|_| ise("Could not encode guild verification"))?)
+            .bind(serde_json::to_string(&self.vote).map_err(|_| ise("Could not encode guild votes"))?)
             .execute(pg_pool)
             .await
-            .map_err(ise)?;
+            .map_err(|_| ise("Could not save guild to database"))?;
         Ok(())
     }
 }

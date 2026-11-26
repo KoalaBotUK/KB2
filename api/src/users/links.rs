@@ -10,13 +10,11 @@ use axum::{Extension, Json};
 use hmac::{Hmac, Mac};
 use http::StatusCode;
 use jwt::{SignWithKey, VerifyWithKey};
-use lambda_http::tracing::info;
+use lambda_http::tracing::{Instrument, info, info_span, warn};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sha2::Sha256;
 use std::collections::BTreeMap;
-use std::sync::Arc;
-use tower_http::cors::CorsLayer;
 use twilight_model::id::Id;
 use twilight_model::id::marker::UserMarker;
 use twilight_model::user::CurrentUser;
@@ -36,16 +34,16 @@ pub fn router() -> axum::Router<AppState> {
 /// subject to unrelated rotation), and reusing it as a JWT signing secret
 /// couples two unrelated trust domains together.
 fn email_link_key() -> Result<Hmac<Sha256>, StatusCode> {
-    build_email_link_key(
-        &std::env::var("EMAIL_LINK_SIGNING_KEY").expect("EMAIL_LINK_SIGNING_KEY must be set"),
-    )
+    let secret = std::env::var("EMAIL_LINK_SIGNING_KEY")
+        .map_err(|_| ise("Email link signing key unavailable"))?;
+    build_email_link_key(&secret)
 }
 
 fn build_email_link_key(secret: &str) -> Result<Hmac<Sha256>, StatusCode> {
     Hmac::new_from_slice(secret.as_bytes()).map_err(ise)
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum LinkOrigin {
     Microsoft,
@@ -66,17 +64,36 @@ async fn post_link(
     State(app_state): State<AppState>,
     Json(link_req): Json<LinkRequest>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
+    let span = info_span!("verify_link", provider = ?link_req.origin);
+    link_for_user(user_id, current_user, app_state, link_req)
+        .instrument(span)
+        .await
+}
+
+async fn link_for_user(
+    user_id: Id<UserMarker>,
+    current_user: CurrentUser,
+    app_state: AppState,
+    link_req: LinkRequest,
+) -> Result<Json<serde_json::Value>, StatusCode> {
     if current_user.id != user_id {
-        return Err(StatusCode::UNAUTHORIZED);
+        return Err(verify_link_failure(
+            "authenticate",
+            "discord_user_mismatch",
+            StatusCode::UNAUTHORIZED,
+        ));
     }
 
+    info!(stage = "resolve_email", "Verify link step started");
     let email = match link_req.origin {
-        LinkOrigin::Discord => {
-            // Handle Discord linking logic here
-            current_user.email.ok_or(StatusCode::UNAUTHORIZED)?
-        }
+        LinkOrigin::Discord => current_user.email.ok_or_else(|| {
+            verify_link_failure(
+                "resolve_email",
+                "discord_email_missing",
+                StatusCode::UNAUTHORIZED,
+            )
+        })?,
         LinkOrigin::Microsoft => {
-            // Handle Microsoft linking logic here
             oidc_email(
                 "https://graph.microsoft.com/oidc/userinfo",
                 link_req.token,
@@ -85,7 +102,6 @@ async fn post_link(
             .await?
         }
         LinkOrigin::Google => {
-            // Handle Google linking logic here
             oidc_email(
                 "https://openidconnect.googleapis.com/v1/userinfo",
                 link_req.token,
@@ -93,26 +109,7 @@ async fn post_link(
             )
             .await?
         }
-        LinkOrigin::Email => {
-            let key = email_link_key()?;
-            let claims: BTreeMap<String, String> =
-                link_req.token.verify_with_key(&key).map_err(ise)?;
-            let exp: u64 = claims
-                .get("exp")
-                .and_then(|e| e.parse().ok())
-                .ok_or(StatusCode::UNAUTHORIZED)?;
-            if exp < chrono::Utc::now().timestamp() as u64 {
-                return Err(StatusCode::UNAUTHORIZED);
-            }
-            if claims.get("uid").map(String::as_str) != Some(current_user.id.to_string().as_str())
-            {
-                return Err(StatusCode::UNAUTHORIZED);
-            }
-            claims
-                .get("sub")
-                .ok_or(StatusCode::UNAUTHORIZED)?
-                .to_string()
-        }
+        LinkOrigin::Email => email_from_link_token(&link_req.token, user_id)?,
     };
 
     let new_link = Link {
@@ -120,8 +117,10 @@ async fn post_link(
         linked_at: chrono::Utc::now().timestamp_millis() as u64,
         active: true,
     };
+    info!(stage = "load_user", "Verify link step started");
     let mut user_model = User::from_db(user_id, &app_state.pg_pool)
-        .await?
+        .await
+        .map_err(|status| verify_link_failure("load_user", "database_read_failed", status))?
         .unwrap_or_else(|| User {
             user_id,
             ..Default::default()
@@ -130,21 +129,27 @@ async fn post_link(
         .links
         .retain(|l| l.link_address != new_link.link_address);
     for link_guild in &user_model.link_guilds {
+        info!(stage = "load_guild", "Verify link step started");
         let mut guild = Guild::from_db(link_guild.guild_id, &app_state.pg_pool)
-            .await?
+            .await
+            .map_err(|status| verify_link_failure("load_guild", "database_read_failed", status))?
             .unwrap_or_else(|| Guild {
                 guild_id: link_guild.guild_id,
                 ..Default::default()
             });
         for role in &guild.verify.roles {
             if link_match(&new_link, &role.pattern) {
+                info!(stage = "assign_role", "Verify link step started");
                 add_guild_member_role(
                     guild.guild_id,
                     user_id,
                     role.role_id,
                     &app_state.discord_bot,
                 )
-                .await?;
+                .await
+                .map_err(|status| {
+                    verify_link_failure("assign_role", "discord_role_assignment_failed", status)
+                })?;
             }
         }
         guild
@@ -158,11 +163,45 @@ async fn post_link(
         // `retain` above) would otherwise inflate the count every time the
         // user re-links an address they already had.
         guild.verify.recompute_role_members();
-        guild.save(&app_state.pg_pool).await?;
+        info!(stage = "save_guild", "Verify link step started");
+        guild
+            .save(&app_state.pg_pool)
+            .await
+            .map_err(|status| verify_link_failure("save_guild", "database_write_failed", status))?;
     }
     user_model.links.push(new_link.clone());
-    user_model.save(&app_state.pg_pool).await?;
+    info!(stage = "save_user", "Verify link step started");
+    user_model
+        .save(&app_state.pg_pool)
+        .await
+        .map_err(|status| verify_link_failure("save_user", "database_write_failed", status))?;
+    info!("Verify link saved");
     Ok(Json(json!(new_link)))
+}
+
+fn email_from_link_token(token: &str, user_id: Id<UserMarker>) -> Result<String, StatusCode> {
+    let unauthorized =
+        |reason| verify_link_failure("resolve_email", reason, StatusCode::UNAUTHORIZED);
+    let key = email_link_key().map_err(|status| {
+        verify_link_failure("resolve_email", "email_signing_key_unavailable", status)
+    })?;
+    let claims: BTreeMap<String, String> = token
+        .verify_with_key(&key)
+        .map_err(|_| unauthorized("email_token_invalid"))?;
+    let exp: u64 = claims
+        .get("exp")
+        .and_then(|expiry| expiry.parse().ok())
+        .ok_or_else(|| unauthorized("email_token_expiry_invalid"))?;
+    if exp < chrono::Utc::now().timestamp() as u64 {
+        return Err(unauthorized("email_token_expired"));
+    }
+    if claims.get("uid").map(String::as_str) != Some(user_id.to_string().as_str()) {
+        return Err(unauthorized("email_token_user_mismatch"));
+    }
+    claims
+        .get("sub")
+        .cloned()
+        .ok_or_else(|| unauthorized("email_token_subject_missing"))
 }
 
 async fn oidc_email(url: &str, token: String, app_state: &AppState) -> Result<String, StatusCode> {
@@ -172,21 +211,54 @@ async fn oidc_email(url: &str, token: String, app_state: &AppState) -> Result<St
         .header("Authorization", format!("Bearer {token}"))
         .send()
         .await
-        .map_err(ise)?;
+        .map_err(|error| {
+            let reason = if error.is_timeout() {
+                "userinfo_timeout"
+            } else {
+                "userinfo_transport_failed"
+            };
+            verify_link_failure("resolve_email", reason, StatusCode::INTERNAL_SERVER_ERROR)
+        })?;
 
-    if response.status().is_success() {
-        let user_info: serde_json::Value = response.json().await.map_err(ise)?;
-        // Process user_info to link with the user_id
-        // For example, save to DynamoDB or update user profile
-        Ok(user_info
-            .get("email")
-            .and_then(|email| email.as_str())
-            .ok_or(StatusCode::UNAUTHORIZED)?
-            .parse()
-            .unwrap())
-    } else {
-        Err(StatusCode::UNAUTHORIZED)
+    if !response.status().is_success() {
+        warn!(
+            stage = "resolve_email",
+            reason = "userinfo_rejected",
+            upstream_status = response.status().as_u16(),
+            "Verify link failed"
+        );
+        return Err(StatusCode::UNAUTHORIZED);
     }
+
+    let user_info: serde_json::Value = response.json().await.map_err(|_| {
+        verify_link_failure(
+            "resolve_email",
+            "userinfo_decode_failed",
+            StatusCode::INTERNAL_SERVER_ERROR,
+        )
+    })?;
+    user_info
+        .get("email")
+        .and_then(|email| email.as_str())
+        .filter(|email| !email.is_empty())
+        .map(str::to_owned)
+        .ok_or_else(|| {
+            verify_link_failure(
+                "resolve_email",
+                "userinfo_email_missing",
+                StatusCode::UNAUTHORIZED,
+            )
+        })
+}
+
+fn verify_link_failure(stage: &str, reason: &str, status: StatusCode) -> StatusCode {
+    warn!(
+        stage,
+        reason,
+        status = status.as_u16(),
+        "Verify link failed"
+    );
+    status
 }
 
 /// Authorizes a `delete_link` request: the middleware-provided current user
@@ -227,7 +299,6 @@ async fn delete_link(
         .iter()
         .position(|l| l.link_address == link_address);
     let existing_link = pos.map(|i| user_model.links.remove(i));
-    info!("Deleting link for user {}: {}", user_id, link_address);
     if existing_link.is_none() {
         return Err(StatusCode::NOT_FOUND);
     }
@@ -362,7 +433,9 @@ mod tests {
                 .to_string(),
         );
 
-        let token = claims.sign_with_key(&signing_key).expect("signing succeeds");
+        let token = claims
+            .sign_with_key(&signing_key)
+            .expect("signing succeeds");
 
         let result: Result<BTreeMap<String, String>, _> = token.verify_with_key(&bot_token_key);
         assert!(
