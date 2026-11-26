@@ -103,7 +103,7 @@ pub async fn get_current_user_guilds(client: &Client) -> Result<Vec<CurrentUserG
 /// user's guilds returned by Discord.
 ///
 /// Discord's `after`/`limit` pagination on `Get Current User Guilds` only
-/// narrows the search space to "the next guild after this ID" - it does not
+/// narrows the search space to "the next guild after this ID" — it does not
 /// guarantee that guild is actually the one requested (the user may not be a
 /// member of `guild_id` at all, in which case Discord returns whichever
 /// guild the client *is* in with the next-highest snowflake). Callers must
@@ -111,7 +111,7 @@ pub async fn get_current_user_guilds(client: &Client) -> Result<Vec<CurrentUserG
 /// on the returned guild, otherwise an authorization check can silently
 /// evaluate a different guild than the one requested.
 ///
-/// Returns `None` - never panics - if none of the supplied guilds match.
+/// Returns `None` — never panics — if none of the supplied guilds match.
 fn select_current_user_guild(
     guilds: Vec<CurrentUserGuild>,
     guild_id: Id<GuildMarker>,
