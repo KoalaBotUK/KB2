@@ -2,9 +2,9 @@
 import BaseVerifyCallback from "./BaseVerifyCallback.vue";
 import {AuthorizationFlowPKCE} from "../../helpers/auth.js";
 
-const authFlow = AuthorizationFlowPKCE.load()
+const loadAuthFlow = () => AuthorizationFlowPKCE.load()
 </script>
 
 <template>
-  <BaseVerifyCallback organization="microsoft" :auth-flow="authFlow" />
+  <BaseVerifyCallback organization="microsoft" :load-auth-flow="loadAuthFlow" />
 </template>

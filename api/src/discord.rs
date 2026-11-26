@@ -57,11 +57,18 @@ where
 
 pub fn as_http_err(e: Error) -> StatusCode {
     match e.kind() {
-        ErrorType::Response { status, error, .. } => {
-            error!("Discord Api Error: {} {:?}", status, error);
-            StatusCode::from_u16(status.get()).map_err(ise).unwrap()
+        ErrorType::Response { status, .. } => {
+            error!(status = status.get(), "Discord API request failed");
+            StatusCode::from_u16(status.get()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR)
         }
-        _ => ise(e),
+        ErrorType::RequestTimedOut => {
+            error!("Discord API request timed out");
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
+        _ => {
+            error!("Discord API request failed without an HTTP response");
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
     }
 }
 
@@ -96,7 +103,7 @@ pub async fn get_current_user_guilds(client: &Client) -> Result<Vec<CurrentUserG
 /// user's guilds returned by Discord.
 ///
 /// Discord's `after`/`limit` pagination on `Get Current User Guilds` only
-/// narrows the search space to "the next guild after this ID" — it does not
+/// narrows the search space to "the next guild after this ID" - it does not
 /// guarantee that guild is actually the one requested (the user may not be a
 /// member of `guild_id` at all, in which case Discord returns whichever
 /// guild the client *is* in with the next-highest snowflake). Callers must
@@ -104,7 +111,7 @@ pub async fn get_current_user_guilds(client: &Client) -> Result<Vec<CurrentUserG
 /// on the returned guild, otherwise an authorization check can silently
 /// evaluate a different guild than the one requested.
 ///
-/// Returns `None` — never panics — if none of the supplied guilds match.
+/// Returns `None` - never panics - if none of the supplied guilds match.
 fn select_current_user_guild(
     guilds: Vec<CurrentUserGuild>,
     guild_id: Id<GuildMarker>,
@@ -276,7 +283,7 @@ pub async fn get_current_user(client: &Client) -> Result<CurrentUser, StatusCode
         .map_err(as_http_err)?
         .model()
         .await
-        .map_err(ise)
+        .map_err(|_| ise("Could not decode Discord current user"))
 }
 
 #[cached(

@@ -17,12 +17,12 @@ class EmailCustomFlow extends OauthFlow {
   }
 }
 
-let authFlow = new EmailCustomFlow(token)
+const loadAuthFlow = () => new EmailCustomFlow(token)
 
 </script>
 
 
 
 <template>
-  <BaseVerifyCallback organization="email" :auth-flow="authFlow" />
+  <BaseVerifyCallback organization="email" :load-auth-flow="loadAuthFlow" />
 </template>

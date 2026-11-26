@@ -1,11 +1,14 @@
 use crate::discord::get_current_user;
 use crate::utils::secure_compare;
-use axum::extract::Request;
-use axum::http::{HeaderMap, StatusCode};
+use axum::extract::{MatchedPath, Request};
+use axum::http::{HeaderMap, HeaderName, HeaderValue, StatusCode};
 use axum::middleware::Next;
 use axum::response::Response;
-use lambda_http::tracing::info;
+use lambda_http::tracing::{Instrument, info, info_span, warn};
+use std::time::Instant;
 use twilight_http::Client;
+
+pub const REQUEST_ID_HEADER: HeaderName = HeaderName::from_static("x-kb-request-id");
 
 /// Parses the `Authorization` header into a `(scheme, credentials)` pair.
 ///
@@ -21,49 +24,30 @@ fn parse_auth_header(headers: &HeaderMap) -> Result<(&str, &str), StatusCode> {
     auth_header.split_once(' ').ok_or(StatusCode::UNAUTHORIZED)
 }
 
-/// Value substituted for sensitive header values when logging.
-const REDACTED_PLACEHOLDER: &str = "***REDACTED***";
-
-/// Headers whose values must never be written to logs verbatim.
-///
-/// Comparison is case-insensitive (matching `http::HeaderName` semantics).
-const SENSITIVE_HEADERS: &[&str] = &["authorization", "cookie", "set-cookie"];
-
-/// Build a loggable representation of a header map with sensitive values
-/// (e.g. `Authorization` tokens, cookies) redacted.
-///
-/// This exists so request/response headers can still be logged for
-/// debugging purposes without leaking credentials (Discord OAuth access
-/// tokens, the bot token, session cookies, etc.) into CloudWatch.
-fn redact_headers(headers: &HeaderMap) -> Vec<(String, String)> {
-    headers
-        .iter()
-        .map(|(name, value)| {
-            let name = name.as_str().to_string();
-            if SENSITIVE_HEADERS.contains(&name.to_lowercase().as_str()) {
-                (name, REDACTED_PLACEHOLDER.to_string())
-            } else {
-                let value = value
-                    .to_str()
-                    .map(|v| v.to_string())
-                    .unwrap_or_else(|_| "<invalid utf-8>".to_string());
-                (name, value)
-            }
-        })
-        .collect()
-}
-
 pub async fn auth_middleware(
     headers: HeaderMap,
     mut request: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {
-    // do something with `request`...
-    let (scheme, credentials) = parse_auth_header(&headers)?;
+    let (scheme, credentials) = parse_auth_header(&headers).inspect_err(|_| {
+        warn!(
+            stage = "authenticate",
+            reason = "missing_or_invalid_authorization",
+            "Authentication failed"
+        );
+    })?;
     match scheme {
         "Discord" => {
             let client = Client::new(format!("Bearer {credentials}"));
-            let current_user = get_current_user(&client).await?;
+            info!(stage = "authenticate", "Checking Discord session");
+            let current_user = get_current_user(&client).await.inspect_err(|status| {
+                warn!(
+                    stage = "authenticate",
+                    reason = "discord_auth_failed",
+                    status = status.as_u16(),
+                    "Authentication failed"
+                );
+            })?;
             if current_user.bot {
                 return Err(StatusCode::UNAUTHORIZED);
             }
@@ -87,32 +71,38 @@ pub async fn auth_middleware(
     }
 }
 
-pub async fn log_middleware(request: Request, next: Next) -> Result<Response, StatusCode> {
-    // Only capture method/URI/headers metadata - request and response bodies
-    // are never logged, as they may contain secrets (OIDC tokens) or PII
-    // (email addresses). Sensitive headers such as `Authorization` are
-    // redacted before logging.
-    let method = request.method().clone();
-    let uri = request.uri().clone();
-    let request_headers = redact_headers(request.headers());
+pub async fn log_middleware(request: Request, next: Next) -> Response {
+    let request_id = request
+        .extensions()
+        .get::<lambda_http::Context>()
+        .map(|context| context.request_id.clone())
+        .unwrap_or_default();
+    // MatchedPath is the route template, so path parameters and query strings stay out of logs.
+    let route = request
+        .extensions()
+        .get::<MatchedPath>()
+        .map(MatchedPath::as_str)
+        .unwrap_or("unmatched");
+    let span = info_span!("http_request", %request_id, method = %request.method(), route);
 
-    info!(
-        "Received request: {} {} headers={:?}",
-        method, uri, request_headers
-    );
-
-    let response = next.run(request).await;
-
-    let response_headers = redact_headers(response.headers());
-    info!(
-        "Response: {} {} -> {} headers={:?}",
-        method,
-        uri,
-        response.status(),
-        response_headers
-    );
-
-    Ok(response)
+    async move {
+        let start = Instant::now();
+        info!("Request started");
+        let mut response = next.run(request).await;
+        info!(
+            status = response.status().as_u16(),
+            elapsed_ms = start.elapsed().as_millis() as u64,
+            "Request completed"
+        );
+        if !request_id.is_empty()
+            && let Ok(value) = HeaderValue::from_str(&request_id)
+        {
+            response.headers_mut().insert(REQUEST_ID_HEADER, value);
+        }
+        response
+    }
+    .instrument(span)
+    .await
 }
 
 pub async fn mock_ctx_middleware(mut request: Request, next: Next) -> Result<Response, StatusCode> {
@@ -178,7 +168,10 @@ mod tests {
     #[test]
     fn parse_auth_header_well_formed_bot_header_parses_successfully() {
         let mut headers = HeaderMap::new();
-        headers.insert("Authorization", HeaderValue::from_static("Bot secret-token"));
+        headers.insert(
+            "Authorization",
+            HeaderValue::from_static("Bot secret-token"),
+        );
 
         let (scheme, credentials) = parse_auth_header(&headers).expect("should parse header");
 
@@ -186,98 +179,35 @@ mod tests {
         assert_eq!(credentials, "secret-token");
     }
 
-    fn header_value(name: &str, redacted: &[(String, String)]) -> Option<String> {
-        redacted
-            .iter()
-            .find(|(k, _)| k.eq_ignore_ascii_case(name))
-            .map(|(_, v)| v.clone())
-    }
+    #[tokio::test]
+    async fn request_logger_returns_the_lambda_request_id_and_preserves_the_response() {
+        use axum::Router;
+        use axum::body::{Body, to_bytes};
+        use axum::routing::post;
+        use lambda_http::tower::ServiceExt;
 
-    #[test]
-    fn redact_headers_hides_authorization_value() {
-        let mut headers = HeaderMap::new();
-        headers.insert(
-            "Authorization",
-            HeaderValue::from_static("Discord super-secret-oauth-token"),
-        );
-        headers.insert("Content-Type", HeaderValue::from_static("application/json"));
+        let app = Router::new()
+            .route(
+                "/users/{user_id}/links",
+                post(|body: String| async { body }),
+            )
+            .route_layer(axum::middleware::from_fn(log_middleware));
+        let mut request = Request::builder()
+            .method("POST")
+            .uri("/users/123/links")
+            .body(Body::from("fixture"))
+            .unwrap();
+        let mut context = lambda_http::Context::default();
+        context.request_id = "b37656aa-a9f4-46e8-9022-928711feec0b".into();
+        request.extensions_mut().insert(context);
 
-        let redacted = redact_headers(&headers);
-        let rendered = format!("{:?}", redacted);
+        let response = app.oneshot(request).await.unwrap();
 
-        // The raw secret must never appear anywhere in the loggable output.
-        assert!(!rendered.contains("super-secret-oauth-token"));
+        assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
-            header_value("Authorization", &redacted).as_deref(),
-            Some(REDACTED_PLACEHOLDER)
+            response.headers()[REQUEST_ID_HEADER],
+            "b37656aa-a9f4-46e8-9022-928711feec0b"
         );
-        // Non-sensitive headers should pass through unchanged.
-        assert_eq!(
-            header_value("Content-Type", &redacted).as_deref(),
-            Some("application/json")
-        );
-    }
-
-    #[test]
-    fn redact_headers_is_case_insensitive() {
-        let mut headers = HeaderMap::new();
-        // HeaderName normalizes case, but exercise via the lowercase form
-        // that http::HeaderName always reports from `.as_str()`.
-        headers.insert("authorization", HeaderValue::from_static("Bot abc123"));
-
-        let redacted = redact_headers(&headers);
-        let rendered = format!("{:?}", redacted);
-
-        assert!(!rendered.contains("abc123"));
-        assert_eq!(
-            header_value("authorization", &redacted).as_deref(),
-            Some(REDACTED_PLACEHOLDER)
-        );
-    }
-
-    #[test]
-    fn redact_headers_hides_cookies() {
-        let mut headers = HeaderMap::new();
-        headers.insert(
-            "Cookie",
-            HeaderValue::from_static("session=top-secret-session-id"),
-        );
-        headers.insert(
-            "Set-Cookie",
-            HeaderValue::from_static("session=another-secret; HttpOnly"),
-        );
-
-        let redacted = redact_headers(&headers);
-        let rendered = format!("{:?}", redacted);
-
-        assert!(!rendered.contains("top-secret-session-id"));
-        assert!(!rendered.contains("another-secret"));
-        assert_eq!(
-            header_value("Cookie", &redacted).as_deref(),
-            Some(REDACTED_PLACEHOLDER)
-        );
-        assert_eq!(
-            header_value("Set-Cookie", &redacted).as_deref(),
-            Some(REDACTED_PLACEHOLDER)
-        );
-    }
-
-    #[test]
-    fn redact_headers_preserves_non_sensitive_headers_and_count() {
-        let mut headers = HeaderMap::new();
-        headers.insert("X-Request-Id", HeaderValue::from_static("req-42"));
-        headers.insert("Accept", HeaderValue::from_static("application/json"));
-
-        let redacted = redact_headers(&headers);
-
-        assert_eq!(redacted.len(), 2);
-        assert_eq!(
-            header_value("X-Request-Id", &redacted).as_deref(),
-            Some("req-42")
-        );
-        assert_eq!(
-            header_value("Accept", &redacted).as_deref(),
-            Some("application/json")
-        );
+        assert_eq!(to_bytes(response.into_body(), 32).await.unwrap(), "fixture");
     }
 }
