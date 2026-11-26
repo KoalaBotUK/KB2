@@ -109,50 +109,7 @@ async fn link_for_user(
             )
             .await?
         }
-        LinkOrigin::Email => {
-            let key = email_link_key().map_err(|status| {
-                verify_link_failure("resolve_email", "email_signing_key_unavailable", status)
-            })?;
-            let claims: BTreeMap<String, String> =
-                link_req.token.verify_with_key(&key).map_err(|_| {
-                    verify_link_failure(
-                        "resolve_email",
-                        "email_token_invalid",
-                        StatusCode::UNAUTHORIZED,
-                    )
-                })?;
-            let exp: u64 = claims
-                .get("exp")
-                .and_then(|e| e.parse().ok())
-                .ok_or_else(|| {
-                    verify_link_failure(
-                        "resolve_email",
-                        "email_token_expiry_invalid",
-                        StatusCode::UNAUTHORIZED,
-                    )
-                })?;
-            if exp < chrono::Utc::now().timestamp() as u64 {
-                return Err(verify_link_failure(
-                    "resolve_email",
-                    "email_token_expired",
-                    StatusCode::UNAUTHORIZED,
-                ));
-            }
-            if claims.get("uid").map(String::as_str) != Some(current_user.id.to_string().as_str()) {
-                return Err(verify_link_failure(
-                    "resolve_email",
-                    "email_token_user_mismatch",
-                    StatusCode::UNAUTHORIZED,
-                ));
-            }
-            claims.get("sub").cloned().ok_or_else(|| {
-                verify_link_failure(
-                    "resolve_email",
-                    "email_token_subject_missing",
-                    StatusCode::UNAUTHORIZED,
-                )
-            })?
-        }
+        LinkOrigin::Email => email_from_link_token(&link_req.token, user_id)?,
     };
 
     let new_link = Link {
@@ -220,6 +177,31 @@ async fn link_for_user(
         .map_err(|status| verify_link_failure("save_user", "database_write_failed", status))?;
     info!("Verify link saved");
     Ok(Json(json!(new_link)))
+}
+
+fn email_from_link_token(token: &str, user_id: Id<UserMarker>) -> Result<String, StatusCode> {
+    let unauthorized =
+        |reason| verify_link_failure("resolve_email", reason, StatusCode::UNAUTHORIZED);
+    let key = email_link_key().map_err(|status| {
+        verify_link_failure("resolve_email", "email_signing_key_unavailable", status)
+    })?;
+    let claims: BTreeMap<String, String> = token
+        .verify_with_key(&key)
+        .map_err(|_| unauthorized("email_token_invalid"))?;
+    let exp: u64 = claims
+        .get("exp")
+        .and_then(|expiry| expiry.parse().ok())
+        .ok_or_else(|| unauthorized("email_token_expiry_invalid"))?;
+    if exp < chrono::Utc::now().timestamp() as u64 {
+        return Err(unauthorized("email_token_expired"));
+    }
+    if claims.get("uid").map(String::as_str) != Some(user_id.to_string().as_str()) {
+        return Err(unauthorized("email_token_user_mismatch"));
+    }
+    claims
+        .get("sub")
+        .cloned()
+        .ok_or_else(|| unauthorized("email_token_subject_missing"))
 }
 
 async fn oidc_email(url: &str, token: String, app_state: &AppState) -> Result<String, StatusCode> {

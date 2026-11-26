@@ -1,8 +1,6 @@
 import axios from "axios";
 import {formatInternalRedirect, redirectTo} from "./redirect.js";
 
-const KB_API_URL = import.meta.env.VITE_KB_API_URL;
-
 export class OauthFlow {
   clientId
   redirectPath
@@ -147,10 +145,6 @@ export class AuthorizationFlowPKCE extends OauthFlow {
     this.token.scope = res.data?.scope
     this.token.date = Date.now()
   }
-
-  save() {
-    localStorage.setItem('authFlow', JSON.stringify(this))
-  }
 }
 
 export class ImplicitFlow extends OauthFlow {
@@ -182,9 +176,5 @@ export class ImplicitFlow extends OauthFlow {
     this.token.refreshToken = urlParams.get('refresh_token')
     this.token.scope = urlParams.get('scope')
     this.token.date = Date.now()
-  }
-
-  save() {
-    localStorage.setItem('authFlow', JSON.stringify(this))
   }
 }

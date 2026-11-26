@@ -39,15 +39,14 @@ function authorizationFailed(stage, reason, err) {
 async function linkThenRedirect(overwrite) {
   errorRef.value = null
   let user
+  let sessionFailure = 'missing_or_expired_session'
   try {
     user = User.loadCache()
   } catch {
-    logFailure('discord_session', 'stored_session_unreadable')
-    errorRef.value = { message: 'Sign in with Discord again to verify your email.' }
-    return
+    sessionFailure = 'stored_session_unreadable'
   }
   if (!user?.userId || !user.token?.accessToken) {
-    logFailure('discord_session', 'missing_or_expired_session')
+    logFailure('discord_session', sessionFailure)
     errorRef.value = { message: 'Sign in with Discord again to verify your email.' }
     return
   }
@@ -70,7 +69,11 @@ async function linkThenRedirect(overwrite) {
   }
 }
 
-onMounted(async () => {
+async function loadAccessToken() {
+  if (props.organization === 'email') {
+    return new URLSearchParams(window.location.search).get('token')
+  }
+
   let authFlow
   try {
     authFlow = props.loadAuthFlow()
@@ -78,7 +81,7 @@ onMounted(async () => {
     authorizationFailed('authorization_state', 'stored_flow_unreadable')
     return
   }
-  if (!authFlow || (props.organization !== 'email' && authFlow.redirectPath !== window.location.pathname)) {
+  if (!authFlow || authFlow.redirectPath !== window.location.pathname) {
     authorizationFailed('authorization_state', authFlow ? 'wrong_callback_path' : 'missing_flow')
     return
   }
@@ -92,12 +95,16 @@ onMounted(async () => {
 
   try {
     await authFlow.callback()
-    accessToken = authFlow.token?.accessToken
+    return authFlow.token?.accessToken
   } catch (err) {
     const reason = err instanceof TokenExchangeError ? err.reason : requestFailureReason(err)
     authorizationFailed('token_exchange', reason, err)
-    return
   }
+}
+
+onMounted(async () => {
+  accessToken = await loadAccessToken()
+  if (errorRef.value) return
   if (!accessToken) {
     authorizationFailed('authorization_callback', 'missing_token')
     return
